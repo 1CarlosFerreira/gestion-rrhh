@@ -15,6 +15,12 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         Inicio
                     </x-nav-link>
+                    @can('personas.ver')
+                        <x-nav-link :href="route('personas.index')" :active="request()->routeIs('personas.*')">Personas</x-nav-link>
+                    @endcan
+                    @can('dotacion.ver')
+                        <x-nav-link :href="route('dotacion.index')" :active="request()->routeIs('dotacion.*')">Dotación</x-nav-link>
+                    @endcan
                     @can('admin.usuarios')
                         <x-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">Usuarios</x-nav-link>
                     @endcan
@@ -76,6 +82,12 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 Inicio
             </x-responsive-nav-link>
+            @can('personas.ver')
+                <x-responsive-nav-link :href="route('personas.index')">Personas</x-responsive-nav-link>
+            @endcan
+            @can('dotacion.ver')
+                <x-responsive-nav-link :href="route('dotacion.index')">Dotación</x-responsive-nav-link>
+            @endcan
             @can('admin.usuarios')
                 <x-responsive-nav-link :href="route('admin.usuarios.index')">Usuarios</x-responsive-nav-link>
             @endcan

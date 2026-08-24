@@ -78,10 +78,15 @@ Después de ejecutar `php artisan migrate:fresh --seed`, se crea exclusivamente 
 ```text
 Usuario: admin@example.test
 Contraseña: password
+
+Usuario: jefatura@example.test
+Contraseña: password
 ```
 
 Estas credenciales son ficticias y deben reemplazarse en cualquier entorno distinto de desarrollo.
 
+El usuario de jefatura es ficticio y tiene acceso limitado a las unidades asignadas en `user_unidades`.
+
 ## Alcance actual
 
-Fase 1: autenticación Blade, roles/permisos y catálogos base. No incluye personas, trámites ni procesos funcionales.
+Fase 2: personas con RUT chileno validado, vínculos históricos de dotación, unidades habilitadas por usuario, búsqueda y consulta de dotación. Aún no incluye trámites, expedientes, Reemplazos ni Horas Extraordinarias.

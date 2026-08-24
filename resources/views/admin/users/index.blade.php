@@ -16,6 +16,12 @@
                     @endforeach
                     <x-primary-button>Guardar roles</x-primary-button>
                 </form>
+                @can('usuarios.unidades.gestionar')
+                    <div class="mt-5 border-t pt-4"><h4 class="font-medium">Unidades habilitadas</h4>
+                        <div class="mt-2 flex flex-wrap gap-2">@forelse($user->asignacionesUnidad as $asignacion)<form method="POST" action="{{ route('admin.usuarios.unidades.toggle', [$user, $asignacion]) }}">@csrf @method('PATCH')<button class="rounded border px-3 py-1 text-sm {{ $asignacion->active ? 'bg-green-50' : 'bg-gray-100 text-gray-500' }}">{{ $asignacion->unidad->nombre }} · {{ $asignacion->active ? 'activa' : 'inactiva' }}</button></form>@empty<span class="text-sm text-gray-500">Sin asignaciones.</span>@endforelse</div>
+                        <form method="POST" action="{{ route('admin.usuarios.unidades.store', $user) }}" class="mt-3 flex flex-wrap gap-2">@csrf<select name="unidad_servicio_id" required class="rounded border-gray-300 text-sm"><option value="">Seleccionar unidad</option>@foreach($unidades as $unidad)<option value="{{ $unidad->id }}">{{ $unidad->nombre }}</option>@endforeach</select><x-text-input type="date" name="valid_from"/><x-text-input type="date" name="valid_to"/><x-secondary-button>Asignar/reactivar</x-secondary-button></form>
+                    </div>
+                @endcan
             </section>
         @endforeach
     </div></div>

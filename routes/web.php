@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Admin\CatalogoController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\DotacionController;
+use App\Http\Controllers\PersonaController;
+use App\Http\Controllers\PersonaSearchController;
+use App\Http\Controllers\PersonaUnidadVinculoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,10 +19,34 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
+    Route::get('/personas/crear/nueva', [PersonaController::class, 'create'])->middleware('can:personas.gestionar')->name('personas.create');
+
+    Route::middleware('can:personas.ver')->group(function () {
+        Route::get('/personas', [PersonaController::class, 'index'])->name('personas.index');
+        Route::get('/personas/buscar', PersonaSearchController::class)->middleware('throttle:30,1')->name('personas.buscar');
+        Route::get('/personas/{persona}', [PersonaController::class, 'show'])->name('personas.show');
+    });
+
+    Route::middleware('can:personas.gestionar')->group(function () {
+        Route::post('/personas', [PersonaController::class, 'store'])->name('personas.store');
+        Route::get('/personas/{persona}/editar', [PersonaController::class, 'edit'])->name('personas.edit');
+        Route::put('/personas/{persona}', [PersonaController::class, 'update'])->name('personas.update');
+        Route::patch('/personas/{persona}/activo', [PersonaController::class, 'toggleActive'])->name('personas.activo');
+        Route::post('/personas/{persona}/vinculos', [PersonaUnidadVinculoController::class, 'store'])->name('personas.vinculos.store');
+        Route::put('/personas/{persona}/vinculos/{vinculo}', [PersonaUnidadVinculoController::class, 'update'])->name('personas.vinculos.update');
+    });
+
+    Route::get('/dotacion', [DotacionController::class, 'index'])->middleware('can:dotacion.ver')->name('dotacion.index');
+
     Route::middleware('can:admin.usuarios')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
         Route::put('/usuarios/{user}/roles', [UserController::class, 'updateRoles'])->name('usuarios.roles.update');
         Route::patch('/usuarios/{user}/activo', [UserController::class, 'toggleActive'])->name('usuarios.activo');
+    });
+
+    Route::middleware('can:usuarios.unidades.gestionar')->prefix('admin')->name('admin.')->group(function () {
+        Route::post('/usuarios/{user}/unidades', [UserController::class, 'storeUnidad'])->name('usuarios.unidades.store');
+        Route::patch('/usuarios/{user}/unidades/{asignacion}', [UserController::class, 'toggleUnidad'])->name('usuarios.unidades.toggle');
     });
 
     Route::middleware('can:admin.catalogos')->prefix('admin')->name('admin.')->group(function () {

@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             RolesPermisosSeeder::class,
             CatalogosSeeder::class,
             AdminUserSeeder::class,
+            PersonasDotacionSeeder::class,
         ]);
     }
 }
