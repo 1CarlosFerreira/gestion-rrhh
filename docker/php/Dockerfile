@@ -7,6 +7,7 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g; s|http://security.
     && apt-get update \
     && apt-get install -y --no-install-recommends git libicu-dev libzip-dev unzip \
     && docker-php-ext-install -j"$(nproc)" intl opcache pdo_mysql zip \
+    && git config --system --add safe.directory /var/www/html \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

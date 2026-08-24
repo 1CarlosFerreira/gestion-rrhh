@@ -71,6 +71,17 @@ APP_URL=https://url-institucional.example
 
 PHP y Laravel usan `America/Santiago`. Los documentos de RRHH deberán mantenerse en almacenamiento privado, sin enlaces desde `public/storage`.
 
+### Acceso de desarrollo
+
+Después de ejecutar `php artisan migrate:fresh --seed`, se crea exclusivamente para desarrollo:
+
+```text
+Usuario: admin@example.test
+Contraseña: password
+```
+
+Estas credenciales son ficticias y deben reemplazarse en cualquier entorno distinto de desarrollo.
+
 ## Alcance actual
 
-Fase 0: infraestructura reproducible y portada técnica. No incluye Breeze, Spatie, tablas de dominio, Reemplazos ni Horas Extraordinarias.
+Fase 1: autenticación Blade, roles/permisos y catálogos base. No incluye personas, trámites ni procesos funcionales.
