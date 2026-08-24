@@ -114,9 +114,9 @@ class PhaseOneSecurityAndCatalogsTest extends TestCase
         $this->assertDatabaseCount('grados_eus', 0);
     }
 
-    public function test_phase_three_and_later_tables_do_not_exist(): void
+    public function test_phase_four_and_later_tables_do_not_exist(): void
     {
-        foreach (['tramites', 'tramite_historial', 'tramite_adjuntos', 'tramite_reemplazos', 'tramite_horas_extra'] as $table) {
+        foreach (['tramite_adjuntos', 'tramite_reemplazos', 'tramite_horas_extra'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
     }

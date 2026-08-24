@@ -18,6 +18,12 @@
                     @can('personas.ver')
                         <x-nav-link :href="route('personas.index')" :active="request()->routeIs('personas.*')">Personas</x-nav-link>
                     @endcan
+                    @canany(['tramites.ver_propios', 'tramites.ver_unidad', 'tramites.ver_todos'])
+                        <x-nav-link :href="route('tramites.index')" :active="request()->routeIs('tramites.*')">Trámites</x-nav-link>
+                    @endcanany
+                    @can('tramites.ver_todos')
+                        <x-nav-link :href="route('gestion-personas.bandeja')" :active="request()->routeIs('gestion-personas.*')">Bandeja GP</x-nav-link>
+                    @endcan
                     @can('dotacion.ver')
                         <x-nav-link :href="route('dotacion.index')" :active="request()->routeIs('dotacion.*')">Dotación</x-nav-link>
                     @endcan
@@ -84,6 +90,12 @@
             </x-responsive-nav-link>
             @can('personas.ver')
                 <x-responsive-nav-link :href="route('personas.index')">Personas</x-responsive-nav-link>
+            @endcan
+            @canany(['tramites.ver_propios', 'tramites.ver_unidad', 'tramites.ver_todos'])
+                <x-responsive-nav-link :href="route('tramites.index')">Trámites</x-responsive-nav-link>
+            @endcanany
+            @can('tramites.ver_todos')
+                <x-responsive-nav-link :href="route('gestion-personas.bandeja')">Bandeja GP</x-responsive-nav-link>
             @endcan
             @can('dotacion.ver')
                 <x-responsive-nav-link :href="route('dotacion.index')">Dotación</x-responsive-nav-link>

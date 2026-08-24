@@ -89,4 +89,4 @@ El usuario de jefatura es ficticio y tiene acceso limitado a las unidades asigna
 
 ## Alcance actual
 
-Fase 2: personas con RUT chileno validado, vínculos históricos de dotación, unidades habilitadas por usuario, búsqueda y consulta de dotación. Aún no incluye trámites, expedientes, Reemplazos ni Horas Extraordinarias.
+Fase 3: núcleo transversal de trámites con referencia ULID/código anual, visibilidad por permisos y unidad, estados configurables e historial inmutable. Aún no incluye expediente, adjuntos, Reemplazos ni Horas Extraordinarias.

@@ -105,10 +105,10 @@ class PhaseTwoPeopleAndStaffingTest extends TestCase
         $this->assertSame($count, $persona->vinculos()->count());
     }
 
-    public function test_link_status_is_varchar_and_phase_three_tables_do_not_exist(): void
+    public function test_link_status_is_varchar_and_phase_four_tables_do_not_exist(): void
     {
         $this->assertSame('varchar', Schema::getColumnType('persona_unidad_vinculos', 'status'));
-        foreach (['tramites', 'tramite_historial', 'tramite_adjuntos'] as $table) {
+        foreach (['tramite_adjuntos', 'tramite_reemplazos', 'tramite_horas_extra'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
     }

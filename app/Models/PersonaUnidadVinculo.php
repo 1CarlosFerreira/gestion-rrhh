@@ -11,7 +11,7 @@ class PersonaUnidadVinculo extends Model
 
     public const ESTADOS_OPERATIVOS = ['ACTIVO', 'EN_TRAMITACION'];
 
-    protected $fillable = ['persona_id', 'unidad_servicio_id', 'estamento_id', 'profesion_id', 'cargo_texto', 'start_date', 'end_date', 'status'];
+    protected $fillable = ['persona_id', 'unidad_servicio_id', 'estamento_id', 'profesion_id', 'cargo_texto', 'start_date', 'end_date', 'status', 'origen_tramite_id'];
 
     public function persona(): BelongsTo
     {
@@ -31,6 +31,11 @@ class PersonaUnidadVinculo extends Model
     public function profesion(): BelongsTo
     {
         return $this->belongsTo(Profesion::class);
+    }
+
+    public function tramiteOrigen(): BelongsTo
+    {
+        return $this->belongsTo(Tramite::class, 'origen_tramite_id');
     }
 
     protected function casts(): array

@@ -16,6 +16,11 @@ class TipoTramite extends Model
         return $this->hasMany(EstadoTramite::class)->orderBy('orden');
     }
 
+    public function tramites(): HasMany
+    {
+        return $this->hasMany(Tramite::class);
+    }
+
     protected function casts(): array
     {
         return ['activo' => 'boolean'];

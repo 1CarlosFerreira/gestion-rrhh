@@ -3,10 +3,12 @@
 use App\Http\Controllers\Admin\CatalogoController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DotacionController;
+use App\Http\Controllers\GestionPersonasBandejaController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\PersonaSearchController;
 use App\Http\Controllers\PersonaUnidadVinculoController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TramiteController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
@@ -18,6 +20,12 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/tramites', [TramiteController::class, 'index'])->name('tramites.index');
+    Route::get('/tramites/nuevo', [TramiteController::class, 'create'])->name('tramites.create');
+    Route::post('/tramites', [TramiteController::class, 'store'])->name('tramites.store');
+    Route::get('/tramites/{tramite}', [TramiteController::class, 'show'])->name('tramites.show');
+    Route::get('/gestion-personas/bandeja', GestionPersonasBandejaController::class)->name('gestion-personas.bandeja');
 
     Route::get('/personas/crear/nueva', [PersonaController::class, 'create'])->middleware('can:personas.gestionar')->name('personas.create');
 

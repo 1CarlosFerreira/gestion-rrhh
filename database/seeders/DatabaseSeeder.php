@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             CatalogosSeeder::class,
             AdminUserSeeder::class,
             PersonasDotacionSeeder::class,
+            TramitesSeeder::class,
         ]);
     }
 }

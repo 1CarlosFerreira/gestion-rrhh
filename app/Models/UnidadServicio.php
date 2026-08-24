@@ -33,6 +33,11 @@ class UnidadServicio extends Model
             });
     }
 
+    public function tramites(): HasMany
+    {
+        return $this->hasMany(Tramite::class);
+    }
+
     protected function casts(): array
     {
         return ['activo' => 'boolean'];

@@ -51,6 +51,16 @@ class User extends Authenticatable
             });
     }
 
+    public function tramitesCreados(): HasMany
+    {
+        return $this->hasMany(Tramite::class, 'created_by');
+    }
+
+    public function historialTramites(): HasMany
+    {
+        return $this->hasMany(TramiteHistorial::class);
+    }
+
     public function setRutAttribute(?string $value): void
     {
         $this->attributes['rut'] = $value === null || $value === '' ? null : Rut::normalize($value);
