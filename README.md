@@ -90,3 +90,5 @@ El usuario de jefatura es ficticio y tiene acceso limitado a las unidades asigna
 ## Alcance actual
 
 Fase 3: núcleo transversal de trámites con referencia ULID/código anual, visibilidad por permisos y unidad, estados configurables e historial inmutable. Aún no incluye expediente, adjuntos, Reemplazos ni Horas Extraordinarias.
+
+Fase 4 incorpora expediente privado, SHA-256, versionado y descarga autorizada. Se rechazan formatos con macros explícitos (`docm`, `xlsm`), pero los formatos Office heredados pueden contener macros que PHP no distingue de forma concluyente; nunca se ejecuta ni interpreta su contenido. Antivirus/ClamAV queda como hardening futuro cuando exista infraestructura institucional.

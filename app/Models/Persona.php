@@ -21,6 +21,11 @@ class Persona extends Model
         return $this->vinculos()->whereIn('status', PersonaUnidadVinculo::ESTADOS_OPERATIVOS);
     }
 
+    public function adjuntosTramite(): HasMany
+    {
+        return $this->hasMany(TramiteAdjunto::class);
+    }
+
     public function scopeBuscar(Builder $query, string $term): Builder
     {
         $term = trim($term);

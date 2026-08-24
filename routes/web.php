@@ -8,6 +8,7 @@ use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\PersonaSearchController;
 use App\Http\Controllers\PersonaUnidadVinculoController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TramiteAdjuntoController;
 use App\Http\Controllers\TramiteController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/tramites', [TramiteController::class, 'index'])->name('tramites.index');
     Route::get('/tramites/nuevo', [TramiteController::class, 'create'])->name('tramites.create');
     Route::post('/tramites', [TramiteController::class, 'store'])->name('tramites.store');
+    Route::post('/tramites/{tramite}/adjuntos', [TramiteAdjuntoController::class, 'store'])->name('tramites.adjuntos.store');
+    Route::post('/tramites/{tramite}/adjuntos/{adjunto}/versiones', [TramiteAdjuntoController::class, 'version'])->name('tramites.adjuntos.version');
+    Route::get('/tramites/{tramite}/adjuntos/{adjunto}/descargar', [TramiteAdjuntoController::class, 'download'])->name('tramites.adjuntos.download');
+    Route::patch('/tramites/{tramite}/adjuntos/{adjunto}/anular', [TramiteAdjuntoController::class, 'annul'])->name('tramites.adjuntos.annul');
     Route::get('/tramites/{tramite}', [TramiteController::class, 'show'])->name('tramites.show');
     Route::get('/gestion-personas/bandeja', GestionPersonasBandejaController::class)->name('gestion-personas.bandeja');
 

@@ -61,6 +61,11 @@ class User extends Authenticatable
         return $this->hasMany(TramiteHistorial::class);
     }
 
+    public function adjuntosCargados(): HasMany
+    {
+        return $this->hasMany(TramiteAdjunto::class, 'uploaded_by');
+    }
+
     public function setRutAttribute(?string $value): void
     {
         $this->attributes['rut'] = $value === null || $value === '' ? null : Rut::normalize($value);

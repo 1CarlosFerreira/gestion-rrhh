@@ -188,7 +188,7 @@ class PhaseThreeCoreTransactionsTest extends TestCase
     public function test_origin_link_is_nullable_and_phase_four_tables_do_not_exist(): void
     {
         $this->assertTrue(Schema::hasColumn('persona_unidad_vinculos', 'origen_tramite_id'));
-        foreach (['tramite_adjuntos', 'tramite_reemplazos', 'tramite_horas_extra', 'documentos_generados', 'docdigital_registros'] as $table) {
+        foreach (['tramite_reemplazos', 'tramite_horas_extra', 'documentos_generados', 'docdigital_registros'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
     }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClasificacionArea;
 use App\Models\Estamento;
 use App\Models\Profesion;
+use App\Models\TipoDocumento;
 use App\Models\TipoReemplazo;
 use App\Models\TipoTramite;
 use App\Models\UnidadServicio;
@@ -21,6 +22,7 @@ class CatalogoController extends Controller
         'profesiones' => Profesion::class,
         'tipos-tramite' => TipoTramite::class,
         'tipos-reemplazo' => TipoReemplazo::class,
+        'tipos-documento' => TipoDocumento::class,
         'clasificaciones-area' => ClasificacionArea::class,
     ];
 

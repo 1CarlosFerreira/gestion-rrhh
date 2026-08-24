@@ -76,7 +76,7 @@ class PhaseOneSecurityAndCatalogsTest extends TestCase
     public function test_roles_and_permissions_are_seeded(): void
     {
         $this->assertSame(3, Role::query()->count());
-        $this->assertSame(24, Permission::query()->count());
+        $this->assertSame(25, Permission::query()->count());
         $this->assertTrue(Role::findByName('Administrador')->hasPermissionTo('admin.usuarios'));
         $this->assertTrue(Role::findByName('Administrador')->hasPermissionTo('docdigital.registrar_formalizacion'));
     }
@@ -116,7 +116,7 @@ class PhaseOneSecurityAndCatalogsTest extends TestCase
 
     public function test_phase_four_and_later_tables_do_not_exist(): void
     {
-        foreach (['tramite_adjuntos', 'tramite_reemplazos', 'tramite_horas_extra'] as $table) {
+        foreach (['tramite_reemplazos', 'tramite_horas_extra'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
     }

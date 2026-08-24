@@ -41,6 +41,11 @@ class Tramite extends Model
         return $this->hasMany(TramiteHistorial::class)->orderBy('occurred_at')->orderBy('id');
     }
 
+    public function adjuntos(): HasMany
+    {
+        return $this->hasMany(TramiteAdjunto::class)->latest('created_at');
+    }
+
     public function scopeVisiblePara(Builder $query, User $user): Builder
     {
         if ($user->can('tramites.ver_todos')) {

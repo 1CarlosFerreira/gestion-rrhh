@@ -17,6 +17,7 @@ class RolesPermisosSeeder extends Seeder
             'tramites.ver_propios', 'tramites.ver_unidad', 'tramites.ver_todos',
             'tramites.crear', 'tramites.transicionar',
             'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar',
+            'tramites.adjuntos.anular',
             'reemplazos.crear', 'reemplazos.revisar_personal', 'reemplazos.devolver',
             'horas_extra.crear', 'horas_extra.cargar_planilla',
             'horas_extra.revisar_planilla', 'horas_extra.registrar_horas',
@@ -42,6 +43,7 @@ class RolesPermisosSeeder extends Seeder
         Role::findOrCreate('Gestión de Personas', 'web')->syncPermissions([
             'tramites.ver_todos', 'tramites.transicionar',
             'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar',
+            'tramites.adjuntos.anular',
             'reemplazos.revisar_personal', 'reemplazos.devolver',
             'horas_extra.cargar_planilla', 'horas_extra.registrar_horas',
             'documentos.generar', 'docdigital.registrar_envio',

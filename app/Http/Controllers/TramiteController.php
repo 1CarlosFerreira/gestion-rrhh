@@ -6,6 +6,8 @@ use App\Actions\Tramites\ConsultarTramites;
 use App\Actions\Tramites\CrearTramite;
 use App\Http\Requests\StoreTramiteRequest;
 use App\Models\EstadoTramite;
+use App\Models\Persona;
+use App\Models\TipoDocumento;
 use App\Models\TipoTramite;
 use App\Models\Tramite;
 use App\Models\UnidadServicio;
@@ -53,9 +55,13 @@ class TramiteController extends Controller
     public function show(Tramite $tramite): View
     {
         Gate::authorize('view', $tramite);
-        $tramite->load(['tipoTramite', 'unidadServicio', 'estadoTramite', 'creador', 'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino']);
+        $tramite->load(['tipoTramite', 'unidadServicio', 'estadoTramite', 'creador', 'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino', 'adjuntos.tipoDocumento', 'adjuntos.persona', 'adjuntos.cargadoPor']);
 
-        return view('tramites.show', compact('tramite'));
+        return view('tramites.show', [
+            'tramite' => $tramite,
+            'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get(),
+            'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->limit(100)->get(),
+        ]);
     }
 
     private function catalogs(Request $request): array
