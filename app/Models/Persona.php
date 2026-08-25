@@ -26,6 +26,16 @@ class Persona extends Model
         return $this->hasMany(TramiteAdjunto::class);
     }
 
+    public function reemplazosComoFuncionario(): HasMany
+    {
+        return $this->hasMany(TramiteReemplazo::class, 'funcionario_id');
+    }
+
+    public function reemplazosComoReemplazante(): HasMany
+    {
+        return $this->hasMany(TramiteReemplazo::class, 'reemplazante_id');
+    }
+
     public function scopeBuscar(Builder $query, string $term): Builder
     {
         $term = trim($term);

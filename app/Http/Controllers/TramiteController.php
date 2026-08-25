@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Actions\Tramites\ConsultarTramites;
 use App\Actions\Tramites\CrearTramite;
 use App\Http\Requests\StoreTramiteRequest;
+use App\Models\ClasificacionArea;
 use App\Models\EstadoTramite;
+use App\Models\GradoEus;
 use App\Models\Persona;
 use App\Models\TipoDocumento;
 use App\Models\TipoTramite;
@@ -36,7 +38,7 @@ class TramiteController extends Controller
             : $request->user()->unidadesHabilitadas()->where('activo', true)->orderBy('nombre')->get();
 
         return view('tramites.create', [
-            'tipos' => TipoTramite::query()->where('activo', true)->orderBy('nombre')->get(),
+            'tipos' => TipoTramite::query()->where('activo', true)->where('codigo', '!=', 'REEMPLAZO')->orderBy('nombre')->get(),
             'unidades' => $unidades,
         ]);
     }
@@ -55,12 +57,16 @@ class TramiteController extends Controller
     public function show(Tramite $tramite): View
     {
         Gate::authorize('view', $tramite);
-        $tramite->load(['tipoTramite', 'unidadServicio', 'estadoTramite', 'creador', 'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino', 'adjuntos.tipoDocumento', 'adjuntos.persona', 'adjuntos.cargadoPor']);
+        $tramite->load(['tipoTramite', 'unidadServicio', 'estadoTramite', 'creador', 'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino', 'adjuntos.tipoDocumento', 'adjuntos.persona', 'adjuntos.cargadoPor', 'reemplazo.tipoReemplazo', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.estamento', 'reemplazo.profesion', 'revisionReemplazo.gradoEus', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.completadoPor']);
 
         return view('tramites.show', [
             'tramite' => $tramite,
             'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get(),
             'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->limit(100)->get(),
+            ...($tramite->tipoTramite->codigo === 'REEMPLAZO' ? [
+                'grados' => GradoEus::query()->where('activo', true)->orderBy('grado')->get(),
+                'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
+            ] : []),
         ]);
     }
 

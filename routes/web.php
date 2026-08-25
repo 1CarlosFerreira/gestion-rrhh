@@ -8,6 +8,7 @@ use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\PersonaSearchController;
 use App\Http\Controllers\PersonaUnidadVinculoController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReemplazoController;
 use App\Http\Controllers\TramiteAdjuntoController;
 use App\Http\Controllers\TramiteController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,16 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/reemplazos/crear', [ReemplazoController::class, 'create'])->name('reemplazos.create');
+    Route::post('/reemplazos', [ReemplazoController::class, 'store'])->name('reemplazos.store');
+    Route::get('/reemplazos/{tramite}/editar', [ReemplazoController::class, 'edit'])->name('reemplazos.edit');
+    Route::put('/reemplazos/{tramite}', [ReemplazoController::class, 'update'])->name('reemplazos.update');
+    Route::post('/reemplazos/{tramite}/enviar', [ReemplazoController::class, 'send'])->name('reemplazos.send');
+    Route::post('/reemplazos/{tramite}/iniciar-revision', [ReemplazoController::class, 'startReview'])->name('reemplazos.review.start');
+    Route::put('/reemplazos/{tramite}/revision', [ReemplazoController::class, 'saveReview'])->name('reemplazos.review.save');
+    Route::post('/reemplazos/{tramite}/devolver', [ReemplazoController::class, 'returnCorrection'])->name('reemplazos.return');
+    Route::post('/reemplazos/{tramite}/completar-revision', [ReemplazoController::class, 'completeReview'])->name('reemplazos.review.complete');
 
     Route::get('/tramites', [TramiteController::class, 'index'])->name('tramites.index');
     Route::get('/tramites/nuevo', [TramiteController::class, 'create'])->name('tramites.create');

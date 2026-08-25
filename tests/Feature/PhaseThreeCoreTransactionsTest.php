@@ -42,7 +42,7 @@ class PhaseThreeCoreTransactionsTest extends TestCase
     public function test_request_cannot_impose_state(): void
     {
         $admin = $this->admin();
-        $tipo = $this->type('REEMPLAZO');
+        $tipo = $this->type('HORAS_EXTRAORDINARIAS');
         $foreignState = EstadoTramite::query()->where('tipo_tramite_id', '!=', $tipo->id)->firstOrFail();
         $unit = UnidadServicio::query()->where('activo', true)->firstOrFail();
 
@@ -81,11 +81,11 @@ class PhaseThreeCoreTransactionsTest extends TestCase
     public function test_valid_transition_changes_state_creates_history_and_sets_submitted_at_once(): void
     {
         $tramite = $this->createAsAdmin('REEMPLAZO');
-        $result = app(TransicionarTramite::class)->execute($tramite, 'ENVIAR', $this->admin());
+        $result = app(TransicionarTramite::class)->execute($tramite, 'ENVIAR_A_GESTION_PERSONAS', $this->admin());
 
         $this->assertSame('ENVIADA_GESTION_PERSONAS', $result->estadoTramite->codigo);
         $this->assertNotNull($result->submitted_at);
-        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ENVIAR']);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
     }
 
     public function test_invalid_or_repeated_transition_changes_nothing(): void
@@ -101,9 +101,9 @@ class PhaseThreeCoreTransactionsTest extends TestCase
             $this->assertSame($before, $tramite->historial()->count());
         }
 
-        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR', $this->admin());
+        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR_A_GESTION_PERSONAS', $this->admin());
         $this->expectException(ValidationException::class);
-        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR', $this->admin());
+        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR_A_GESTION_PERSONAS', $this->admin());
     }
 
     public function test_required_observation_is_transactional(): void
@@ -114,14 +114,14 @@ class PhaseThreeCoreTransactionsTest extends TestCase
         $count = $tramite->historial()->count();
 
         try {
-            app(TransicionarTramite::class)->execute($tramite, 'DEVOLVER', $this->admin());
+            app(TransicionarTramite::class)->execute($tramite, 'DEVOLVER_CORRECCION', $this->admin());
             $this->fail('Expected validation exception.');
         } catch (ValidationException) {
             $this->assertSame($review->id, $tramite->fresh()->estado_tramite_id);
             $this->assertSame($count, $tramite->historial()->count());
         }
 
-        $result = app(TransicionarTramite::class)->execute($tramite, 'DEVOLVER', $this->admin(), 'Observación ficticia obligatoria');
+        $result = app(TransicionarTramite::class)->execute($tramite, 'DEVOLVER_CORRECCION', $this->admin(), 'Observación ficticia obligatoria');
         $this->assertSame('DEVUELTA_CORRECCION', $result->estadoTramite->codigo);
         $this->assertSame('Observación ficticia obligatoria', $result->historial()->reorder()->latest('id')->value('observation'));
     }
@@ -132,19 +132,19 @@ class PhaseThreeCoreTransactionsTest extends TestCase
         $user = User::factory()->create();
         $this->expectException(AuthorizationException::class);
 
-        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR', $user);
+        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR_A_GESTION_PERSONAS', $user);
     }
 
     public function test_cross_type_destination_is_rejected_without_partial_history(): void
     {
         $tramite = $this->createAsAdmin('REEMPLAZO');
-        $transition = TransicionEstado::query()->where(['tipo_tramite_id' => $tramite->tipo_tramite_id, 'codigo_accion' => 'ENVIAR'])->firstOrFail();
+        $transition = TransicionEstado::query()->where(['tipo_tramite_id' => $tramite->tipo_tramite_id, 'codigo_accion' => 'ENVIAR_A_GESTION_PERSONAS'])->firstOrFail();
         $foreign = EstadoTramite::query()->where('tipo_tramite_id', '!=', $tramite->tipo_tramite_id)->firstOrFail();
         $transition->update(['estado_destino_id' => $foreign->id]);
         $count = $tramite->historial()->count();
 
         try {
-            app(TransicionarTramite::class)->execute($tramite, 'ENVIAR', $this->admin());
+            app(TransicionarTramite::class)->execute($tramite, 'ENVIAR_A_GESTION_PERSONAS', $this->admin());
             $this->fail('Expected validation exception.');
         } catch (ValidationException) {
             $this->assertSame($count, $tramite->historial()->count());
@@ -177,18 +177,18 @@ class PhaseThreeCoreTransactionsTest extends TestCase
     public function test_list_filters_and_history_order_work(): void
     {
         $tramite = $this->createAsAdmin('REEMPLAZO');
-        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR', $this->admin());
+        app(TransicionarTramite::class)->execute($tramite, 'ENVIAR_A_GESTION_PERSONAS', $this->admin());
 
         $this->actingAs($this->admin())->get('/tramites?codigo='.$tramite->codigo.'&tipo_tramite_id='.$tramite->tipo_tramite_id)
             ->assertOk()->assertSee($tramite->codigo);
         $response = $this->actingAs($this->admin())->get(route('tramites.show', $tramite));
-        $response->assertOk()->assertSeeInOrder(['TRAMITE_CREADO', 'ENVIAR']);
+        $response->assertOk()->assertSeeInOrder(['TRAMITE_CREADO', 'ENVIAR_A_GESTION_PERSONAS']);
     }
 
     public function test_origin_link_is_nullable_and_phase_four_tables_do_not_exist(): void
     {
         $this->assertTrue(Schema::hasColumn('persona_unidad_vinculos', 'origen_tramite_id'));
-        foreach (['tramite_reemplazos', 'tramite_horas_extra', 'documentos_generados', 'docdigital_registros'] as $table) {
+        foreach (['tramite_horas_extra', 'documentos_generados', 'docdigital_registros'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
     }

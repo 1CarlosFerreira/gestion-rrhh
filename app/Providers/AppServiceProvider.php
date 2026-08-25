@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Actions\Reemplazos\ReemplazoTransitionGuard;
 use App\Models\Tramite;
 use App\Models\UnidadServicio;
 use App\Policies\TramitePolicy;
@@ -26,5 +27,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(UnidadServicio::class, UnidadServicioPolicy::class);
         Gate::policy(Tramite::class, TramitePolicy::class);
+        $this->app->singleton(ReemplazoTransitionGuard::class);
+        $this->app->tag(ReemplazoTransitionGuard::class, 'tramite.transition.guards');
     }
 }

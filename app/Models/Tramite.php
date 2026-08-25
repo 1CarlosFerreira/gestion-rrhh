@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tramite extends Model
 {
@@ -44,6 +45,16 @@ class Tramite extends Model
     public function adjuntos(): HasMany
     {
         return $this->hasMany(TramiteAdjunto::class)->latest('created_at');
+    }
+
+    public function reemplazo(): HasOne
+    {
+        return $this->hasOne(TramiteReemplazo::class);
+    }
+
+    public function revisionReemplazo(): HasOne
+    {
+        return $this->hasOne(ReemplazoRevisionPersonal::class);
     }
 
     public function scopeVisiblePara(Builder $query, User $user): Builder
