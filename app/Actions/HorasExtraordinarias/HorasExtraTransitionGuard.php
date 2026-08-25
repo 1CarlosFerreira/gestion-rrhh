@@ -49,5 +49,8 @@ class HorasExtraTransitionGuard implements TramiteTransitionGuard
                 throw ValidationException::withMessages(['revision' => 'El resultado global no coincide con las decisiones vigentes.']);
             }
         }
+        if ($transicion->codigo_accion === 'GENERAR_INFORME_TECNICO' && ! $tramite->documentosGenerados()->where('status', 'VIGENTE')->whereHas('tipoDocumento', fn ($query) => $query->where('codigo', 'INFORME_TECNICO'))->exists()) {
+            throw ValidationException::withMessages(['documento' => 'Debe generarse correctamente el Informe Técnico antes de avanzar.']);
+        }
     }
 }

@@ -47,6 +47,11 @@ class TramiteAdjunto extends Model
         return $this->hasOne(self::class, 'replaces_adjunto_id');
     }
 
+    public function documentoGenerado(): HasOne
+    {
+        return $this->hasOne(DocumentoGenerado::class, 'adjunto_id');
+    }
+
     public function scopeActivos(Builder $query): Builder
     {
         return $query->where('status', 'ACTIVO');

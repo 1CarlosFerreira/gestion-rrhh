@@ -109,7 +109,7 @@ class PhaseFourAttachmentsTest extends TestCase
     public function test_storage_path_is_unique_and_future_phase_tables_do_not_exist(): void
     {
         $this->assertTrue(Schema::hasTable('tramite_adjuntos'));
-        foreach (['documentos_generados', 'documento_plantillas', 'docdigital_registros'] as $table) {
+        foreach (['docdigital_registros'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
     }

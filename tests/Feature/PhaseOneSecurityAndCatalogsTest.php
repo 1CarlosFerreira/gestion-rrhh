@@ -116,7 +116,7 @@ class PhaseOneSecurityAndCatalogsTest extends TestCase
 
     public function test_phase_four_and_later_tables_do_not_exist(): void
     {
-        foreach (['documentos_generados'] as $table) {
+        foreach (['docdigital_registros'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CatalogoController;
+use App\Http\Controllers\Admin\DocumentoPlantillaController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DotacionController;
 use App\Http\Controllers\GestionPersonasBandejaController;
@@ -43,6 +44,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/horas-extra/{tramite}/funcionarios/{funcionario}/horas', [HorasExtraController::class, 'hours'])->name('horas-extra.hours');
     Route::post('/horas-extra/{tramite}/funcionarios/{funcionario}/revision', [HorasExtraController::class, 'review'])->name('horas-extra.review');
     Route::post('/horas-extra/{tramite}/finalizar-revision', [HorasExtraController::class, 'finishReview'])->name('horas-extra.review.finish');
+    Route::get('/horas-extra/{tramite}/informe-tecnico', [HorasExtraController::class, 'prepareReport'])->name('horas-extra.report.prepare');
+    Route::put('/horas-extra/{tramite}/informe-tecnico', [HorasExtraController::class, 'saveReport'])->name('horas-extra.report.save');
+    Route::post('/horas-extra/{tramite}/informe-tecnico/generar', [HorasExtraController::class, 'generateReport'])->name('horas-extra.report.generate');
 
     Route::get('/tramites', [TramiteController::class, 'index'])->name('tramites.index');
     Route::get('/tramites/nuevo', [TramiteController::class, 'create'])->name('tramites.create');
@@ -87,6 +91,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:admin.catalogos')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/catalogos', [CatalogoController::class, 'index'])->name('catalogos.index');
         Route::patch('/catalogos/{catalogo}/{id}/activo', [CatalogoController::class, 'toggleActive'])->name('catalogos.activo');
+        Route::get('/plantillas-documentales', [DocumentoPlantillaController::class, 'index'])->name('plantillas.index');
     });
 });
 

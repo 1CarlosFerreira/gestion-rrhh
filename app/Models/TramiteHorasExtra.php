@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TramiteHorasExtra extends Model
 {
@@ -20,6 +21,11 @@ class TramiteHorasExtra extends Model
     public function funcionarios(): HasMany
     {
         return $this->hasMany(HorasExtraFuncionario::class);
+    }
+
+    public function informeTecnico(): HasOne
+    {
+        return $this->hasOne(HorasExtraInformeTecnico::class);
     }
 
     protected function casts(): array

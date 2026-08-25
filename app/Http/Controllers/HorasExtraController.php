@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Actions\HorasExtraordinarias\CargarPlanillaSirh;
 use App\Actions\HorasExtraordinarias\CrearHorasExtraordinarias;
 use App\Actions\HorasExtraordinarias\FinalizarRevisionHorasExtra;
+use App\Actions\HorasExtraordinarias\GenerarInformeTecnicoHorasExtra;
 use App\Actions\HorasExtraordinarias\GuardarBorradorHorasExtra;
+use App\Actions\HorasExtraordinarias\GuardarInformeTecnicoHorasExtra;
 use App\Actions\HorasExtraordinarias\RegistrarHorasExtra;
 use App\Actions\HorasExtraordinarias\RevisarPlanillaSirh;
 use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\RegisterHorasExtraRequest;
 use App\Http\Requests\ReviewPlanillaSirhRequest;
 use App\Http\Requests\SaveHorasExtraRequest;
+use App\Http\Requests\SaveInformeTecnicoRequest;
 use App\Models\HorasExtraFuncionario;
 use App\Models\Persona;
 use App\Models\Tramite;
@@ -93,6 +96,29 @@ class HorasExtraController extends Controller
         $finish->execute($tramite, $request->user());
 
         return back()->with('status', 'Revisión de Jefatura finalizada.');
+    }
+
+    public function prepareReport(Request $request, Tramite $tramite): View
+    {
+        Gate::authorize('view', $tramite);
+        abort_unless($request->user()->can('documentos.generar') && $tramite->tipoTramite()->value('codigo') === 'HORAS_EXTRAORDINARIAS' && in_array($tramite->estadoTramite()->value('codigo'), ['CONFORME', 'INFORME_TECNICO_GENERADO'], true), 403);
+        $tramite->load(['unidadServicio', 'horasExtra.informeTecnico', 'horasExtra.funcionarios.persona']);
+
+        return view('horas-extra.informe-tecnico', compact('tramite'));
+    }
+
+    public function saveReport(SaveInformeTecnicoRequest $request, Tramite $tramite, GuardarInformeTecnicoHorasExtra $save): RedirectResponse
+    {
+        $save->execute($tramite, $request->validated(), $request->user());
+
+        return back()->with('status', 'Antecedentes del Informe Técnico guardados. Revise la previsualización antes de generar.');
+    }
+
+    public function generateReport(Request $request, Tramite $tramite, GenerarInformeTecnicoHorasExtra $generate): RedirectResponse
+    {
+        $document = $generate->execute($tramite, $request->user());
+
+        return redirect()->route('tramites.show', $tramite)->with('status', 'Informe Técnico v'.$document->version.' generado.');
     }
 
     private function ensureParticipant(Tramite $tramite, HorasExtraFuncionario $funcionario): void

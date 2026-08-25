@@ -38,6 +38,7 @@
                     @endcan
                     @can('admin.catalogos')
                         <x-nav-link :href="route('admin.catalogos.index')" :active="request()->routeIs('admin.catalogos.*')">Catálogos</x-nav-link>
+                        <x-nav-link :href="route('admin.plantillas.index')" :active="request()->routeIs('admin.plantillas.*')">Plantillas</x-nav-link>
                     @endcan
                 </div>
             </div>
@@ -117,6 +118,7 @@
             @endcan
             @can('admin.catalogos')
                 <x-responsive-nav-link :href="route('admin.catalogos.index')">Catálogos</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.plantillas.index')">Plantillas</x-responsive-nav-link>
             @endcan
         </div>
 

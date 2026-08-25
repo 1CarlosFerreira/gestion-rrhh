@@ -62,6 +62,11 @@ class Tramite extends Model
         return $this->hasOne(TramiteHorasExtra::class);
     }
 
+    public function documentosGenerados(): HasMany
+    {
+        return $this->hasMany(DocumentoGenerado::class)->latest('generated_at');
+    }
+
     public function scopeVisiblePara(Builder $query, User $user): Builder
     {
         if ($user->can('tramites.ver_todos')) {

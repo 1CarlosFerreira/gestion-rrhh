@@ -142,7 +142,7 @@ class PhaseFiveReplacementsTest extends TestCase
     {
         $tramite = $this->completeDraft();
         $this->actingAs($this->jefe())->get(route('tramites.show', $tramite))->assertOk()->assertSee('Solicitud')->assertSee('Reemplazante')->assertSee('Gestión de Personas');
-        foreach (['documentos_generados', 'documento_plantillas', 'docdigital_registros'] as $table) {
+        foreach (['docdigital_registros'] as $table) {
             $this->assertFalse(Schema::hasTable($table));
         }
         $this->assertDatabaseCount('grados_eus', 0);

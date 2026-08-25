@@ -57,7 +57,7 @@ class TramiteController extends Controller
     public function show(Tramite $tramite): View
     {
         Gate::authorize('view', $tramite);
-        $tramite->load(['tipoTramite', 'unidadServicio', 'estadoTramite', 'creador', 'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino', 'adjuntos.tipoDocumento', 'adjuntos.persona', 'adjuntos.cargadoPor', 'reemplazo.tipoReemplazo', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.estamento', 'reemplazo.profesion', 'revisionReemplazo.gradoEus', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.completadoPor', 'horasExtra.funcionarios.persona.vinculosOperativos.unidad', 'horasExtra.funcionarios.planillas.adjunto', 'horasExtra.funcionarios.planillas.cargadoPor', 'horasExtra.funcionarios.planillas.revisiones.revisadoPor']);
+        $tramite->load(['tipoTramite', 'unidadServicio', 'estadoTramite', 'creador', 'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino', 'adjuntos.tipoDocumento', 'adjuntos.persona', 'adjuntos.cargadoPor', 'documentosGenerados.tipoDocumento', 'documentosGenerados.plantilla', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor', 'reemplazo.tipoReemplazo', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.estamento', 'reemplazo.profesion', 'revisionReemplazo.gradoEus', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.completadoPor', 'horasExtra.informeTecnico', 'horasExtra.funcionarios.persona.vinculosOperativos.unidad', 'horasExtra.funcionarios.planillas.adjunto', 'horasExtra.funcionarios.planillas.cargadoPor', 'horasExtra.funcionarios.planillas.revisiones.revisadoPor']);
 
         return view('tramites.show', [
             'tramite' => $tramite,
