@@ -1,0 +1,1 @@
+<x-app-layout><x-slot name="header"><h2 class="text-xl font-semibold">Nueva solicitud de Horas Extraordinarias</h2></x-slot><div class="py-10"><form method="POST" action="{{ route('horas-extra.store') }}" class="mx-auto max-w-4xl space-y-5 rounded-lg bg-white p-6 shadow-sm">@include('horas-extra._form')</form></div></x-app-layout>

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Actions\HorasExtraordinarias\HorasExtraTransitionGuard;
 use App\Actions\Reemplazos\ReemplazoTransitionGuard;
 use App\Models\Tramite;
 use App\Models\UnidadServicio;
@@ -29,5 +30,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Tramite::class, TramitePolicy::class);
         $this->app->singleton(ReemplazoTransitionGuard::class);
         $this->app->tag(ReemplazoTransitionGuard::class, 'tramite.transition.guards');
+        $this->app->singleton(HorasExtraTransitionGuard::class);
+        $this->app->tag(HorasExtraTransitionGuard::class, 'tramite.transition.guards');
     }
 }

@@ -57,6 +57,11 @@ class Tramite extends Model
         return $this->hasOne(ReemplazoRevisionPersonal::class);
     }
 
+    public function horasExtra(): HasOne
+    {
+        return $this->hasOne(TramiteHorasExtra::class);
+    }
+
     public function scopeVisiblePara(Builder $query, User $user): Builder
     {
         if ($user->can('tramites.ver_todos')) {

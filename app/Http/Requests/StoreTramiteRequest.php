@@ -15,7 +15,7 @@ class StoreTramiteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo_tramite_id' => ['required', 'integer', Rule::exists('tipos_tramite', 'id')->where('activo', true)->where('codigo', '!=', 'REEMPLAZO')],
+            'tipo_tramite_id' => ['required', 'integer', Rule::exists('tipos_tramite', 'id')->where('activo', true)->whereNotIn('codigo', ['REEMPLAZO', 'HORAS_EXTRAORDINARIAS'])],
             'unidad_servicio_id' => ['required', 'integer', Rule::exists('unidades_servicios', 'id')->where('activo', true)],
         ];
     }

@@ -36,6 +36,11 @@ class Persona extends Model
         return $this->hasMany(TramiteReemplazo::class, 'reemplazante_id');
     }
 
+    public function participacionesHorasExtra(): HasMany
+    {
+        return $this->hasMany(HorasExtraFuncionario::class);
+    }
+
     public function scopeBuscar(Builder $query, string $term): Builder
     {
         $term = trim($term);

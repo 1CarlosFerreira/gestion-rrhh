@@ -24,6 +24,9 @@
                     @can('reemplazos.crear')
                         <x-nav-link :href="route('reemplazos.create')" :active="request()->routeIs('reemplazos.*')">Nuevo reemplazo</x-nav-link>
                     @endcan
+                    @can('horas_extra.crear')
+                        <x-nav-link :href="route('horas-extra.create')" :active="request()->routeIs('horas-extra.*')">Nuevas horas extra</x-nav-link>
+                    @endcan
                     @can('tramites.ver_todos')
                         <x-nav-link :href="route('gestion-personas.bandeja')" :active="request()->routeIs('gestion-personas.*')">Bandeja GP</x-nav-link>
                     @endcan
@@ -99,6 +102,9 @@
             @endcanany
             @can('reemplazos.crear')
                 <x-responsive-nav-link :href="route('reemplazos.create')">Nuevo reemplazo</x-responsive-nav-link>
+            @endcan
+            @can('horas_extra.crear')
+                <x-responsive-nav-link :href="route('horas-extra.create')">Nuevas horas extra</x-responsive-nav-link>
             @endcan
             @can('tramites.ver_todos')
                 <x-responsive-nav-link :href="route('gestion-personas.bandeja')">Bandeja GP</x-responsive-nav-link>

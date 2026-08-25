@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CatalogoController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DotacionController;
 use App\Http\Controllers\GestionPersonasBandejaController;
+use App\Http\Controllers\HorasExtraController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\PersonaSearchController;
 use App\Http\Controllers\PersonaUnidadVinculoController;
@@ -32,6 +33,16 @@ Route::middleware('auth')->group(function () {
     Route::put('/reemplazos/{tramite}/revision', [ReemplazoController::class, 'saveReview'])->name('reemplazos.review.save');
     Route::post('/reemplazos/{tramite}/devolver', [ReemplazoController::class, 'returnCorrection'])->name('reemplazos.return');
     Route::post('/reemplazos/{tramite}/completar-revision', [ReemplazoController::class, 'completeReview'])->name('reemplazos.review.complete');
+
+    Route::get('/horas-extra/crear', [HorasExtraController::class, 'create'])->name('horas-extra.create');
+    Route::post('/horas-extra', [HorasExtraController::class, 'store'])->name('horas-extra.store');
+    Route::get('/horas-extra/{tramite}/editar', [HorasExtraController::class, 'edit'])->name('horas-extra.edit');
+    Route::put('/horas-extra/{tramite}', [HorasExtraController::class, 'update'])->name('horas-extra.update');
+    Route::post('/horas-extra/{tramite}/transiciones/{action}', [HorasExtraController::class, 'transition'])->name('horas-extra.transition');
+    Route::post('/horas-extra/{tramite}/funcionarios/{funcionario}/planilla', [HorasExtraController::class, 'upload'])->name('horas-extra.planillas.upload');
+    Route::put('/horas-extra/{tramite}/funcionarios/{funcionario}/horas', [HorasExtraController::class, 'hours'])->name('horas-extra.hours');
+    Route::post('/horas-extra/{tramite}/funcionarios/{funcionario}/revision', [HorasExtraController::class, 'review'])->name('horas-extra.review');
+    Route::post('/horas-extra/{tramite}/finalizar-revision', [HorasExtraController::class, 'finishReview'])->name('horas-extra.review.finish');
 
     Route::get('/tramites', [TramiteController::class, 'index'])->name('tramites.index');
     Route::get('/tramites/nuevo', [TramiteController::class, 'create'])->name('tramites.create');
