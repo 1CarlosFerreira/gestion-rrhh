@@ -201,9 +201,7 @@ class PhaseSixOvertimeTest extends TestCase
     {
         $tramite = $this->readyForReview();
         $this->actingAs($this->jefe())->get(route('tramites.show', $tramite))->assertOk()->assertSee('Planilla v1')->assertSee('Funcionarios y Planillas SIRH');
-        foreach (['docdigital_registros'] as $table) {
-            $this->assertFalse(Schema::hasTable($table));
-        }
+        $this->assertTrue(Schema::hasTable('docdigital_registros'));
         $this->assertSame('varchar', Schema::getColumnType('horas_extra_funcionarios', 'review_status'));
         $this->assertSame('varchar', Schema::getColumnType('horas_extra_revisiones', 'result'));
     }

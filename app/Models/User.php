@@ -66,6 +66,16 @@ class User extends Authenticatable
         return $this->hasMany(TramiteAdjunto::class, 'uploaded_by');
     }
 
+    public function registrosDocDigitalEnviados(): HasMany
+    {
+        return $this->hasMany(DocDigitalRegistro::class, 'registrado_por');
+    }
+
+    public function formalizacionesDocDigital(): HasMany
+    {
+        return $this->hasMany(DocDigitalRegistro::class, 'formalizado_por');
+    }
+
     public function setRutAttribute(?string $value): void
     {
         $this->attributes['rut'] = $value === null || $value === '' ? null : Rut::normalize($value);

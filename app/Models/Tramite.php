@@ -67,6 +67,16 @@ class Tramite extends Model
         return $this->hasMany(DocumentoGenerado::class)->latest('generated_at');
     }
 
+    public function registrosDocDigital(): HasMany
+    {
+        return $this->hasMany(DocDigitalRegistro::class)->orderByDesc('intento');
+    }
+
+    public function registroDocDigitalActual(): HasOne
+    {
+        return $this->hasOne(DocDigitalRegistro::class)->where('is_current', true)->latestOfMany('intento');
+    }
+
     public function scopeVisiblePara(Builder $query, User $user): Builder
     {
         if ($user->can('tramites.ver_todos')) {

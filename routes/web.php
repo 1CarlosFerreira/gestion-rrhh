@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CatalogoController;
 use App\Http\Controllers\Admin\DocumentoPlantillaController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\DocDigitalController;
 use App\Http\Controllers\DotacionController;
 use App\Http\Controllers\GestionPersonasBandejaController;
 use App\Http\Controllers\HorasExtraController;
@@ -52,6 +53,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/tramites/nuevo', [TramiteController::class, 'create'])->name('tramites.create');
     Route::post('/tramites', [TramiteController::class, 'store'])->name('tramites.store');
     Route::post('/tramites/{tramite}/adjuntos', [TramiteAdjuntoController::class, 'store'])->name('tramites.adjuntos.store');
+    Route::post('/tramites/{tramite}/docdigital/envios', [DocDigitalController::class, 'store'])->name('tramites.docdigital.store');
+    Route::post('/tramites/{tramite}/docdigital/formalizacion', [DocDigitalController::class, 'formalize'])->name('tramites.docdigital.formalize');
     Route::post('/tramites/{tramite}/adjuntos/{adjunto}/versiones', [TramiteAdjuntoController::class, 'version'])->name('tramites.adjuntos.version');
     Route::get('/tramites/{tramite}/adjuntos/{adjunto}/descargar', [TramiteAdjuntoController::class, 'download'])->name('tramites.adjuntos.download');
     Route::patch('/tramites/{tramite}/adjuntos/{adjunto}/anular', [TramiteAdjuntoController::class, 'annul'])->name('tramites.adjuntos.annul');

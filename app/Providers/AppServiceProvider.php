@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Actions\DocDigital\DocDigitalTransitionGuard;
 use App\Actions\HorasExtraordinarias\HorasExtraTransitionGuard;
 use App\Actions\Reemplazos\ReemplazoTransitionGuard;
 use App\Models\Tramite;
@@ -32,5 +33,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->tag(ReemplazoTransitionGuard::class, 'tramite.transition.guards');
         $this->app->singleton(HorasExtraTransitionGuard::class);
         $this->app->tag(HorasExtraTransitionGuard::class, 'tramite.transition.guards');
+        $this->app->singleton(DocDigitalTransitionGuard::class);
+        $this->app->tag(DocDigitalTransitionGuard::class, 'tramite.transition.guards');
     }
 }

@@ -152,15 +152,19 @@ class PhaseThreeCoreTransactionsTest extends TestCase
         }
     }
 
-    public function test_finalized_at_is_set_when_formalized(): void
+    public function test_formalization_requires_docdigital_evidence(): void
     {
         $tramite = $this->createAsAdmin('REEMPLAZO');
         $sent = EstadoTramite::query()->where(['tipo_tramite_id' => $tramite->tipo_tramite_id, 'codigo' => 'ENVIADA_DOCDIGITAL'])->firstOrFail();
         $tramite->update(['estado_tramite_id' => $sent->id]);
 
-        $result = app(TransicionarTramite::class)->execute($tramite, 'REGISTRAR_FORMALIZACION', $this->admin());
-        $this->assertSame('FORMALIZADA', $result->estadoTramite->codigo);
-        $this->assertNotNull($result->finalized_at);
+        try {
+            app(TransicionarTramite::class)->execute($tramite, 'REGISTRAR_FORMALIZACION', $this->admin());
+            $this->fail('Expected validation exception.');
+        } catch (ValidationException) {
+            $this->assertSame('ENVIADA_DOCDIGITAL', $tramite->fresh()->estadoTramite->codigo);
+            $this->assertNull($tramite->fresh()->finalized_at);
+        }
     }
 
     public function test_visibility_policy_combines_own_unit_and_global_permissions(): void
@@ -188,9 +192,7 @@ class PhaseThreeCoreTransactionsTest extends TestCase
     public function test_origin_link_is_nullable_and_phase_four_tables_do_not_exist(): void
     {
         $this->assertTrue(Schema::hasColumn('persona_unidad_vinculos', 'origen_tramite_id'));
-        foreach (['docdigital_registros'] as $table) {
-            $this->assertFalse(Schema::hasTable($table));
-        }
+        $this->assertTrue(Schema::hasTable('docdigital_registros'));
     }
 
     public function test_history_events_cannot_be_modified_or_deleted_through_application_model(): void

@@ -144,7 +144,7 @@ class PhaseSevenDocumentGenerationTest extends TestCase
     {
         $document = app(GenerarInformeTecnicoHorasExtra::class)->execute($this->prepared(1), $this->jefe());
         $this->assertStringEndsWith('.xlsx', $document->adjunto->stored_name);
-        $this->assertFalse(Schema::hasTable('docdigital_registros'));
+        $this->assertTrue(Schema::hasTable('docdigital_registros'));
         foreach (['firma', 'signature', 'certificado'] as $column) {
             $this->assertFalse(Schema::hasColumn('documentos_generados', $column));
         }

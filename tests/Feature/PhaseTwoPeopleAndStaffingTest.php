@@ -108,8 +108,6 @@ class PhaseTwoPeopleAndStaffingTest extends TestCase
     public function test_link_status_is_varchar_and_phase_four_tables_do_not_exist(): void
     {
         $this->assertSame('varchar', Schema::getColumnType('persona_unidad_vinculos', 'status'));
-        foreach (['docdigital_registros'] as $table) {
-            $this->assertFalse(Schema::hasTable($table));
-        }
+        $this->assertTrue(Schema::hasTable('docdigital_registros'));
     }
 }
