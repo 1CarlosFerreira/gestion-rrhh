@@ -45,6 +45,7 @@ class TramiteController extends Controller
 
     public function store(StoreTramiteRequest $request, CrearTramite $crear): RedirectResponse
     {
+        abort_unless($request->user()->can('tramites.ver_todos'), 403);
         $tramite = $crear->execute(
             TipoTramite::query()->findOrFail($request->integer('tipo_tramite_id')),
             UnidadServicio::query()->findOrFail($request->integer('unidad_servicio_id')),

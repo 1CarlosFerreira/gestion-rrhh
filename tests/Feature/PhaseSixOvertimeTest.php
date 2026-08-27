@@ -65,7 +65,9 @@ class PhaseSixOvertimeTest extends TestCase
         $tramite = $this->create([1]);
         $admin = $this->admin();
         $ids = Persona::query()->limit(2)->pluck('id')->all();
-        app(GuardarBorradorHorasExtra::class)->execute($tramite, UnidadServicio::query()->skip(1)->firstOrFail(), 2027, 12, $ids, $admin);
+        $newUnit = UnidadServicio::query()->skip(1)->firstOrFail();
+        Persona::query()->whereIn('id', $ids)->each(fn (Persona $persona) => $persona->vinculos()->firstOrCreate(['unidad_servicio_id' => $newUnit->id], ['status' => 'ACTIVO']));
+        app(GuardarBorradorHorasExtra::class)->execute($tramite, $newUnit, 2027, 12, $ids, $admin);
         $this->assertSame(12, $tramite->fresh()->horasExtra->month);
         $this->assertCount(2, $tramite->fresh()->horasExtra->funcionarios);
     }

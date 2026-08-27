@@ -46,7 +46,7 @@ class ReemplazoController extends Controller
         abort_unless($tramite->tipoTramite()->value('codigo') === 'REEMPLAZO' && auth()->user()->can('reemplazos.crear') && in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_CORRECCION'], true), 403);
         $tramite->load(['reemplazo.funcionario', 'reemplazo.funcionarioVinculo', 'reemplazo.reemplazante']);
 
-        return view('reemplazos.edit', ['tramite' => $tramite, ...$this->catalogs()]);
+        return view('reemplazos.edit', ['tramite' => $tramite, ...$this->catalogs($tramite)]);
     }
 
     public function update(SaveReemplazoRequest $request, Tramite $tramite, GuardarBorradorReemplazo $guardar): RedirectResponse
@@ -97,15 +97,21 @@ class ReemplazoController extends Controller
         return back()->with('status', 'Revisión completada.');
     }
 
-    private function catalogs(): array
+    private function catalogs(Tramite $tramite): array
     {
+        $today = now()->toDateString();
+
         return [
             'tiposReemplazo' => TipoReemplazo::query()->where('activo', true)->orderBy('nombre')->get(),
             'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(),
             'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(),
             'grados' => GradoEus::query()->where('activo', true)->orderBy('grado')->get(),
             'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
-            'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->orderBy('nombres')->get(),
+            'funcionariosUnidad' => Persona::query()->where('active', true)
+                ->with(['vinculos' => fn ($query) => $query->where('unidad_servicio_id', $tramite->unidad_servicio_id)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today))->with(['estamento', 'profesion'])])
+                ->whereHas('vinculos', fn ($query) => $query->where('unidad_servicio_id', $tramite->unidad_servicio_id)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today)))
+                ->orderBy('apellido_paterno')->orderBy('nombres')->get(),
+            'personas' => Persona::query()->where('active', true)->with(['vinculos.unidad', 'vinculos.estamento', 'vinculos.profesion'])->orderBy('apellido_paterno')->orderBy('nombres')->get(),
         ];
     }
 }

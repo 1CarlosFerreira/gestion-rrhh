@@ -31,6 +31,17 @@ class GuardarBorradorHorasExtra
         if ($month < 1 || $month > 12 || $year < 2000 || $year > 2100) {
             throw ValidationException::withMessages(['periodo' => 'El período no es válido.']);
         }
+        $validCount = DB::table('persona_unidad_vinculos')
+            ->where('unidad_servicio_id', $unidad->id)
+            ->where('status', 'ACTIVO')
+            ->whereIn('persona_id', $ids)
+            ->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', now()->toDateString()))
+            ->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString()))
+            ->distinct()
+            ->count('persona_id');
+        if ($ids === [] || $validCount !== count($ids)) {
+            throw ValidationException::withMessages(['persona_ids' => 'Todos los funcionarios deben tener un vínculo ACTIVO y vigente en la unidad seleccionada.']);
+        }
 
         return DB::transaction(function () use ($tramite, $unidad, $year, $month, $ids, $user): Tramite {
             $detail = $tramite->horasExtra()->lockForUpdate()->firstOrFail();

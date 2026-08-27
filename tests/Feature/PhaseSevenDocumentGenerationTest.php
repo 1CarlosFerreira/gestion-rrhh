@@ -38,6 +38,8 @@ class PhaseSevenDocumentGenerationTest extends TestCase
         for ($i = 1; $i <= 12; $i++) {
             Persona::query()->firstOrCreate(['rut' => sprintf('%08d-%d', 50000000 + $i, $i % 10)], ['nombres' => 'Persona '.$i, 'apellido_paterno' => 'Ficticia', 'active' => true]);
         }
+        $unit = $this->unit();
+        Persona::query()->each(fn (Persona $persona) => $persona->vinculos()->firstOrCreate(['unidad_servicio_id' => $unit->id], ['status' => 'ACTIVO']));
     }
 
     public function test_real_template_is_registered_without_replacement_template(): void

@@ -21,6 +21,9 @@ class CrearHorasExtraordinarias
         if (! $user->can('horas_extra.crear')) {
             throw new AuthorizationException('No tiene permiso para crear solicitudes de horas extraordinarias.');
         }
+        if (! $unidad->activo || (! $user->can('tramites.ver_todos') && ! $user->unidadesHabilitadas()->whereKey($unidad->id)->exists())) {
+            throw new AuthorizationException('La unidad no está habilitada para el usuario.');
+        }
         $ids = array_values(array_unique(array_map('intval', $personaIds)));
         if ($ids === [] || count($ids) !== count($personaIds)) {
             throw ValidationException::withMessages(['persona_ids' => 'Debe seleccionar funcionarios sin duplicados.']);
@@ -31,6 +34,7 @@ class CrearHorasExtraordinarias
         if (DB::table('personas')->whereIn('id', $ids)->where('active', true)->count() !== count($ids)) {
             throw ValidationException::withMessages(['persona_ids' => 'Todos los funcionarios deben existir y estar activos.']);
         }
+        $this->validateUnitLinks($unidad, $ids);
 
         return DB::transaction(function () use ($unidad, $year, $month, $ids, $user): Tramite {
             $tipo = TipoTramite::query()->where('codigo', 'HORAS_EXTRAORDINARIAS')->where('activo', true)->firstOrFail();
@@ -47,5 +51,21 @@ class CrearHorasExtraordinarias
 
             return $tramite->refresh();
         });
+    }
+
+    private function validateUnitLinks(UnidadServicio $unidad, array $personIds): void
+    {
+        $validCount = DB::table('persona_unidad_vinculos')
+            ->where('unidad_servicio_id', $unidad->id)
+            ->where('status', 'ACTIVO')
+            ->whereIn('persona_id', $personIds)
+            ->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', now()->toDateString()))
+            ->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString()))
+            ->distinct()
+            ->count('persona_id');
+
+        if ($validCount !== count($personIds)) {
+            throw ValidationException::withMessages(['persona_ids' => 'Todos los funcionarios deben tener un vínculo ACTIVO y vigente en la unidad seleccionada.']);
+        }
     }
 }

@@ -37,7 +37,7 @@ class HorasExtraController extends Controller
     {
         $tramite = $crear->execute(UnidadServicio::findOrFail($request->integer('unidad_servicio_id')), $request->integer('year'), $request->integer('month'), $request->input('persona_ids'), $request->user());
 
-        return redirect()->route('horas-extra.edit', $tramite)->with('status', 'Borrador creado.');
+        return redirect()->route('horas-extra.edit', $tramite)->with('status', 'Borrador creado correctamente.');
     }
 
     public function edit(Request $request, Tramite $tramite): View
@@ -46,7 +46,7 @@ class HorasExtraController extends Controller
         abort_unless($request->user()->can('horas_extra.crear') && $tramite->tipoTramite()->value('codigo') === 'HORAS_EXTRAORDINARIAS' && $tramite->estadoTramite()->value('codigo') === 'BORRADOR', 403);
         $tramite->load('horasExtra.funcionarios');
 
-        return view('horas-extra.edit', ['tramite' => $tramite, ...$this->formData($request)]);
+        return view('horas-extra.edit', ['tramite' => $tramite, ...$this->formData($request, $tramite)]);
     }
 
     public function update(SaveHorasExtraRequest $request, Tramite $tramite, GuardarBorradorHorasExtra $guardar): RedirectResponse
@@ -126,11 +126,21 @@ class HorasExtraController extends Controller
         abort_unless($funcionario->tramiteHorasExtra()->where('tramite_id', $tramite->id)->exists(), 404);
     }
 
-    private function formData(Request $request): array
+    private function formData(Request $request, ?Tramite $tramite = null): array
     {
         $unidades = $request->user()->can('tramites.ver_todos') ? UnidadServicio::query()->where('activo', true)->orderBy('nombre')->get() : $request->user()->unidadesHabilitadas()->where('activo', true)->orderBy('nombre')->get();
-        $personas = Persona::query()->with(['vinculosOperativos.unidad', 'vinculosOperativos.estamento', 'vinculosOperativos.profesion'])->where('active', true)->orderBy('apellido_paterno')->orderBy('nombres')->get();
+        $selectedUnidadId = $request->integer('unidad_servicio_id') ?: (int) old('unidad_servicio_id', $tramite?->unidad_servicio_id ?? $unidades->first()?->id);
+        if (! $unidades->contains('id', $selectedUnidadId)) {
+            $selectedUnidadId = (int) $unidades->first()?->id;
+        }
+        $today = now()->toDateString();
+        $personas = Persona::query()
+            ->with(['vinculos' => fn ($query) => $query->where('unidad_servicio_id', $selectedUnidadId)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today))->with(['unidad', 'estamento', 'profesion'])])
+            ->where('active', true)
+            ->whereHas('vinculos', fn ($query) => $query->where('unidad_servicio_id', $selectedUnidadId)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today)))
+            ->orderBy('apellido_paterno')->orderBy('nombres')->get();
+        $selectedUnidad = $unidades->firstWhere('id', $selectedUnidadId);
 
-        return compact('unidades', 'personas');
+        return compact('unidades', 'personas', 'selectedUnidadId', 'selectedUnidad');
     }
 }

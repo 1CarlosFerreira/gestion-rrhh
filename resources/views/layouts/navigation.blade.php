@@ -15,18 +15,10 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         Inicio
                     </x-nav-link>
-                    @can('personas.ver')
-                        <x-nav-link :href="route('personas.index')" :active="request()->routeIs('personas.*')">Personas</x-nav-link>
-                    @endcan
                     @canany(['tramites.ver_propios', 'tramites.ver_unidad', 'tramites.ver_todos'])
-                        <x-nav-link :href="route('tramites.index')" :active="request()->routeIs('tramites.*')">Trámites</x-nav-link>
+                        <x-nav-link :href="route('tramites.index')" :active="request()->routeIs('tramites.*')">{{ auth()->user()->can('tramites.ver_todos') ? 'Trámites' : 'Mis trámites' }}</x-nav-link>
                     @endcanany
-                    @can('reemplazos.crear')
-                        <x-nav-link :href="route('reemplazos.create')" :active="request()->routeIs('reemplazos.*')">Nuevo reemplazo</x-nav-link>
-                    @endcan
-                    @can('horas_extra.crear')
-                        <x-nav-link :href="route('horas-extra.create')" :active="request()->routeIs('horas-extra.*')">Nuevas horas extra</x-nav-link>
-                    @endcan
+                    @if(auth()->user()->can('tramites.ver_todos')) @can('personas.ver')<x-nav-link :href="route('personas.index')" :active="request()->routeIs('personas.*')">Personas</x-nav-link>@endcan @endif
                     @can('tramites.ver_todos')
                         <x-nav-link :href="route('gestion-personas.bandeja')" :active="request()->routeIs('gestion-personas.*')">Bandeja GP</x-nav-link>
                     @endcan
@@ -43,38 +35,18 @@
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
-
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            Perfil
-                        </x-dropdown-link>
-
-                        <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                Cerrar sesión
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
+            <!-- Authenticated user -->
+            <div class="hidden items-center gap-4 sm:flex sm:ms-6">
+                <a href="{{ route('profile.edit') }}" class="text-sm font-medium text-gray-700 hover:text-gray-900">
+                    {{ Auth::user()->name }}
+                </a>
+                <a href="{{ route('profile.edit') }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">Mi perfil</a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Cerrar sesión
+                    </button>
+                </form>
             </div>
 
             <!-- Hamburger -->
@@ -95,18 +67,10 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 Inicio
             </x-responsive-nav-link>
-            @can('personas.ver')
-                <x-responsive-nav-link :href="route('personas.index')">Personas</x-responsive-nav-link>
-            @endcan
             @canany(['tramites.ver_propios', 'tramites.ver_unidad', 'tramites.ver_todos'])
-                <x-responsive-nav-link :href="route('tramites.index')">Trámites</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('tramites.index')">{{ auth()->user()->can('tramites.ver_todos') ? 'Trámites' : 'Mis trámites' }}</x-responsive-nav-link>
             @endcanany
-            @can('reemplazos.crear')
-                <x-responsive-nav-link :href="route('reemplazos.create')">Nuevo reemplazo</x-responsive-nav-link>
-            @endcan
-            @can('horas_extra.crear')
-                <x-responsive-nav-link :href="route('horas-extra.create')">Nuevas horas extra</x-responsive-nav-link>
-            @endcan
+            @if(auth()->user()->can('tramites.ver_todos')) @can('personas.ver')<x-responsive-nav-link :href="route('personas.index')">Personas</x-responsive-nav-link>@endcan @endif
             @can('tramites.ver_todos')
                 <x-responsive-nav-link :href="route('gestion-personas.bandeja')">Bandeja GP</x-responsive-nav-link>
             @endcan
@@ -131,18 +95,14 @@
 
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
-                    Perfil
+                    Mi perfil
                 </x-responsive-nav-link>
 
-                <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
+                    <button type="submit" class="block w-full px-4 py-2 text-start text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800 focus:bg-gray-50 focus:text-gray-800 focus:outline-none">
                         Cerrar sesión
-                    </x-responsive-nav-link>
+                    </button>
                 </form>
             </div>
         </div>

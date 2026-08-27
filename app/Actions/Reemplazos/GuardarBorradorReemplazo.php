@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\Rut\Rut;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class GuardarBorradorReemplazo
 {
@@ -17,8 +18,13 @@ class GuardarBorradorReemplazo
         if (! $user->can('reemplazos.crear') || Gate::forUser($user)->denies('view', $tramite) || ! in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_CORRECCION'], true)) {
             throw new AuthorizationException('El reemplazo no se puede editar en su estado actual.');
         }
-        if (($data['funcionario_vinculo_id'] ?? null) && ! PersonaUnidadVinculo::query()->whereKey($data['funcionario_vinculo_id'])->where('persona_id', $data['funcionario_id'] ?? 0)->exists()) {
-            throw new \InvalidArgumentException('El vínculo no corresponde al funcionario seleccionado.');
+        if ($data['funcionario_id'] ?? null) {
+            $today = now()->toDateString();
+            $vinculo = PersonaUnidadVinculo::query()->where('persona_id', $data['funcionario_id'])->where('unidad_servicio_id', $tramite->unidad_servicio_id)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today))->first();
+            if (! $vinculo || (($data['funcionario_vinculo_id'] ?? null) && (int) $data['funcionario_vinculo_id'] !== $vinculo->id)) {
+                throw ValidationException::withMessages(['funcionario_id' => 'El funcionario debe pertenecer a la dotación vigente de la unidad del trámite.']);
+            }
+            $data['funcionario_vinculo_id'] = $vinculo->id;
         }
         $reemplazanteId = $data['reemplazante_id'] ?? null;
         if (! $reemplazanteId && ($data['nuevo_reemplazante_rut'] ?? null)) {

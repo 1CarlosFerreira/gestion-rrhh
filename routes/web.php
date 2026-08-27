@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CatalogoController;
 use App\Http\Controllers\Admin\DocumentoPlantillaController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocDigitalController;
 use App\Http\Controllers\DotacionController;
 use App\Http\Controllers\GestionPersonasBandejaController;
@@ -18,9 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -79,6 +78,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/dotacion', [DotacionController::class, 'index'])->middleware('can:dotacion.ver')->name('dotacion.index');
+    Route::get('/dotacion/personas/{persona}', [DotacionController::class, 'show'])->middleware('can:dotacion.ver')->name('dotacion.show');
 
     Route::middleware('can:admin.usuarios')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
