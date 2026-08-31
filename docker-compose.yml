@@ -70,7 +70,7 @@ services:
     image: node:22-alpine
     working_dir: /var/www/html
     restart: unless-stopped
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm install && npm run dev"
     ports:
       - "127.0.0.1:${VITE_PORT:-5173}:5173"
     volumes:

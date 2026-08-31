@@ -6,7 +6,7 @@ Infraestructura base del sistema interno del Hospital de Illapel. Usa Laravel 12
 
 - WSL2 con Ubuntu (no la distribución `docker-desktop`).
 - Docker con Compose e integración habilitada en la distribución.
-- Puertos 80, 3306 y 5173 disponibles. Se pueden cambiar con `APP_PORT`, `DB_PORT_FORWARD` y `VITE_PORT`.
+- Puertos 8080, 3306 y 5173 disponibles. Se pueden cambiar con `APP_PORT`, `DB_PORT_FORWARD` y `VITE_PORT`.
 
 ## Primer arranque
 
@@ -18,7 +18,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-La aplicación queda en <http://localhost>. MySQL y Vite se enlazan exclusivamente a `127.0.0.1`.
+La aplicación queda en la URL definida por `APP_URL` (por defecto, <http://localhost:8080>). MySQL y Vite se enlazan exclusivamente a `127.0.0.1`.
 
 ## Operación habitual
 
@@ -68,6 +68,8 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://url-institucional.example
 ```
+
+En desarrollo, `APP_URL` es el origen de Laravel y debe coincidir con `APP_PORT` (por ejemplo, `http://localhost:8080` y `8080`). Vite sigue publicando assets en `VITE_PORT` (5173 por defecto) y permite por CORS exclusivamente el origen de `APP_URL`. Si el navegador debe alcanzar Vite mediante otro host, se puede definir `VITE_DEV_SERVER_URL`; de no hacerlo se usa `http://localhost:${VITE_PORT}`.
 
 PHP y Laravel usan `America/Santiago`. Los documentos de RRHH deberán mantenerse en almacenamiento privado, sin enlaces desde `public/storage`.
 

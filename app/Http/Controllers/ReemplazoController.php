@@ -7,6 +7,7 @@ use App\Actions\Reemplazos\CrearReemplazo;
 use App\Actions\Reemplazos\EnviarReemplazo;
 use App\Actions\Reemplazos\GuardarBorradorReemplazo;
 use App\Actions\Reemplazos\GuardarRevisionReemplazo;
+use App\Actions\Tramites\Adjuntos\CargarAdjunto;
 use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\SaveReemplazoRequest;
 use App\Http\Requests\SaveRevisionReemplazoRequest;
@@ -15,6 +16,7 @@ use App\Models\Estamento;
 use App\Models\GradoEus;
 use App\Models\Persona;
 use App\Models\Profesion;
+use App\Models\TipoDocumento;
 use App\Models\TipoReemplazo;
 use App\Models\Tramite;
 use App\Models\UnidadServicio;
@@ -22,6 +24,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
+use Throwable;
 
 class ReemplazoController extends Controller
 {
@@ -30,21 +33,36 @@ class ReemplazoController extends Controller
         abort_unless($request->user()->can('reemplazos.crear'), 403);
         $unidades = $request->user()->can('tramites.ver_todos') ? UnidadServicio::query()->where('activo', true)->orderBy('nombre')->get() : $request->user()->unidadesHabilitadas()->where('activo', true)->orderBy('nombre')->get();
 
-        return view('reemplazos.create', compact('unidades'));
+        return view('reemplazos.create', [
+            'unidades' => $unidades,
+            ...$this->catalogsForUnits($unidades->pluck('id')->all()),
+        ]);
     }
 
-    public function store(SaveReemplazoRequest $request, CrearReemplazo $crear): RedirectResponse
+    public function store(SaveReemplazoRequest $request, CrearReemplazo $crear, CargarAdjunto $cargarAdjunto): RedirectResponse
     {
-        $tramite = $crear->execute(UnidadServicio::query()->findOrFail($request->integer('unidad_servicio_id')), $request->user());
+        $tramite = $crear->execute(UnidadServicio::query()->findOrFail($request->integer('unidad_servicio_id')), $request->user(), $request->validated());
 
-        return redirect()->route('reemplazos.edit', $tramite);
+        if ($request->hasFile('archivo')) {
+            try {
+                $cargarAdjunto->execute($tramite, $request->file('archivo'), $request->user(), $request->integer('tipo_documento_id') ?: null);
+
+                return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Borrador creado correctamente y documento adjuntado.');
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return redirect()->route('reemplazos.edit', $tramite)->with('upload_error', 'El borrador fue guardado, pero el documento no pudo adjuntarse.');
+            }
+        }
+
+        return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Borrador creado correctamente.');
     }
 
     public function edit(Tramite $tramite): View
     {
         Gate::authorize('view', $tramite);
         abort_unless($tramite->tipoTramite()->value('codigo') === 'REEMPLAZO' && auth()->user()->can('reemplazos.crear') && in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_CORRECCION'], true), 403);
-        $tramite->load(['reemplazo.funcionario', 'reemplazo.funcionarioVinculo', 'reemplazo.reemplazante']);
+        $tramite->load(['reemplazo.funcionario', 'reemplazo.funcionarioVinculo', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']);
 
         return view('reemplazos.edit', ['tramite' => $tramite, ...$this->catalogs($tramite)]);
     }
@@ -99,19 +117,27 @@ class ReemplazoController extends Controller
 
     private function catalogs(Tramite $tramite): array
     {
+        return [
+            ...$this->catalogsForUnits([$tramite->unidad_servicio_id]),
+            'grados' => GradoEus::query()->where('activo', true)->orderBy('grado')->get(),
+            'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
+        ];
+    }
+
+    private function catalogsForUnits(array $unitIds): array
+    {
         $today = now()->toDateString();
 
         return [
             'tiposReemplazo' => TipoReemplazo::query()->where('activo', true)->orderBy('nombre')->get(),
             'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(),
             'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(),
-            'grados' => GradoEus::query()->where('activo', true)->orderBy('grado')->get(),
-            'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
             'funcionariosUnidad' => Persona::query()->where('active', true)
-                ->with(['vinculos' => fn ($query) => $query->where('unidad_servicio_id', $tramite->unidad_servicio_id)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today))->with(['estamento', 'profesion'])])
-                ->whereHas('vinculos', fn ($query) => $query->where('unidad_servicio_id', $tramite->unidad_servicio_id)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today)))
+                ->with(['vinculos' => fn ($query) => $query->whereIn('unidad_servicio_id', $unitIds)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today))->with(['estamento', 'profesion'])])
+                ->whereHas('vinculos', fn ($query) => $query->whereIn('unidad_servicio_id', $unitIds)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today)))
                 ->orderBy('apellido_paterno')->orderBy('nombres')->get(),
             'personas' => Persona::query()->where('active', true)->with(['vinculos.unidad', 'vinculos.estamento', 'vinculos.profesion'])->orderBy('apellido_paterno')->orderBy('nombres')->get(),
+            'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get(),
         ];
     }
 }

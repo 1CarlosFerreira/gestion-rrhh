@@ -11,16 +11,21 @@ use Illuminate\Support\Facades\DB;
 
 class CrearReemplazo
 {
-    public function __construct(private readonly CrearTramite $crearTramite) {}
+    public function __construct(
+        private readonly CrearTramite $crearTramite,
+        private readonly GuardarBorradorReemplazo $guardarBorrador,
+    ) {}
 
-    public function execute(UnidadServicio $unidad, User $user): Tramite
+    public function execute(UnidadServicio $unidad, User $user, array $data = []): Tramite
     {
-        return DB::transaction(function () use ($unidad, $user): Tramite {
+        return DB::transaction(function () use ($unidad, $user, $data): Tramite {
             $tipo = TipoTramite::query()->where(['codigo' => 'REEMPLAZO', 'activo' => true])->firstOrFail();
             $tramite = $this->crearTramite->execute($tipo, $unidad, $user);
             $tramite->reemplazo()->create();
 
-            return $tramite->load('reemplazo');
+            $tramite->load(['estadoTramite', 'reemplazo']);
+
+            return $data === [] ? $tramite : $this->guardarBorrador->execute($tramite, $data, $user);
         });
     }
 }

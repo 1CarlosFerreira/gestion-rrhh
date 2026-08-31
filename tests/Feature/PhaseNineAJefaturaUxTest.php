@@ -59,7 +59,7 @@ class PhaseNineAJefaturaUxTest extends TestCase
         $this->actingAs($this->jefe())->get(route('reemplazos.edit', $tramite))->assertOk()
             ->assertSee('Funcionario a reemplazar')->assertSee($valid->nombre_completo)
             ->assertSee($other->nombre_completo)
-            ->assertSee('+ Registrar nuevo reemplazante')->assertSee('Fecha de inicio')->assertSee('Fecha de término');
+            ->assertSee('+ Agregar reemplazante que no está en la lista')->assertSee('Fecha de inicio')->assertSee('Fecha de término');
     }
 
     public function test_replacement_backend_rejects_employee_from_another_unit_and_reuses_replacement(): void
