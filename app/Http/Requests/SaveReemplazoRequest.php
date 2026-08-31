@@ -34,7 +34,7 @@ class SaveReemplazoRequest extends FormRequest
             'justificacion' => ['nullable', 'string', 'max:5000'],
             'fecha_inicio' => ['nullable', 'date'],
             'fecha_termino' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
-            'accion' => ['nullable', Rule::in(['guardar', 'adjuntar'])],
+            'accion' => ['nullable', Rule::in(['guardar', 'adjuntar', 'enviar'])],
             'archivo' => ['required_if:accion,adjuntar', 'nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,csv,jpg,jpeg,png'],
             'tipo_documento_id' => ['nullable', 'integer', Rule::exists('tipos_documento', 'id')->where('active', true)],
         ];

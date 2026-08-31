@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Actions\Reemplazos\CrearReemplazo;
 use App\Actions\Tramites\Adjuntos\CargarAdjunto;
+use App\Models\Estamento;
 use App\Models\Persona;
+use App\Models\Profesion;
 use App\Models\TipoDocumento;
 use App\Models\TipoReemplazo;
 use App\Models\TipoTramite;
@@ -364,6 +366,72 @@ class ReemplazoUnifiedCreationTest extends TestCase
         $this->assertSame('REEMPLAZADO', $first->fresh()->status);
         $this->assertSame(2, $version->version);
         $this->assertSame($documentType->id, $version->tipo_documento_id);
+    }
+
+    public function test_sending_from_edit_saves_current_values_transitions_and_preserves_attachments(): void
+    {
+        $unit = $this->unit();
+        $employee = Persona::query()->whereHas('vinculos', fn ($query) => $query->where('unidad_servicio_id', $unit->id)->where('status', 'ACTIVO'))->firstOrFail();
+        $replacement = Persona::query()->whereKeyNot($employee->id)->firstOrFail();
+        $tramite = app(CrearReemplazo::class)->execute($unit, $this->jefe());
+        $adjunto = app(CargarAdjunto::class)->execute($tramite, UploadedFile::fake()->createWithContent('respaldo.pdf', "%PDF-1.4\nrespaldo"), $this->jefe());
+
+        $response = $this->actingAs($this->jefe())->put(route('reemplazos.update', $tramite), [
+            'accion' => 'enviar',
+            'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id,
+            'funcionario_id' => $employee->id,
+            'reemplazante_id' => $replacement->id,
+            'estamento_id' => Estamento::query()->firstOrFail()->id,
+            'profesion_id' => Profesion::query()->firstOrFail()->id,
+            'justificacion' => 'Justificación ficticia enviada junto con los últimos cambios.',
+            'fecha_inicio' => '2026-09-01',
+            'fecha_termino' => '2026-09-30',
+        ]);
+
+        $response->assertRedirect(route('tramites.show', $tramite))
+            ->assertSessionHas('status', 'Solicitud enviada correctamente a Gestión de Personas.');
+        $sent = $tramite->fresh(['estadoTramite', 'reemplazo']);
+        $this->assertSame('ENVIADA_GESTION_PERSONAS', $sent->estadoTramite->codigo);
+        $this->assertSame($replacement->id, $sent->reemplazo->reemplazante_id);
+        $this->assertNotNull($sent->reemplazo->reemplazante_snapshot);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
+        $this->assertDatabaseHas('tramite_adjuntos', ['id' => $adjunto->id, 'tramite_id' => $tramite->id]);
+        $this->actingAs($this->jefe())->get(route('reemplazos.edit', $tramite))->assertForbidden();
+    }
+
+    public function test_send_validation_returns_to_edit_with_visible_errors_and_action_bar(): void
+    {
+        $tramite = app(CrearReemplazo::class)->execute($this->unit(), $this->jefe());
+
+        $this->actingAs($this->jefe())->get(route('reemplazos.edit', $tramite))->assertOk()
+            ->assertSee('Antecedentes de la solicitud')
+            ->assertSee('Guardar borrador')
+            ->assertSee('Enviar a Gestión de Personas')
+            ->assertSee('Enviar solicitud a Gestión de Personas')
+            ->assertSee('¿Confirmas que deseas enviar esta solicitud?')
+            ->assertSee('Después del envío no podrás editarla mientras se encuentre en revisión.')
+            ->assertSee('role="dialog"', false)
+            ->assertSee('@keydown.escape.window', false)
+            ->assertSee('id="reemplazo-form"', false)
+            ->assertSee('x-ref="abrirEnvio"', false)
+            ->assertSee('@click="confirmarEnvio = true', false)
+            ->assertSee('type="button" @click="confirmarEnvio = false', false)
+            ->assertSee('type="submit" form="reemplazo-form" name="accion" value="enviar"', false)
+            ->assertSee('@submit="if ($event.submitter?.value === \'enviar\') enviando = true"', false)
+            ->assertSee('x-bind:disabled="enviando"', false)
+            ->assertDontSee('window.confirm', false);
+
+        $this->actingAs($this->jefe())->put(route('reemplazos.update', $tramite), [
+            'accion' => 'enviar',
+            'justificacion' => 'Este valor queda guardado aunque falten otros antecedentes.',
+        ])
+            ->assertRedirect(route('reemplazos.edit', $tramite))
+            ->assertSessionHas('send_error', 'No fue posible enviar la solicitud. Revisa los siguientes antecedentes:')
+            ->assertSessionHasErrors(['tipo_reemplazo_id', 'reemplazante_id', 'estamento_id', 'fecha_inicio', 'fecha_termino'])
+            ->assertSessionDoesntHaveErrors('justificacion');
+
+        $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertSame('Este valor queda guardado aunque falten otros antecedentes.', $tramite->fresh()->reemplazo->justificacion);
     }
 
     public function test_invalid_first_attachment_does_not_create_draft_or_file(): void

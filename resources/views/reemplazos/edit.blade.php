@@ -1,12 +1,32 @@
 <x-app-layout>
     <x-slot name="header"><h2 class="text-xl font-semibold text-gray-800">Editar {{ $tramite->codigo }} · {{ $tramite->estadoTramite->nombre }}</h2></x-slot>
-    <div class="py-10"><div class="mx-auto max-w-5xl space-y-4 px-4">
+    <div class="py-10"><div class="mx-auto max-w-5xl space-y-4 px-4" x-data="@js([
+        'unidad' => (string) old('unidad_servicio_id', $tramite->unidad_servicio_id),
+        'nuevo' => (bool) old('nuevo_reemplazante_rut'),
+        'confirmarEnvio' => false,
+        'enviando' => false,
+    ])">
         @if(session('status'))<div class="rounded bg-green-50 p-3">{{ session('status') }}</div>@endif
         @if(session('upload_error'))<div class="rounded bg-red-50 p-3 text-red-800">{{ session('upload_error') }}</div>@endif
-        <form method="POST" action="{{ route('reemplazos.update', $tramite) }}" class="space-y-6 rounded-lg bg-white p-6 shadow-sm" x-data="@js([
-            'unidad' => (string) old('unidad_servicio_id', $tramite->unidad_servicio_id),
-            'nuevo' => (bool) old('nuevo_reemplazante_rut'),
-        ])">@csrf @method('PUT')
+        @if(session('send_error'))
+            <section id="send-errors" tabindex="-1" role="alert" class="rounded border border-red-200 bg-red-50 p-4 text-red-900">
+                <p class="font-semibold">{{ session('send_error') }}</p>
+                <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+            </section>
+        @endif
+        <section class="rounded border border-gray-200 bg-gray-50 p-4">
+            <h3 class="font-semibold">Antecedentes de la solicitud</h3>
+            <ul class="mt-2 grid gap-1 text-sm md:grid-cols-2">
+                <li>{{ isset($sendErrors['tipo_reemplazo_id']) ? '⚠' : '✓' }} Tipo de reemplazo</li>
+                <li>{{ isset($sendErrors['reemplazante_id']) ? '⚠' : '✓' }} Reemplazante</li>
+                <li>{{ isset($sendErrors['estamento_id']) ? '⚠' : '✓' }} Estamento</li>
+                <li>{{ isset($sendErrors['justificacion']) ? '⚠' : '✓' }} Justificación</li>
+                <li>{{ isset($sendErrors['cargo_texto']) ? '⚠' : '✓' }} Profesión o cargo</li>
+                <li>{{ isset($sendErrors['fecha_inicio']) || isset($sendErrors['fecha_termino']) ? '⚠' : '✓' }} Período propuesto</li>
+                <li>{{ isset($sendErrors['documentos']) ? '⚠ '.$sendErrors['documentos'] : '✓ '.$tramite->adjuntos->count().' documentos adjuntos' }}</li>
+            </ul>
+        </section>
+        <form id="reemplazo-form" method="POST" action="{{ route('reemplazos.update', $tramite) }}" class="space-y-6 rounded-lg bg-white p-6 shadow-sm" @submit="if ($event.submitter?.value === 'enviar') enviando = true">@csrf @method('PUT')
             <section>
                 <h3 class="font-semibold">1. Origen del reemplazo</h3>
                 <p class="text-sm">Unidad: <strong>{{ $tramite->unidadServicio->nombre }}</strong></p>
@@ -44,8 +64,29 @@
                 </div>
             </section>
             <x-input-error :messages="$errors->all()"/>
-            <div class="flex justify-end"><x-primary-button>Guardar borrador</x-primary-button></div>
+            <div class="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white/95 p-3 shadow-sm backdrop-blur">
+                <span class="text-sm font-medium text-gray-700">{{ $tramite->codigo }} · {{ $tramite->estadoTramite->nombre }}</span>
+                <div class="flex flex-wrap gap-2">
+                    <x-secondary-button>{{ $tramite->estadoTramite->codigo === 'DEVUELTA_CORRECCION' ? 'Guardar cambios' : 'Guardar borrador' }}</x-secondary-button>
+                    <x-primary-button type="button" x-ref="abrirEnvio" @click="confirmarEnvio = true; $nextTick(() => $refs.confirmar.focus())" x-bind:disabled="confirmarEnvio || enviando">{{ $tramite->estadoTramite->codigo === 'DEVUELTA_CORRECCION' ? 'Reenviar a Gestión de Personas' : 'Enviar a Gestión de Personas' }}</x-primary-button>
+                </div>
+            </div>
         </form>
+        <div x-show="confirmarEnvio" x-cloak @keydown.escape.window="confirmarEnvio = false; $nextTick(() => $refs.abrirEnvio.focus())" @click.self="confirmarEnvio = false; $nextTick(() => $refs.abrirEnvio.focus())" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4" role="presentation">
+            <section role="dialog" aria-modal="true" aria-labelledby="confirmar-envio-titulo" class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+                <h3 id="confirmar-envio-titulo" class="text-lg font-semibold text-gray-900">Enviar solicitud a Gestión de Personas</h3>
+                <p class="mt-3 text-gray-700">¿Confirmas que deseas enviar esta solicitud?</p>
+                <p class="mt-2 text-sm text-gray-600">Después del envío no podrás editarla mientras se encuentre en revisión.</p>
+                <dl class="mt-4 rounded bg-gray-50 p-3 text-sm text-gray-700">
+                    <div><dt class="inline font-medium">Trámite:</dt> <dd class="inline">{{ $tramite->codigo }}</dd></div>
+                    <div><dt class="inline font-medium">Unidad/Servicio:</dt> <dd class="inline">{{ $tramite->unidadServicio->nombre }}</dd></div>
+                </dl>
+                <div class="mt-6 flex flex-wrap justify-end gap-3">
+                    <button type="button" @click="confirmarEnvio = false; $nextTick(() => $refs.abrirEnvio.focus())" x-bind:disabled="enviando" class="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">Cancelar</button>
+                    <button x-ref="confirmar" type="submit" form="reemplazo-form" name="accion" value="enviar" x-bind:disabled="enviando" class="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60" x-text="enviando ? 'Enviando...' : 'Sí, enviar solicitud'">Sí, enviar solicitud</button>
+                </div>
+            </section>
+        </div>
         <section class="rounded-lg bg-white p-6 shadow-sm">
             <h3 class="font-semibold">5. Documentos de respaldo</h3>
             <div class="mt-4 space-y-3">
@@ -80,7 +121,6 @@
                 <x-primary-button>+ Adjuntar documento</x-primary-button>
             </form>
         </section>
-        <div class="flex justify-end"><form method="POST" action="{{ route('reemplazos.send', $tramite) }}">@csrf<x-secondary-button>Enviar a Gestión de Personas</x-secondary-button></form></div>
     </div></div>
     <script>
         const funcionario = document.getElementById('funcionario_id');

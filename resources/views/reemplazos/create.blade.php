@@ -106,7 +106,10 @@
                 </section>
 
                 <x-input-error :messages="$errors->all()"/>
-                <div class="flex justify-end"><x-primary-button name="accion" value="guardar">Guardar borrador</x-primary-button></div>
+                <div class="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white/95 p-3 shadow-sm backdrop-blur">
+                    <span class="text-sm font-medium text-gray-700">Estado: Nueva solicitud</span>
+                    <x-primary-button name="accion" value="guardar">Guardar borrador</x-primary-button>
+                </div>
             </form>
         </div>
     </div>

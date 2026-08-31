@@ -7,6 +7,7 @@ use App\Actions\Reemplazos\CrearReemplazo;
 use App\Actions\Reemplazos\EnviarReemplazo;
 use App\Actions\Reemplazos\GuardarBorradorReemplazo;
 use App\Actions\Reemplazos\GuardarRevisionReemplazo;
+use App\Actions\Reemplazos\ReemplazoTransitionGuard;
 use App\Actions\Tramites\Adjuntos\CargarAdjunto;
 use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\SaveReemplazoRequest;
@@ -23,6 +24,7 @@ use App\Models\UnidadServicio;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Throwable;
 
@@ -58,27 +60,41 @@ class ReemplazoController extends Controller
         return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Borrador creado correctamente.');
     }
 
-    public function edit(Tramite $tramite): View
+    public function edit(Tramite $tramite, ReemplazoTransitionGuard $guard): View
     {
         Gate::authorize('view', $tramite);
         abort_unless($tramite->tipoTramite()->value('codigo') === 'REEMPLAZO' && auth()->user()->can('reemplazos.crear') && in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_CORRECCION'], true), 403);
         $tramite->load(['reemplazo.funcionario', 'reemplazo.funcionarioVinculo', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']);
 
-        return view('reemplazos.edit', ['tramite' => $tramite, ...$this->catalogs($tramite)]);
+        return view('reemplazos.edit', ['tramite' => $tramite, 'sendErrors' => $guard->sendErrors($tramite), ...$this->catalogs($tramite)]);
     }
 
-    public function update(SaveReemplazoRequest $request, Tramite $tramite, GuardarBorradorReemplazo $guardar): RedirectResponse
+    public function update(SaveReemplazoRequest $request, Tramite $tramite, GuardarBorradorReemplazo $guardar, EnviarReemplazo $enviar): RedirectResponse
     {
         $guardar->execute($tramite->load(['estadoTramite', 'reemplazo']), $request->validated(), $request->user());
+
+        if ($request->input('accion') === 'enviar') {
+            try {
+                $enviar->execute($tramite->fresh(), $request->user());
+
+                return redirect()->route('tramites.show', $tramite)->with('status', 'Solicitud enviada correctamente a Gestión de Personas.');
+            } catch (ValidationException $exception) {
+                return redirect()->route('reemplazos.edit', $tramite)->withErrors($exception->errors())->withInput()->with('send_error', 'No fue posible enviar la solicitud. Revisa los siguientes antecedentes:');
+            }
+        }
 
         return back()->with('status', 'Borrador guardado.');
     }
 
     public function send(Request $request, Tramite $tramite, EnviarReemplazo $enviar): RedirectResponse
     {
-        $enviar->execute($tramite, $request->user());
+        try {
+            $enviar->execute($tramite, $request->user());
+        } catch (ValidationException $exception) {
+            return redirect()->route('reemplazos.edit', $tramite)->withErrors($exception->errors())->with('send_error', 'No fue posible enviar la solicitud. Revisa los siguientes antecedentes:');
+        }
 
-        return redirect()->route('tramites.show', $tramite)->with('status', 'Solicitud enviada a Gestión de Personas.');
+        return redirect()->route('tramites.show', $tramite)->with('status', 'Solicitud enviada correctamente a Gestión de Personas.');
     }
 
     public function startReview(Request $request, Tramite $tramite, TransicionarTramite $transition): RedirectResponse
