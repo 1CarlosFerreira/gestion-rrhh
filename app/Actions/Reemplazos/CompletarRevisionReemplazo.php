@@ -3,6 +3,7 @@
 namespace App\Actions\Reemplazos;
 
 use App\Actions\Tramites\TransicionarTramite;
+use App\Models\GradoEus;
 use App\Models\Tramite;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -21,11 +22,19 @@ class CompletarRevisionReemplazo
 
         return DB::transaction(function () use ($tramite, $user): Tramite {
             $revision = $tramite->revisionReemplazo()->first();
+            $approvedWithoutGrade = ! $revision?->grado_eus_id
+                && ! GradoEus::query()->where('activo', true)->exists();
+
             if ($revision) {
                 $revision->update(['completed_by' => $user->id, 'completed_at' => now()]);
             }
 
-            return $this->transicionar->execute($tramite, 'COMPLETAR_REVISION', $user);
+            return $this->transicionar->execute(
+                $tramite,
+                'COMPLETAR_REVISION',
+                $user,
+                $approvedWithoutGrade ? 'Revisión aprobada sin Grado E.U.S. porque el catálogo no tenía valores activos.' : null,
+            );
         });
     }
 }

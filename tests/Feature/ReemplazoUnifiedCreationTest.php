@@ -15,6 +15,7 @@ use App\Models\TramiteAdjunto;
 use App\Models\TramiteReemplazo;
 use App\Models\UnidadServicio;
 use App\Models\User;
+use App\Models\UserUnidad;
 use App\Support\Rut\Rut;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -38,20 +39,24 @@ class ReemplazoUnifiedCreationTest extends TestCase
         $before = Tramite::query()->count();
 
         $this->actingAs($this->jefe())->get(route('reemplazos.create'))->assertOk()
-            ->assertSee('Nueva Solicitud de Reemplazo')
+            ->assertSee('Solicitud de Reemplazo')
             ->assertSee('Estado: Nueva solicitud')
-            ->assertSee('1. Origen del reemplazo')
-            ->assertSee('2. Justificación')
-            ->assertSee('3. Reemplazante propuesto')
+            ->assertSee('1. Origen del reemplazo y justificación')
+            ->assertSee('2. Reemplazante propuesto')
             ->assertSee('x-data="JSON.parse(\'', false)
             ->assertSee('\\u0022unidad\\u0022:\\u0022\\u0022', false)
             ->assertSee('\\u0022nuevo\\u0022:false', false)
             ->assertDontSee("x-data='JSON.parse('", false)
             ->assertSee('id="buscar_reemplazante"', false)
-            ->assertSee('>+ Agregar reemplazante que no está en la lista</button>', false)
-            ->assertSee('4. Función y período propuesto')
-            ->assertSee('5. Documentos de respaldo')
-            ->assertSee('Adjunte los antecedentes necesarios para respaldar la solicitud.')
+            ->assertSee('>+ Registrar nuevo reemplazante</button>', false)
+            ->assertSee('3. Función y período')
+            ->assertSee('4. Documentos de respaldo')
+            ->assertSee('grid grid-cols-1 items-start gap-6 lg:grid-cols-2', false)
+            ->assertSee('sticky top-20', false)
+            ->assertDontSee('>Solicitud de Reemplazo</h2><p class="text-sm text-gray-600">Estado: Nueva solicitud</p>', false)
+            ->assertSee('Guarda primero el borrador para poder adjuntar documentos.')
+            ->assertDontSee('id="adjuntar-documento"', false)
+            ->assertDontSee('actualizarAccionAdjunto', false)
             ->assertSee('Guardar borrador')
             ->assertDontSee('Crear borrador');
 
@@ -71,6 +76,22 @@ class ReemplazoUnifiedCreationTest extends TestCase
 
         $activePerson = Persona::query()->whereHas('vinculos', fn ($query) => $query->where('unidad_servicio_id', $authorized->id)->where('status', 'ACTIVO'))->firstOrFail();
         $response->assertSee('data-unidad="'.$authorized->id.'"', false)->assertSee($activePerson->nombre_completo);
+    }
+
+    public function test_create_preselects_a_single_authorized_unit_and_blocks_a_jefe_without_units(): void
+    {
+        $jefe = $this->jefe();
+        $unit = $jefe->unidadesHabilitadas()->firstOrFail();
+        UserUnidad::query()->where('user_id', $jefe->id)->where('unidad_servicio_id', '!=', $unit->id)->update(['active' => false]);
+
+        $this->actingAs($jefe)->get(route('reemplazos.create'))->assertOk()
+            ->assertSee('data-label="'.$unit->nombre.'"', false)
+            ->assertDontSee('<select name="unidad_servicio_id"', false);
+
+        UserUnidad::query()->where('user_id', $jefe->id)->update(['active' => false]);
+        $this->actingAs($jefe)->get(route('reemplazos.create'))->assertOk()
+            ->assertSee('No tienes una unidad vigente asignada.')
+            ->assertSee('Solicita apoyo al administrador para crear una solicitud.');
     }
 
     public function test_complete_screen_creates_and_populates_both_records_server_side(): void
@@ -169,7 +190,7 @@ class ReemplazoUnifiedCreationTest extends TestCase
             ->assertSee('\\u0022unidad\\u0022:\\u0022\\u0022', false)
             ->assertSee('\\u0022nuevo\\u0022:false', false)
             ->assertDontSee("x-data='JSON.parse('", false)
-            ->assertSee('x-show="! nuevo" class="md:col-span-2"', false)
+            ->assertSee('x-show="! nuevo && ! seleccionado" class="md:col-span-2"', false)
             ->assertSee('x-show="nuevo" x-cloak', false);
 
         $this->actingAs($this->jefe())->get(route('reemplazos.edit', $tramite))->assertOk()
@@ -177,8 +198,52 @@ class ReemplazoUnifiedCreationTest extends TestCase
             ->assertSee('\\u0022unidad\\u0022:\\u0022'.$unit->id.'\\u0022', false)
             ->assertSee('\\u0022nuevo\\u0022:false', false)
             ->assertDontSee("x-data='JSON.parse('", false)
-            ->assertSee('x-show="! nuevo" class="md:col-span-2"', false)
+            ->assertSee('x-show="! nuevo && ! seleccionado" class="md:col-span-2"', false)
             ->assertSee('x-show="nuevo" x-cloak', false);
+    }
+
+    public function test_replacement_flash_messages_render_as_non_blocking_toasts_without_completion_summary(): void
+    {
+        $tramite = app(CrearReemplazo::class)->execute($this->unit(), $this->jefe());
+
+        $this->actingAs($this->jefe())->withSession(['status' => 'Borrador guardado correctamente.'])
+            ->get(route('reemplazos.create'))->assertOk()
+            ->assertSee('fixed right-4 top-4 z-50', false)
+            ->assertSee('setTimeout(() => show = false, 3500)', false)
+            ->assertSee('Cerrar notificación');
+
+        $this->actingAs($this->jefe())->withSession(['status' => 'Adjunto cargado correctamente.'])
+            ->get(route('reemplazos.edit', $tramite))->assertOk()
+            ->assertSee('fixed right-4 top-4 z-50', false)
+            ->assertSee('setTimeout(() => show = false, 3500)', false)
+            ->assertDontSee('Antecedentes de la solicitud');
+
+        $this->actingAs($this->jefe())->withSession(['upload_error' => 'No fue posible cargar el adjunto.'])
+            ->get(route('reemplazos.edit', $tramite))->assertOk()
+            ->assertSee('No fue posible cargar el adjunto.')
+            ->assertSee('role="alert"', false);
+    }
+
+    public function test_edit_draft_save_uses_the_update_form_persists_changes_and_flashes_success(): void
+    {
+        $tramite = app(CrearReemplazo::class)->execute($this->unit(), $this->jefe());
+
+        $this->actingAs($this->jefe())->get(route('reemplazos.edit', $tramite))->assertOk()
+            ->assertSee('grid grid-cols-1 items-start gap-6 lg:grid-cols-2', false)
+            ->assertSee('form="reemplazo-form"', false)
+            ->assertSee('name="accion"', false)
+            ->assertSee('value="guardar"', false)
+            ->assertSee('id="reemplazo-send-form"', false)
+            ->assertSee('form="reemplazo-send-form"', false);
+
+        $this->actingAs($this->jefe())->put(route('reemplazos.update', $tramite), [
+            'accion' => 'guardar',
+            'justificacion' => 'Justificación modificada en un borrador incompleto.',
+        ])->assertRedirect(route('reemplazos.edit', $tramite))
+            ->assertSessionHas('status', 'Borrador guardado correctamente.');
+
+        $this->assertSame('BORRADOR', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+        $this->assertSame('Justificación modificada en un borrador incompleto.', $tramite->fresh('reemplazo')->reemplazo->justificacion);
     }
 
     public function test_autocomplete_recalculates_candidates_when_employee_changes_and_clears_conflict(): void
@@ -189,7 +254,9 @@ class ReemplazoUnifiedCreationTest extends TestCase
             ->assertDontSee('option.hidden = ocultar', false)
             ->assertSee('option.dataset.persona === funcionarioId', false)
             ->assertSee("reemplazante.value = ''", false)
-            ->assertSee('El reemplazante seleccionado coincide con el funcionario a reemplazar y fue eliminado de la selección.')
+            ->assertSee('No puedes seleccionar como reemplazante al mismo funcionario.')
+            ->assertSee('funcionarioId && reemplazante?.value === funcionarioId', false)
+            ->assertSee("window.setTimeout(() => { reemplazanteConflicto.textContent = ''; }, 4000)", false)
             ->assertSee('reemplazante_conflicto', false);
     }
 
@@ -243,11 +310,11 @@ class ReemplazoUnifiedCreationTest extends TestCase
         ])->assertSessionHasErrors(['reemplazante_id', 'nuevo_reemplazante_rut']);
 
         $this->actingAs($this->jefe())->get(route('reemplazos.create'))->assertOk()
-            ->assertSee("nuevo ? 'Cancelar' : '+ Agregar reemplazante que no está en la lista'", false)
-            ->assertSee('x-show="! nuevo" class="md:col-span-2"', false)
-            ->assertDontSee('x-show="! nuevo" x-cloak', false)
+            ->assertSee("nuevo ? 'Cancelar' : '+ Registrar nuevo reemplazante'", false)
+            ->assertSee('x-show="! nuevo && ! seleccionado" class="md:col-span-2"', false)
+            ->assertDontSee('x-show="! nuevo && ! seleccionado" x-cloak', false)
             ->assertSee('x-show="nuevo" x-cloak', false)
-            ->assertSee('>+ Agregar reemplazante que no está en la lista</button>', false)
+            ->assertSee('>+ Registrar nuevo reemplazante</button>', false)
             ->assertSee('$refs.reemplazante.value = \'\'', false)
             ->assertSee('$refs.rut.value = \'\'', false)
             ->assertSee('$refs.nombres.value = \'\'', false)
@@ -336,7 +403,7 @@ class ReemplazoUnifiedCreationTest extends TestCase
             ->assertSee('Versión: 1')
             ->assertSee('Estado: Activo')
             ->assertSee('Descargar')
-            ->assertSee('+ Adjuntar otro documento');
+            ->assertSee('Adjuntar nuevo documento')->assertSee('Adjuntar documento');
     }
 
     public function test_editing_adds_another_document_without_replacing_and_versions_only_explicitly(): void
@@ -404,7 +471,7 @@ class ReemplazoUnifiedCreationTest extends TestCase
         $tramite = app(CrearReemplazo::class)->execute($this->unit(), $this->jefe());
 
         $this->actingAs($this->jefe())->get(route('reemplazos.edit', $tramite))->assertOk()
-            ->assertSee('Antecedentes de la solicitud')
+            ->assertDontSee('Antecedentes de la solicitud')
             ->assertSee('Guardar borrador')
             ->assertSee('Enviar a Gestión de Personas')
             ->assertSee('Enviar solicitud a Gestión de Personas')
@@ -416,8 +483,10 @@ class ReemplazoUnifiedCreationTest extends TestCase
             ->assertSee('x-ref="abrirEnvio"', false)
             ->assertSee('@click="confirmarEnvio = true', false)
             ->assertSee('type="button" @click="confirmarEnvio = false', false)
-            ->assertSee('type="submit" form="reemplazo-form" name="accion" value="enviar"', false)
-            ->assertSee('@submit="if ($event.submitter?.value === \'enviar\') enviando = true"', false)
+            ->assertSee('type="submit" form="reemplazo-send-form"', false)
+            ->assertSee('id="reemplazo-send-form"', false)
+            ->assertSee('@submit="enviando = true"', false)
+            ->assertDontSee('@click="enviando = true"', false)
             ->assertSee('x-bind:disabled="enviando"', false)
             ->assertDontSee('window.confirm', false);
 

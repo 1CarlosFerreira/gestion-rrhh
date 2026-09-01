@@ -23,6 +23,8 @@ use App\Models\Tramite;
 use App\Models\UnidadServicio;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -34,9 +36,20 @@ class ReemplazoController extends Controller
     {
         abort_unless($request->user()->can('reemplazos.crear'), 403);
         $unidades = $request->user()->can('tramites.ver_todos') ? UnidadServicio::query()->where('activo', true)->orderBy('nombre')->get() : $request->user()->unidadesHabilitadas()->where('activo', true)->orderBy('nombre')->get();
+        $unidadPreseleccionada = $unidades->count() === 1 ? $unidades->first() : null;
+        $unidadSolicitada = $unidades->firstWhere('id', $request->integer('unidad_servicio_id'));
+        $unidadInicial = $unidadSolicitada ?? $unidadPreseleccionada;
+        $funcionarioPreseleccionado = null;
+        if ($unidadInicial && $request->integer('funcionario_id')) {
+            $today = now()->toDateString();
+            $funcionarioPreseleccionado = Persona::query()->whereKey($request->integer('funcionario_id'))->where('active', true)->whereHas('vinculos', fn ($query) => $query->where('unidad_servicio_id', $unidadInicial->id)->where('status', 'ACTIVO')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $today))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $today)))->value('id');
+        }
 
         return view('reemplazos.create', [
             'unidades' => $unidades,
+            'unidadPreseleccionada' => $unidadPreseleccionada,
+            'unidadInicial' => $unidadInicial,
+            'funcionarioPreseleccionado' => $funcionarioPreseleccionado,
             ...$this->catalogsForUnits($unidades->pluck('id')->all()),
         ]);
     }
@@ -83,7 +96,9 @@ class ReemplazoController extends Controller
             }
         }
 
-        return back()->with('status', 'Borrador guardado.');
+        return back()->with('status', $tramite->estadoTramite->codigo === 'DEVUELTA_CORRECCION'
+            ? 'Cambios guardados correctamente.'
+            : 'Borrador guardado correctamente.');
     }
 
     public function send(Request $request, Tramite $tramite, EnviarReemplazo $enviar): RedirectResponse
@@ -101,16 +116,56 @@ class ReemplazoController extends Controller
     {
         abort_unless($request->user()->can('reemplazos.revisar_personal'), 403);
         Gate::authorize('view', $tramite);
-        $transition->execute($tramite, 'INICIAR_REVISION', $request->user());
+        try {
+            $transition->execute($tramite, 'INICIAR_REVISION', $request->user());
+        } catch (ValidationException $exception) {
+            return redirect()->route('gestion-personas.bandeja')->withErrors($exception->errors());
+        }
 
-        return back()->with('status', 'Revisión iniciada.');
+        return redirect()->route('reemplazos.review.show', $tramite)->with('status', 'Revisión iniciada correctamente.');
     }
 
-    public function saveReview(SaveRevisionReemplazoRequest $request, Tramite $tramite, GuardarRevisionReemplazo $guardar): RedirectResponse
+    public function showReview(Request $request, Tramite $tramite): View
     {
-        $guardar->execute($tramite->load('estadoTramite'), $request->validated(), $request->user());
+        Gate::authorize('view', $tramite);
+        abort_unless(
+            $request->user()->can('reemplazos.revisar_personal')
+            && $tramite->tipoTramite()->value('codigo') === 'REEMPLAZO'
+            && $tramite->estadoTramite->codigo === 'EN_REVISION',
+            403,
+        );
 
-        return back()->with('status', 'Revisión administrativa guardada.');
+        $tramite->load([
+            'tipoTramite', 'unidadServicio', 'estadoTramite', 'creador',
+            'reemplazo.tipoReemplazo', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.estamento', 'reemplazo.profesion',
+            'revisionReemplazo.gradoEus', 'revisionReemplazo.clasificacionArea',
+            'adjuntos.tipoDocumento', 'adjuntos.cargadoPor',
+            'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino',
+        ]);
+
+        return view('gestion-personas.reemplazos.revision', [
+            'tramite' => $tramite,
+            'grados' => GradoEus::query()->where('activo', true)->orderBy('grado')->get(),
+            'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
+            'requisitosDocumentales' => $this->requisitosDocumentales($tramite),
+        ]);
+    }
+
+    public function saveReview(SaveRevisionReemplazoRequest $request, Tramite $tramite, GuardarRevisionReemplazo $guardar, CompletarRevisionReemplazo $complete): RedirectResponse
+    {
+        $changed = $guardar->execute($tramite->load('estadoTramite'), $request->validated(), $request->user());
+
+        if ($request->input('accion') === 'aprobar') {
+            try {
+                $complete->execute($tramite->fresh(), $request->user());
+            } catch (ValidationException $exception) {
+                return redirect()->route('reemplazos.review.show', $tramite)->withErrors($exception->errors())->withInput();
+            }
+
+            return redirect()->route('gestion-personas.bandeja')->with('status', 'Revisión completada. La solicitud está lista para generar el documento.');
+        }
+
+        return back()->with('status', $changed ? 'Avance de revisión guardado correctamente.' : 'No hay cambios pendientes por guardar.');
     }
 
     public function returnCorrection(Request $request, Tramite $tramite, TransicionarTramite $transition): RedirectResponse
@@ -120,7 +175,7 @@ class ReemplazoController extends Controller
         $validated = $request->validate(['observation' => ['required', 'string', 'max:5000']]);
         $transition->execute($tramite, 'DEVOLVER_CORRECCION', $request->user(), $validated['observation']);
 
-        return back()->with('status', 'Solicitud devuelta para corrección.');
+        return redirect()->route('gestion-personas.bandeja')->with('status', 'Solicitud devuelta a Jefatura para corrección.');
     }
 
     public function completeReview(Request $request, Tramite $tramite, CompletarRevisionReemplazo $complete): RedirectResponse
@@ -128,7 +183,7 @@ class ReemplazoController extends Controller
         abort_unless($request->user()->can('reemplazos.revisar_personal'), 403);
         $complete->execute($tramite, $request->user());
 
-        return back()->with('status', 'Revisión completada.');
+        return redirect()->route('gestion-personas.bandeja')->with('status', 'Revisión completada. La solicitud está lista para generar el documento.');
     }
 
     private function catalogs(Tramite $tramite): array
@@ -138,6 +193,26 @@ class ReemplazoController extends Controller
             'grados' => GradoEus::query()->where('activo', true)->orderBy('grado')->get(),
             'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
         ];
+    }
+
+    private function requisitosDocumentales(Tramite $tramite): Collection
+    {
+        $replacementTypeId = $tramite->reemplazo?->tipo_reemplazo_id;
+        $attachedTypes = $tramite->adjuntos->where('status', 'ACTIVO')->pluck('tipo_documento_id');
+
+        return DB::table('requisitos_documentales')
+            ->join('tipos_documento', 'tipos_documento.id', '=', 'requisitos_documentales.tipo_documento_id')
+            ->where('requisitos_documentales.tipo_tramite_id', $tramite->tipo_tramite_id)
+            ->where('requisitos_documentales.active', true)
+            ->where(fn ($query) => $query->whereNull('requisitos_documentales.tipo_reemplazo_id')->orWhere('requisitos_documentales.tipo_reemplazo_id', $replacementTypeId))
+            ->where(fn ($query) => $query->whereNull('requisitos_documentales.valid_from')->orWhere('requisitos_documentales.valid_from', '<=', now()->toDateString()))
+            ->where(fn ($query) => $query->whereNull('requisitos_documentales.valid_to')->orWhere('requisitos_documentales.valid_to', '>=', now()->toDateString()))
+            ->orderBy('tipos_documento.nombre')
+            ->get(['tipos_documento.nombre', 'requisitos_documentales.tipo_documento_id', 'requisitos_documentales.obligatorio'])
+            ->map(fn ($requirement) => (object) [
+                ...((array) $requirement),
+                'cumplido' => $attachedTypes->contains($requirement->tipo_documento_id),
+            ]);
     }
 
     private function catalogsForUnits(array $unitIds): array

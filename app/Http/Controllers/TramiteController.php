@@ -25,7 +25,7 @@ class TramiteController extends Controller
         Gate::authorize('viewAny', Tramite::class);
 
         return view('tramites.index', [
-            'tramites' => $consultar->execute($request->user(), $request->only(['tipo_tramite_id', 'estado_tramite_id', 'unidad_servicio_id', 'codigo', 'desde', 'hasta']))->paginate(20)->withQueryString(),
+            'tramites' => $consultar->execute($request->user(), $request->only(['tipo_tramite_id', 'estado_tramite_id', 'unidad_servicio_id', 'codigo', 'desde', 'hasta', 'estado_grupo']))->paginate(20)->withQueryString(),
             ...$this->catalogs($request),
         ]);
     }
@@ -55,9 +55,18 @@ class TramiteController extends Controller
         return redirect()->route('tramites.show', $tramite)->with('status', 'Trámite raíz creado.');
     }
 
-    public function show(Tramite $tramite): View
+    public function show(Tramite $tramite): View|RedirectResponse
     {
         Gate::authorize('view', $tramite);
+        if (
+            $tramite->tipoTramite()->value('codigo') === 'REEMPLAZO'
+            && $tramite->estadoTramite->codigo === 'EN_REVISION'
+            && request()->user()->can('reemplazos.revisar_personal')
+            && ! request()->user()->can('reemplazos.crear')
+        ) {
+            return redirect()->route('reemplazos.review.show', $tramite);
+        }
+
         $tramite->load(['tipoTramite', 'unidadServicio', 'estadoTramite', 'creador', 'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino', 'adjuntos.tipoDocumento', 'adjuntos.persona', 'adjuntos.cargadoPor', 'documentosGenerados.tipoDocumento', 'documentosGenerados.plantilla', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor', 'registrosDocDigital.documentoGenerado', 'registrosDocDigital.adjuntoEnviado', 'registrosDocDigital.registradoPor', 'registrosDocDigital.formalizadoPor', 'registrosDocDigital.adjuntoFinal', 'reemplazo.tipoReemplazo', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.estamento', 'reemplazo.profesion', 'revisionReemplazo.gradoEus', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.completadoPor', 'horasExtra.informeTecnico', 'horasExtra.funcionarios.persona.vinculosOperativos.unidad', 'horasExtra.funcionarios.planillas.adjunto', 'horasExtra.funcionarios.planillas.cargadoPor', 'horasExtra.funcionarios.planillas.revisiones.revisadoPor']);
 
         return view('tramites.show', [
@@ -78,7 +87,9 @@ class TramiteController extends Controller
         return [
             'tipos' => TipoTramite::query()->where('activo', true)->orderBy('nombre')->get(),
             'estados' => EstadoTramite::query()->with('tipoTramite')->where('activo', true)->when($type, fn ($query) => $query->where('tipo_tramite_id', $type))->orderBy('nombre')->get(),
-            'unidades' => UnidadServicio::query()->where('activo', true)->orderBy('nombre')->get(),
+            'unidades' => $request->user()->can('tramites.ver_todos')
+                ? UnidadServicio::query()->where('activo', true)->orderBy('nombre')->get()
+                : $request->user()->unidadesHabilitadas()->where('activo', true)->orderBy('nombre')->get(),
         ];
     }
 }

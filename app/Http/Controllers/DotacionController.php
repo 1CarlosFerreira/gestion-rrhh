@@ -33,7 +33,7 @@ class DotacionController extends Controller
                         ->when($request->filled('q'), fn ($query) => $query->buscar($request->string('q')->toString()));
                 })
                 ->with(['persona', 'estamento', 'profesion'])
-                ->orderBy('status')->paginate(20)->withQueryString();
+                ->orderBy('status')->orderBy('id')->paginate(12)->withQueryString();
         }
 
         return view('dotacion.index', compact('unidades', 'unidad', 'vinculos'));
@@ -43,9 +43,9 @@ class DotacionController extends Controller
     {
         Gate::authorize('viewFicha', $persona);
         $allowedUnits = $request->user()->can('tramites.ver_todos') ? null : $request->user()->unidadesHabilitadas()->pluck('unidades_servicios.id');
-        $vinculos = $persona->vinculos()->with(['unidad', 'estamento', 'profesion'])->when($allowedUnits, fn ($query) => $query->whereIn('unidad_servicio_id', $allowedUnits))->get();
-        $reemplazos = TramiteReemplazo::query()->where(fn ($query) => $query->where('funcionario_id', $persona->id)->orWhere('reemplazante_id', $persona->id))->whereHas('tramite', fn ($query) => $query->visiblePara($request->user()))->with(['tramite.unidadServicio', 'tramite.estadoTramite', 'tipoReemplazo'])->latest()->get();
-        $horasExtra = HorasExtraFuncionario::query()->where('persona_id', $persona->id)->whereHas('tramiteHorasExtra.tramite', fn ($query) => $query->visiblePara($request->user()))->with(['tramiteHorasExtra.tramite.unidadServicio', 'tramiteHorasExtra.tramite.estadoTramite'])->latest()->get();
+        $vinculos = $persona->vinculos()->with(['unidad', 'estamento', 'profesion'])->when($allowedUnits, fn ($query) => $query->whereIn('unidad_servicio_id', $allowedUnits))->orderByDesc('start_date')->orderByDesc('id')->get();
+        $reemplazos = TramiteReemplazo::query()->where(fn ($query) => $query->where('funcionario_id', $persona->id)->orWhere('reemplazante_id', $persona->id))->whereHas('tramite', fn ($query) => $query->visiblePara($request->user()))->with(['tramite.tipoTramite', 'tramite.unidadServicio', 'tramite.estadoTramite'])->latest()->paginate(10, ['*'], 'reemplazos_page')->withQueryString();
+        $horasExtra = HorasExtraFuncionario::query()->where('persona_id', $persona->id)->whereHas('tramiteHorasExtra.tramite', fn ($query) => $query->visiblePara($request->user()))->with(['tramiteHorasExtra.tramite.unidadServicio', 'tramiteHorasExtra.tramite.estadoTramite'])->latest()->paginate(10, ['*'], 'horas_extra_page')->withQueryString();
         $actual = $vinculos->first(fn ($item) => $item->status === 'ACTIVO' && (! $item->start_date || $item->start_date->lte(now())) && (! $item->end_date || $item->end_date->gte(now())));
 
         return view('dotacion.show', compact('persona', 'vinculos', 'reemplazos', 'horasExtra', 'actual'));

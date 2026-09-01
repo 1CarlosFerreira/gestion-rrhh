@@ -1,6 +1,9 @@
 <x-app-layout>
     <x-slot name="header"><h2 class="text-xl font-semibold text-gray-800">Personas</h2></x-slot>
     <div class="py-10"><div class="mx-auto max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
+        @if(auth()->user()->can('reemplazos.revisar_personal') && ! auth()->user()->can('reemplazos.crear'))
+            <nav class="flex gap-2" aria-label="Personas y dotación"><a href="{{ route('personas.index') }}" class="rounded-full bg-indigo-700 px-3 py-2 text-sm font-medium text-white">Personas</a>@can('dotacion.ver')<a href="{{ route('dotacion.index') }}" class="rounded-full bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">Dotación</a>@endcan</nav>
+        @endif
         @if(session('status'))<div class="rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</div>@endif
         <div class="flex flex-wrap justify-between gap-3">
             <form class="flex gap-2" method="GET"><x-text-input name="q" :value="request('q')" placeholder="RUT, nombre o apellido"/><x-secondary-button>Buscar</x-secondary-button></form>

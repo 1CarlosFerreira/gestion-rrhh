@@ -18,7 +18,11 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->get('/profile');
 
-        $response->assertOk();
+        $response->assertOk()
+            ->assertSee('Información personal')
+            ->assertSee('RUT')
+            ->assertSee('Rol y asignación')
+            ->assertSee('Cambiar contraseña');
     }
 
     public function test_profile_information_can_be_updated(): void
@@ -34,6 +38,7 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', 'profile-updated')
             ->assertRedirect('/profile');
 
         $user->refresh();
@@ -41,6 +46,19 @@ class ProfileTest extends TestCase
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_profile_update_success_is_displayed_as_a_temporary_toast(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession(['status' => 'profile-updated'])
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('Perfil actualizado correctamente.')
+            ->assertSee('setTimeout(() => show = false, 3500)', false)
+            ->assertSee('role="status"', false);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void

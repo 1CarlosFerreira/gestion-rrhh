@@ -74,6 +74,33 @@ class PhaseTwoPeopleAndStaffingTest extends TestCase
         $this->actingAs($admin)->get('/dotacion?unidad_id='.$unit->id)->assertOk();
     }
 
+    public function test_staffing_uses_responsive_cards_and_hides_the_unit_selector_for_one_unit(): void
+    {
+        $jefe = User::query()->where('email', 'jefatura@example.test')->firstOrFail();
+        $unit = $jefe->unidadesHabilitadas()->firstOrFail();
+        UserUnidad::query()->where('user_id', $jefe->id)->where('unidad_servicio_id', '!=', $unit->id)->update(['active' => false]);
+        $jefe->refresh();
+
+        $this->actingAs($jefe)->get('/dotacion?unidad_id='.$unit->id)->assertOk()
+            ->assertSee('Dotación de '.$unit->nombre)
+            ->assertSee('xl:grid-cols-3', false)
+            ->assertSee('Buscar por RUT, nombre o apellido')
+            ->assertDontSee('<select name="unidad_id"', false);
+    }
+
+    public function test_staffing_only_offers_authorized_units_when_a_jefe_has_more_than_one(): void
+    {
+        $jefe = User::query()->where('email', 'jefatura@example.test')->firstOrFail();
+        $extra = UnidadServicio::query()->where('activo', true)->whereNotIn('id', $jefe->unidadesHabilitadas()->select('unidades_servicios.id'))->firstOrFail();
+        $hidden = UnidadServicio::query()->where('activo', true)->whereKeyNot($extra->id)->whereNotIn('id', $jefe->unidadesHabilitadas()->select('unidades_servicios.id'))->firstOrFail();
+        UserUnidad::query()->create(['user_id' => $jefe->id, 'unidad_servicio_id' => $extra->id, 'active' => true]);
+
+        $this->actingAs($jefe)->get('/dotacion?unidad_id='.$extra->id)->assertOk()
+            ->assertSee('<select name="unidad_id"', false)
+            ->assertSee($extra->nombre)
+            ->assertDontSee($hidden->nombre);
+    }
+
     public function test_user_units_unique_constraint_prevents_duplicates(): void
     {
         $assignment = UserUnidad::query()->firstOrFail();

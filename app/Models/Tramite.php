@@ -80,6 +80,10 @@ class Tramite extends Model
     public function scopeVisiblePara(Builder $query, User $user): Builder
     {
         if ($user->can('tramites.ver_todos')) {
+            if ($user->can('reemplazos.revisar_personal') && ! $user->can('reemplazos.crear')) {
+                return $query->whereHas('estadoTramite', fn (Builder $state) => $state->where('codigo', '!=', 'BORRADOR'));
+            }
+
             return $query;
         }
 

@@ -25,18 +25,28 @@ class PhaseNineAJefaturaUxTest extends TestCase
 
     public function test_jefatura_navigation_is_simplified_and_keeps_account_actions(): void
     {
-        $this->actingAs($this->jefe())->get('/dashboard')->assertOk()
+        $response = $this->actingAs($this->jefe())->get('/dashboard');
+
+        $response->assertOk()
             ->assertSee('Inicio')->assertSee('Mis trámites')->assertSee('Dotación')
             ->assertSee('Mi perfil')->assertSee('Cerrar sesión')
+            ->assertSee('aria-haspopup="menu"', false)->assertSee('@keydown.escape.window="accountOpen = false"', false)
+            ->assertSee('@click.outside="accountOpen = false"', false)
             ->assertDontSee('>Personas<', false)->assertDontSee('Nuevo reemplazo')->assertDontSee('Nuevas horas extra');
+
+        $this->assertSame(1, substr_count($response->getContent(), 'role="menuitem" href="'.route('profile.edit').'"'));
+        $this->assertStringContainsString('<form method="POST" action="'.route('logout').'">', $response->getContent());
+        $this->assertMatchesRegularExpression('/action="'.preg_quote(route('logout'), '/').'">\\s*<input type="hidden" name="_token"/', $response->getContent());
     }
 
     public function test_dashboard_has_real_actions_indicators_and_attention_section(): void
     {
         $this->actingAs($this->jefe())->get('/dashboard')->assertOk()
             ->assertSee('Bienvenido/a, '.$this->jefe()->name)
-            ->assertSee('Nueva solicitud de reemplazo')->assertSee('Horas extraordinarias')
-            ->assertSee('Trámites activos')->assertSee('Requieren mi atención');
+            ->assertSee('Solicitud de Reemplazo')->assertSee('Horas Extraordinarias')
+            ->assertSee('Solicitar reemplazo')->assertSee('Solicitar horas extraordinarias')
+            ->assertSee('Borradores')->assertSee('En revisión')->assertSee('Devueltos para corrección')->assertSee('Formalizados')
+            ->assertSee('Requieren mi atención')->assertSee('Trámites recientes');
     }
 
     public function test_new_tramite_is_a_choice_screen_and_does_not_create_orphan_root(): void
@@ -59,7 +69,7 @@ class PhaseNineAJefaturaUxTest extends TestCase
         $this->actingAs($this->jefe())->get(route('reemplazos.edit', $tramite))->assertOk()
             ->assertSee('Funcionario a reemplazar')->assertSee($valid->nombre_completo)
             ->assertSee($other->nombre_completo)
-            ->assertSee('+ Agregar reemplazante que no está en la lista')->assertSee('Fecha de inicio')->assertSee('Fecha de término');
+            ->assertSee('+ Registrar nuevo reemplazante')->assertSee('Fecha de inicio')->assertSee('Fecha de término');
     }
 
     public function test_replacement_backend_rejects_employee_from_another_unit_and_reuses_replacement(): void
@@ -81,9 +91,9 @@ class PhaseNineAJefaturaUxTest extends TestCase
     {
         $visible = Persona::query()->where('nombres', 'Ana Prueba')->firstOrFail();
         $hidden = Persona::query()->where('nombres', 'Carla Muestra')->firstOrFail();
-        $this->actingAs($this->jefe())->get(route('dotacion.show', $visible))->assertOk()->assertSee('Ficha del funcionario')->assertSee('Historial de vínculos')->assertSee('Reemplazos')->assertSee('Horas Extraordinarias');
+        $this->actingAs($this->jefe())->get(route('dotacion.show', $visible))->assertOk()->assertSee('Hoja de vida del funcionario')->assertSee('Vínculo actual')->assertSee('Historial de vínculos')->assertSee('Reemplazos')->assertSee('Horas Extraordinarias');
         $this->get(route('dotacion.show', $hidden))->assertForbidden();
-        $this->get(route('profile.edit'))->assertOk()->assertSee('Mi perfil')->assertSee('Información de la cuenta')->assertSee('Rol(es)')->assertSee('Último acceso')->assertSee('Unidades/Servicios habilitados')->assertSee('Cambiar contraseña')->assertDontSee('Update Password');
+        $this->get(route('profile.edit'))->assertOk()->assertSee('Mi perfil')->assertSee('Información personal')->assertSee('RUT')->assertSee('Rol y asignación')->assertSee('Último acceso')->assertSee('Unidades asignadas')->assertSee('Cambiar contraseña')->assertDontSee('Update Password');
     }
 
     private function jefe(): User

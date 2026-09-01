@@ -1,7 +1,7 @@
 <section>
     <header>
         <h2 class="text-lg font-medium text-gray-900">
-            Información de la cuenta
+            Información personal
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
@@ -47,18 +47,15 @@
             @endif
         </div>
 
+        <div>
+            <x-input-label for="rut" value="RUT" />
+            <x-text-input id="rut" type="text" class="mt-1 block w-full bg-gray-50 text-gray-600" :value="\App\Support\Rut\Rut::format($user->rut)" readonly aria-readonly="true" />
+            <p class="mt-2 text-sm text-gray-500">El RUT es administrado institucionalmente.</p>
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>Guardar cambios</x-primary-button>
 
-            @if (session('status') === 'profile-updated')
-                <p
-                    x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-gray-600"
-                >Cambios guardados correctamente.</p>
-            @endif
         </div>
     </form>
 </section>

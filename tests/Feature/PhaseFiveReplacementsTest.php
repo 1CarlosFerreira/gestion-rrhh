@@ -10,6 +10,7 @@ use App\Actions\Reemplazos\GuardarRevisionReemplazo;
 use App\Actions\Tramites\TransicionarTramite;
 use App\Models\ClasificacionArea;
 use App\Models\Estamento;
+use App\Models\GradoEus;
 use App\Models\Persona;
 use App\Models\Profesion;
 use App\Models\TipoReemplazo;
@@ -18,6 +19,7 @@ use App\Models\UnidadServicio;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -81,6 +83,27 @@ class PhaseFiveReplacementsTest extends TestCase
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
     }
 
+    public function test_http_send_transitions_a_valid_draft_once_and_makes_it_visible_to_management(): void
+    {
+        $tramite = $this->completeDraft();
+        $historialBefore = $tramite->historial()->count();
+
+        $this->actingAs($this->jefe())->post(route('reemplazos.send', $tramite))
+            ->assertRedirect(route('tramites.show', $tramite))
+            ->assertSessionHas('status', 'Solicitud enviada correctamente a Gestión de Personas.');
+
+        $sent = $tramite->fresh('estadoTramite');
+        $this->assertSame('ENVIADA_GESTION_PERSONAS', $sent->estadoTramite->codigo);
+        $this->assertSame($historialBefore + 1, $sent->historial()->count());
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
+        $this->actingAs($this->gp())->get(route('gestion-personas.bandeja'))->assertOk()->assertSee($tramite->codigo);
+
+        $this->actingAs($this->jefe())->post(route('reemplazos.send', $tramite))
+            ->assertRedirect(route('reemplazos.edit', $tramite))
+            ->assertSessionHas('send_error', 'No fue posible enviar la solicitud. Revisa los siguientes antecedentes:');
+        $this->assertSame($historialBefore + 1, $tramite->fresh()->historial()->count());
+    }
+
     public function test_management_can_start_review_but_jefe_cannot(): void
     {
         $tramite = app(EnviarReemplazo::class)->execute($this->completeDraft(), $this->jefe());
@@ -112,11 +135,21 @@ class PhaseFiveReplacementsTest extends TestCase
         $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->fresh()->estadoTramite->codigo);
     }
 
-    public function test_point_four_can_be_saved_without_grade_and_completion_requires_admin_fields(): void
+    public function test_review_can_be_saved_partially_but_completion_requires_all_administrative_fields(): void
     {
         $tramite = $this->inReview();
         app(GuardarRevisionReemplazo::class)->execute($tramite->load('estadoTramite'), ['clasificacion_area_id' => ClasificacionArea::query()->firstOrFail()->id, 'cumple_normativa' => false], $this->gp());
         $this->assertNull($tramite->revisionReemplazo->grado_eus_id);
+        $grado = GradoEus::query()->create(['grado' => 12, 'activo' => true]);
+
+        try {
+            app(CompletarRevisionReemplazo::class)->execute($tramite, $this->gp());
+            $this->fail('Expected an incomplete review to be rejected.');
+        } catch (ValidationException) {
+            $this->assertSame('EN_REVISION', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+        }
+
+        app(GuardarRevisionReemplazo::class)->execute($tramite->fresh('estadoTramite'), ['grado_eus_id' => $grado->id, 'clasificacion_area_id' => ClasificacionArea::query()->firstOrFail()->id, 'cumple_normativa' => false], $this->gp());
         $done = app(CompletarRevisionReemplazo::class)->execute($tramite, $this->gp());
         $this->assertSame('LISTA_GENERAR_DOCUMENTO', $done->estadoTramite->codigo);
         $this->assertSame($this->gp()->id, $done->revisionReemplazo->fresh()->completed_by);
@@ -129,6 +162,99 @@ class PhaseFiveReplacementsTest extends TestCase
         $this->assertDatabaseCount('requisitos_documentales', 0);
         $this->expectException(ValidationException::class);
         app(CompletarRevisionReemplazo::class)->execute($tramite, $this->gp());
+    }
+
+    public function test_completion_requires_classification_and_normativa_even_when_the_grade_catalog_is_empty(): void
+    {
+        $tramite = $this->inReview();
+
+        try {
+            app(CompletarRevisionReemplazo::class)->execute($tramite, $this->gp());
+            $this->fail('Expected the incomplete review to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('clasificacion_area_id', $exception->errors());
+            $this->assertArrayHasKey('cumple_normativa', $exception->errors());
+            $this->assertArrayNotHasKey('grado_eus_id', $exception->errors());
+        }
+    }
+
+    public function test_completion_requires_configured_documents_even_when_the_grade_catalog_is_empty(): void
+    {
+        $tramite = $this->inReview();
+        app(GuardarRevisionReemplazo::class)->execute($tramite, [
+            'clasificacion_area_id' => ClasificacionArea::query()->firstOrFail()->id,
+            'cumple_normativa' => true,
+        ], $this->gp());
+        DB::table('requisitos_documentales')->insert([
+            'tipo_tramite_id' => $tramite->tipo_tramite_id,
+            'tipo_documento_id' => DB::table('tipos_documento')->value('id'),
+            'obligatorio' => true,
+            'active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        try {
+            app(CompletarRevisionReemplazo::class)->execute($tramite->fresh(), $this->gp());
+            $this->fail('Expected required documents to be enforced.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('documentos', $exception->errors());
+            $this->assertArrayNotHasKey('grado_eus_id', $exception->errors());
+        }
+    }
+
+    public function test_active_grade_catalog_rejects_empty_inactive_and_unknown_grade_ids(): void
+    {
+        $tramite = $this->inReview();
+        $classification = ClasificacionArea::query()->firstOrFail();
+        $active = GradoEus::query()->create(['grado' => 12, 'activo' => true]);
+        $inactive = GradoEus::query()->create(['grado' => 13, 'activo' => false]);
+
+        $this->actingAs($this->gp())->put(route('reemplazos.review.save', $tramite), [
+            'grado_eus_id' => 999999,
+            'clasificacion_area_id' => $classification->id,
+            'cumple_normativa' => true,
+            'accion' => 'aprobar',
+        ])->assertSessionHasErrors('grado_eus_id');
+        $this->actingAs($this->gp())->put(route('reemplazos.review.save', $tramite), [
+            'grado_eus_id' => $inactive->id,
+            'clasificacion_area_id' => $classification->id,
+            'cumple_normativa' => true,
+            'accion' => 'aprobar',
+        ])->assertSessionHasErrors('grado_eus_id');
+        $this->actingAs($this->gp())->put(route('reemplazos.review.save', $tramite), [
+            'clasificacion_area_id' => $classification->id,
+            'cumple_normativa' => true,
+            'accion' => 'aprobar',
+        ])->assertSessionHasErrors('grado_eus_id');
+        $this->actingAs($this->gp())->put(route('reemplazos.review.save', $tramite), [
+            'grado_eus_id' => $active->id,
+            'clasificacion_area_id' => $classification->id,
+            'cumple_normativa' => true,
+            'accion' => 'aprobar',
+        ])->assertRedirect(route('gestion-personas.bandeja'));
+
+        $this->assertSame('LISTA_GENERAR_DOCUMENTO', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+    }
+
+    public function test_completion_rechecks_that_a_persisted_grade_is_active_when_the_catalog_is_available(): void
+    {
+        $tramite = $this->inReview();
+        $inactive = GradoEus::query()->create(['grado' => 12, 'activo' => false]);
+        GradoEus::query()->create(['grado' => 13, 'activo' => true]);
+        $tramite->revisionReemplazo()->create([
+            'grado_eus_id' => $inactive->id,
+            'clasificacion_area_id' => ClasificacionArea::query()->firstOrFail()->id,
+            'cumple_normativa' => true,
+        ]);
+
+        try {
+            app(CompletarRevisionReemplazo::class)->execute($tramite->fresh(), $this->gp());
+            $this->fail('Expected an inactive grade to be rejected at completion.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('grado_eus_id', $exception->errors());
+            $this->assertSame('EN_REVISION', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+        }
     }
 
     public function test_unauthorized_user_cannot_complete_and_future_tables_do_not_exist(): void

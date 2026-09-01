@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/reemplazos/{tramite}', [ReemplazoController::class, 'update'])->name('reemplazos.update');
     Route::post('/reemplazos/{tramite}/enviar', [ReemplazoController::class, 'send'])->name('reemplazos.send');
     Route::post('/reemplazos/{tramite}/iniciar-revision', [ReemplazoController::class, 'startReview'])->name('reemplazos.review.start');
+    Route::get('/reemplazos/{tramite}/revision', [ReemplazoController::class, 'showReview'])->name('reemplazos.review.show');
     Route::put('/reemplazos/{tramite}/revision', [ReemplazoController::class, 'saveReview'])->name('reemplazos.review.save');
     Route::post('/reemplazos/{tramite}/devolver', [ReemplazoController::class, 'returnCorrection'])->name('reemplazos.return');
     Route::post('/reemplazos/{tramite}/completar-revision', [ReemplazoController::class, 'completeReview'])->name('reemplazos.review.complete');

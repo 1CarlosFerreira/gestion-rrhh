@@ -3,6 +3,7 @@
 namespace App\Actions\Reemplazos;
 
 use App\Contracts\Tramites\TramiteTransitionGuard;
+use App\Models\GradoEus;
 use App\Models\Tramite;
 use App\Models\TransicionEstado;
 use App\Models\User;
@@ -29,11 +30,21 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         if ($transicion->codigo_accion === 'COMPLETAR_REVISION') {
             $revision = $tramite->revisionReemplazo()->first();
             $errors = [];
+            $hasActiveGrades = GradoEus::query()->where('activo', true)->exists();
+            if ($hasActiveGrades && ! $revision?->grado_eus_id) {
+                $errors['grado_eus_id'] = 'El grado E.U.S. es obligatorio mientras existan grados activos configurados.';
+            }
+            if ($hasActiveGrades && $revision?->grado_eus_id && ! GradoEus::query()->whereKey($revision->grado_eus_id)->where('activo', true)->exists()) {
+                $errors['grado_eus_id'] = 'El grado E.U.S. seleccionado debe existir y estar activo.';
+            }
             if (! $revision?->clasificacion_area_id) {
                 $errors['clasificacion_area_id'] = 'La clasificación es obligatoria.';
             }
             if ($revision?->cumple_normativa === null) {
                 $errors['cumple_normativa'] = 'Debe informar si cumple normativa.';
+            }
+            if ($this->documentosObligatoriosPendientes($tramite)) {
+                $errors['documentos'] = 'Faltan documentos obligatorios configurados.';
             }
             if ($errors) {
                 throw ValidationException::withMessages($errors);
@@ -56,6 +67,20 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         if ($detail?->fecha_inicio && $detail?->fecha_termino && $detail->fecha_termino->lt($detail->fecha_inicio)) {
             $errors['fecha_termino'] = 'La fecha de término debe ser posterior o igual al inicio.';
         }
+        if ($this->documentosObligatoriosPendientes($tramite)) {
+            $errors['documentos'] = 'Faltan documentos obligatorios configurados.';
+        }
+
+        return $errors;
+    }
+
+    private function documentosObligatoriosPendientes(Tramite $tramite): bool
+    {
+        $detail = $tramite->reemplazo()->first();
+        if (! $detail) {
+            return false;
+        }
+
         $requiredTypes = DB::table('requisitos_documentales')
             ->where('tipo_tramite_id', $tramite->tipo_tramite_id)
             ->where('obligatorio', true)->where('active', true)
@@ -63,13 +88,12 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
             ->where(fn ($query) => $query->whereNull('valid_from')->orWhere('valid_from', '<=', now()->toDateString()))
             ->where(fn ($query) => $query->whereNull('valid_to')->orWhere('valid_to', '>=', now()->toDateString()))
             ->pluck('tipo_documento_id');
-        if ($requiredTypes->isNotEmpty()) {
-            $presentTypes = $tramite->adjuntos()->activos()->whereIn('tipo_documento_id', $requiredTypes)->pluck('tipo_documento_id');
-            if ($requiredTypes->diff($presentTypes)->isNotEmpty()) {
-                $errors['documentos'] = 'Faltan documentos obligatorios configurados.';
-            }
+        if ($requiredTypes->isEmpty()) {
+            return false;
         }
 
-        return $errors;
+        $presentTypes = $tramite->adjuntos()->activos()->whereIn('tipo_documento_id', $requiredTypes)->pluck('tipo_documento_id');
+
+        return $requiredTypes->diff($presentTypes)->isNotEmpty();
     }
 }

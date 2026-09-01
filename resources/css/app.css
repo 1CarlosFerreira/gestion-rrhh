@@ -1,3 +1,28 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+[x-cloak] {
+    display: none !important;
+}
+
+@media print {
+    nav,
+    .print-hidden,
+    [role="status"],
+    [role="alert"] {
+        display: none !important;
+    }
+
+    body,
+    main,
+    .min-h-screen {
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
+    .print-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}

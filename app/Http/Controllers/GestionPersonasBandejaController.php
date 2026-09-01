@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Tramites\ConsultarTramites;
-use App\Models\EstadoTramite;
-use App\Models\TipoTramite;
 use App\Models\Tramite;
 use App\Models\UnidadServicio;
 use Illuminate\Http\Request;
@@ -17,10 +15,15 @@ class GestionPersonasBandejaController extends Controller
     {
         Gate::authorize('viewAny', Tramite::class);
 
+        abort_unless($request->user()->can('reemplazos.revisar_personal'), 403);
+
         return view('gestion-personas.bandeja', [
-            'tramites' => $consultar->execute($request->user(), $request->only(['tipo_tramite_id', 'estado_tramite_id', 'unidad_servicio_id']))->paginate(20)->withQueryString(),
-            'tipos' => TipoTramite::query()->where('activo', true)->orderBy('nombre')->get(),
-            'estados' => EstadoTramite::query()->with('tipoTramite')->where('activo', true)->orderBy('nombre')->get(),
+            'tramites' => $consultar->execute($request->user(), $request->only(['estado_grupo', 'codigo', 'unidad_servicio_id']))
+                ->whereHas('tipoTramite', fn ($query) => $query->where('codigo', 'REEMPLAZO'))
+                ->whereNotNull('submitted_at')
+                ->with(['historial' => fn ($query) => $query->whereIn('action_code', ['INICIAR_REVISION', 'DEVOLVER_CORRECCION'])->with('usuario')])
+                ->paginate(20)
+                ->withQueryString(),
             'unidades' => UnidadServicio::query()->where('activo', true)->orderBy('nombre')->get(),
         ]);
     }
