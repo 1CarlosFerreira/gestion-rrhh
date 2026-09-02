@@ -35,6 +35,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/reemplazos/{tramite}/revision', [ReemplazoController::class, 'saveReview'])->name('reemplazos.review.save');
     Route::post('/reemplazos/{tramite}/devolver', [ReemplazoController::class, 'returnCorrection'])->name('reemplazos.return');
     Route::post('/reemplazos/{tramite}/completar-revision', [ReemplazoController::class, 'completeReview'])->name('reemplazos.review.complete');
+    Route::post('/reemplazos/{tramite}/generar-pdf', [ReemplazoController::class, 'retryPdf'])->name('reemplazos.pdf.retry');
+    Route::put('/reemplazos/{tramite}/grado-eus', [ReemplazoController::class, 'updatePendingGrade'])->name('reemplazos.grade.update');
+    Route::get('/ausencias-reemplazables/{ausencia}', [ReemplazoController::class, 'showAbsence'])->name('reemplazos.absences.show');
+    Route::post('/ausencias-reemplazables/{ausencia}/coberturas', [ReemplazoController::class, 'addCoverage'])->name('reemplazos.absences.coverages.store');
+    Route::post('/ausencias-reemplazables/{ausencia}/cerrar', [ReemplazoController::class, 'closeAbsence'])->name('reemplazos.absences.close');
 
     Route::get('/horas-extra/crear', [HorasExtraController::class, 'create'])->name('horas-extra.create');
     Route::post('/horas-extra', [HorasExtraController::class, 'store'])->name('horas-extra.store');
@@ -57,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tramites/{tramite}/docdigital/formalizacion', [DocDigitalController::class, 'formalize'])->name('tramites.docdigital.formalize');
     Route::post('/tramites/{tramite}/adjuntos/{adjunto}/versiones', [TramiteAdjuntoController::class, 'version'])->name('tramites.adjuntos.version');
     Route::get('/tramites/{tramite}/adjuntos/{adjunto}/descargar', [TramiteAdjuntoController::class, 'download'])->name('tramites.adjuntos.download');
+    Route::get('/tramites/{tramite}/adjuntos/{adjunto}/ver', [TramiteAdjuntoController::class, 'view'])->name('tramites.adjuntos.view');
     Route::patch('/tramites/{tramite}/adjuntos/{adjunto}/anular', [TramiteAdjuntoController::class, 'annul'])->name('tramites.adjuntos.annul');
     Route::get('/tramites/{tramite}', [TramiteController::class, 'show'])->name('tramites.show');
     Route::get('/gestion-personas/bandeja', GestionPersonasBandejaController::class)->name('gestion-personas.bandeja');

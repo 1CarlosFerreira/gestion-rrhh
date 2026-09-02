@@ -3,15 +3,17 @@
 namespace App\Actions\Reemplazos;
 
 use App\Contracts\Tramites\TramiteTransitionGuard;
-use App\Models\GradoEus;
 use App\Models\Tramite;
 use App\Models\TransicionEstado;
 use App\Models\User;
+use App\Services\Reemplazos\CoberturaAusenciaService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ReemplazoTransitionGuard implements TramiteTransitionGuard
 {
+    public function __construct(private readonly CoberturaAusenciaService $coberturas) {}
+
     public function validate(Tramite $tramite, TransicionEstado $transicion, User $user, ?string $observation, array $metadata): void
     {
         if ($tramite->tipoTramite()->value('codigo') !== 'REEMPLAZO') {
@@ -30,12 +32,8 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         if ($transicion->codigo_accion === 'COMPLETAR_REVISION') {
             $revision = $tramite->revisionReemplazo()->first();
             $errors = [];
-            $hasActiveGrades = GradoEus::query()->where('activo', true)->exists();
-            if ($hasActiveGrades && ! $revision?->grado_eus_id) {
-                $errors['grado_eus_id'] = 'El grado E.U.S. es obligatorio mientras existan grados activos configurados.';
-            }
-            if ($hasActiveGrades && $revision?->grado_eus_id && ! GradoEus::query()->whereKey($revision->grado_eus_id)->where('activo', true)->exists()) {
-                $errors['grado_eus_id'] = 'El grado E.U.S. seleccionado debe existir y estar activo.';
+            if (! $revision?->grado_eus_informado) {
+                $errors['grado_eus_informado'] = 'Ingrese el último grado E.U.S. informado por Gestión de Personas.';
             }
             if (! $revision?->clasificacion_area_id) {
                 $errors['clasificacion_area_id'] = 'La clasificación es obligatoria.';
@@ -45,6 +43,10 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
             }
             if ($this->documentosObligatoriosPendientes($tramite)) {
                 $errors['documentos'] = 'Faltan documentos obligatorios configurados.';
+            }
+            $errors = [...$errors, ...$this->coberturas->validationErrors($detail->loadMissing('ausencia'))];
+            if ($this->coberturas->conflictingCoverage($detail)) {
+                $errors['fecha_inicio'] = 'El periodo seleccionado se superpone con otra cobertura del mismo funcionario.';
             }
             if ($errors) {
                 throw ValidationException::withMessages($errors);
@@ -60,6 +62,9 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
             if (blank($detail?->{$field})) {
                 $errors[$field] = 'Este campo es obligatorio antes de enviar.';
             }
+        }
+        if ($detail) {
+            $errors = [...$errors, ...$this->coberturas->validationErrors($detail->loadMissing('ausencia'))];
         }
         if ($detail && blank($detail->profesion_id) && blank($detail->cargo_texto)) {
             $errors['cargo_texto'] = 'Debe indicar profesión o cargo.';

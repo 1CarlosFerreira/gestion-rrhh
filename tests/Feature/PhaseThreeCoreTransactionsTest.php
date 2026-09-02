@@ -186,7 +186,7 @@ class PhaseThreeCoreTransactionsTest extends TestCase
         $this->actingAs($this->admin())->get('/tramites?codigo='.$tramite->codigo.'&tipo_tramite_id='.$tramite->tipo_tramite_id)
             ->assertOk()->assertSee($tramite->codigo);
         $response = $this->actingAs($this->admin())->get(route('tramites.show', $tramite));
-        $response->assertOk()->assertSeeInOrder(['TRAMITE_CREADO', 'ENVIAR_A_GESTION_PERSONAS']);
+        $response->assertOk()->assertSeeInOrder(['Solicitud creada', 'Solicitud enviada a Gestión de Personas']);
     }
 
     public function test_origin_link_is_nullable_and_phase_four_tables_do_not_exist(): void

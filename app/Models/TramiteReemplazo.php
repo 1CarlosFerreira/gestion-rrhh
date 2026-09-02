@@ -11,9 +11,19 @@ class TramiteReemplazo extends Model
 
     protected $guarded = ['id'];
 
+    public function getDiasCalendarioAttribute(): int
+    {
+        return $this->fecha_inicio && $this->fecha_termino ? $this->fecha_inicio->diffInDays($this->fecha_termino) + 1 : 0;
+    }
+
     public function tramite(): BelongsTo
     {
         return $this->belongsTo(Tramite::class);
+    }
+
+    public function ausencia(): BelongsTo
+    {
+        return $this->belongsTo(AusenciaReemplazable::class, 'ausencia_reemplazable_id');
     }
 
     public function tipoReemplazo(): BelongsTo
@@ -48,6 +58,6 @@ class TramiteReemplazo extends Model
 
     protected function casts(): array
     {
-        return ['fecha_inicio' => 'date', 'fecha_termino' => 'date', 'funcionario_snapshot' => 'array', 'reemplazante_snapshot' => 'array'];
+        return ['fecha_inicio' => 'date', 'fecha_termino' => 'date', 'funcionario_snapshot' => 'array', 'reemplazante_snapshot' => 'array', 'remitente_snapshot' => 'array'];
     }
 }

@@ -33,6 +33,6 @@ class ReemplazoRevisionPersonal extends Model
 
     protected function casts(): array
     {
-        return ['cumple_normativa' => 'boolean', 'completed_at' => 'datetime'];
+        return ['grado_eus_informado' => 'integer', 'cumple_normativa' => 'boolean', 'completed_at' => 'datetime'];
     }
 }

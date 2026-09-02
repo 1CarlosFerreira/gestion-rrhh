@@ -15,7 +15,7 @@ class SaveRevisionReemplazoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'grado_eus_id' => ['nullable', Rule::exists('grados_eus', 'id')->where('activo', true)],
+            'grado_eus_informado' => ['nullable', 'integer', 'min:1'],
             'clasificacion_area_id' => ['nullable', Rule::exists('clasificaciones_area', 'id')->where('activo', true)],
             'cumple_normativa' => ['nullable', 'boolean'],
         ];

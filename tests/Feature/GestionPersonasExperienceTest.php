@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Actions\Reemplazos\CrearReemplazo;
 use App\Actions\Reemplazos\EnviarReemplazo;
+use App\Actions\Reemplazos\GenerarSolicitudReemplazoPdfAction;
 use App\Actions\Reemplazos\GuardarBorradorReemplazo;
 use App\Actions\Tramites\TransicionarTramite;
 use App\Models\ClasificacionArea;
 use App\Models\Estamento;
-use App\Models\GradoEus;
 use App\Models\Persona;
 use App\Models\Profesion;
 use App\Models\TipoReemplazo;
@@ -16,6 +16,7 @@ use App\Models\Tramite;
 use App\Models\UnidadServicio;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class GestionPersonasExperienceTest extends TestCase
@@ -26,6 +27,7 @@ class GestionPersonasExperienceTest extends TestCase
     {
         parent::setUp();
         $this->seed();
+        Storage::fake('private');
     }
 
     public function test_gestion_personas_has_its_own_navigation_and_dashboard(): void
@@ -123,11 +125,10 @@ class GestionPersonasExperienceTest extends TestCase
         $this->assertSame($historyCount, $tramite->historial()->where('action_code', 'REEMPLAZO_REVISION_ACTUALIZADA')->count());
         $this->actingAs($this->gp())->get(route('reemplazos.review.show', $tramite))->assertOk()->assertSee('Último guardado:');
 
-        $grado = GradoEus::query()->create(['grado' => 13, 'activo' => true]);
-        $this->actingAs($this->gp())->post(route('reemplazos.review.complete', $tramite))->assertSessionHasErrors('grado_eus_id');
+        $this->actingAs($this->gp())->post(route('reemplazos.review.complete', $tramite))->assertSessionHasErrors('grado_eus_informado');
 
         $this->actingAs($this->gp())->put(route('reemplazos.review.save', $tramite), [
-            'grado_eus_id' => $grado->id,
+            'grado_eus_informado' => 13,
             'clasificacion_area_id' => $classification->id,
             'cumple_normativa' => 1,
         ])->assertRedirect();
@@ -139,33 +140,117 @@ class GestionPersonasExperienceTest extends TestCase
         $this->assertDatabaseCount('reemplazo_revisiones_personal', 1);
     }
 
-    public function test_review_without_active_grades_can_be_completed_and_records_the_reason(): void
+    public function test_manual_grade_is_required_even_without_active_catalog_values(): void
     {
         $tramite = $this->inReview();
         $classification = ClasificacionArea::query()->firstOrFail();
 
         $this->actingAs($this->gp())->get(route('reemplazos.review.show', $tramite))
             ->assertOk()
-            ->assertSee('Grado E.U.S. pendiente de configuración')
-            ->assertSee('Podrás aprobar esta solicitud sin informarlo; será obligatorio cuando el catálogo esté disponible.')
-            ->assertDontSee('No puedes aprobar: falta configurar el Grado E.U.S.');
+            ->assertSee('Último grado E.U.S.')
+            ->assertSee('Ej.: 15')
+            ->assertDontSee('name="grado_eus_id"', false);
 
         $this->actingAs($this->gp())->put(route('reemplazos.review.save', $tramite), [
             'clasificacion_area_id' => $classification->id,
             'cumple_normativa' => 1,
             'accion' => 'aprobar',
-        ])->assertRedirect(route('gestion-personas.bandeja'));
+        ])->assertSessionHasErrors('grado_eus_informado');
 
-        $this->assertSame('LISTA_GENERAR_DOCUMENTO', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
-        $this->assertNull($tramite->fresh('revisionReemplazo')->revisionReemplazo->grado_eus_id);
-        $this->assertDatabaseHas('tramite_historial', [
-            'tramite_id' => $tramite->id,
-            'action_code' => 'COMPLETAR_REVISION',
-            'observation' => 'Revisión aprobada sin Grado E.U.S. porque el catálogo no tenía valores activos.',
-        ]);
+        $this->actingAs($this->gp())->put(route('reemplazos.review.save', $tramite), [
+            'grado_eus_informado' => 15,
+            'clasificacion_area_id' => $classification->id,
+            'cumple_normativa' => 1,
+            'accion' => 'aprobar',
+        ])->assertRedirect(route('tramites.show', $tramite));
+
+        $this->assertSame('DOCUMENTO_GENERADO', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+        $this->assertSame(15, $tramite->fresh('revisionReemplazo')->revisionReemplazo->grado_eus_informado);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'COMPLETAR_REVISION']);
         $this->actingAs($this->gp())->get(route('tramites.show', $tramite))
             ->assertOk()
-            ->assertSee('Pendiente de configuración');
+            ->assertSee('Documento oficial de Solicitud de Reemplazo');
+    }
+
+    public function test_approval_ui_uses_one_controlled_request_and_separate_loading_states(): void
+    {
+        $tramite = $this->inReview();
+        $response = $this->actingAs($this->gp())->get(route('reemplazos.review.show', $tramite));
+
+        $response->assertOk()
+            ->assertSee('@click="openApproval()"', false)
+            ->assertSee('@click="approve()"', false)
+            ->assertSee(':disabled="saving || approving || !approvable"', false)
+            ->assertDontSee('@click="saving = true"', false)
+            ->assertDontSee('|| missingApprovalFields.length"', false)
+            ->assertDontSee('form="revision-form" type="submit" name="accion" value="aprobar"', false);
+
+        $script = file_get_contents(resource_path('js/app.js'));
+        $this->assertStringContainsString("payload.set('accion', 'aprobar')", $script);
+        $this->assertStringContainsString('if (this.approving || this.saving) return;', $script);
+        $this->assertStringContainsString('Number.isInteger(value) && value > 0', $script);
+        $this->assertStringContainsString("['0', '1', 'false', 'true']", $script);
+        $this->assertStringContainsString('if (this.missingApprovalFields.length)', $script);
+        $this->assertStringContainsString('finally {', $script);
+    }
+
+    public function test_ajax_approval_sends_current_unsaved_values_for_both_normative_options(): void
+    {
+        foreach ([1, 0] as $normativa) {
+            $tramite = $this->inReview();
+            $classification = ClasificacionArea::query()->firstOrFail();
+
+            $response = $this->actingAs($this->gp())->putJson(route('reemplazos.review.save', $tramite), [
+                'grado_eus_informado' => 16,
+                'clasificacion_area_id' => $classification->id,
+                'cumple_normativa' => $normativa,
+                'accion' => 'aprobar',
+            ]);
+
+            $response->assertOk()->assertJsonPath('redirect', route('tramites.show', $tramite));
+            $this->assertSame('DOCUMENTO_GENERADO', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+            $this->assertSame(16, $tramite->fresh()->revisionReemplazo->grado_eus_informado);
+            $this->assertSame((bool) $normativa, $tramite->fresh()->revisionReemplazo->cumple_normativa);
+            $this->assertSame($classification->id, $tramite->fresh()->revisionReemplazo->clasificacion_area_id);
+            $this->assertSame(1, $tramite->documentosGenerados()->count());
+            $this->assertSame(1, $tramite->historial()->where('action_code', 'COMPLETAR_REVISION')->count());
+        }
+    }
+
+    public function test_ajax_approval_validation_returns_422_without_changing_state(): void
+    {
+        $tramite = $this->inReview();
+
+        $this->actingAs($this->gp())->putJson(route('reemplazos.review.save', $tramite), [
+            'accion' => 'aprobar',
+        ])->assertUnprocessable()->assertJsonValidationErrors([
+            'grado_eus_informado',
+            'clasificacion_area_id',
+            'cumple_normativa',
+        ]);
+
+        $this->assertSame('EN_REVISION', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+        $this->assertDatabaseCount('documentos_generados', 0);
+    }
+
+    public function test_ajax_pdf_failure_returns_recoverable_error_without_duplicate_approval(): void
+    {
+        $tramite = $this->inReview();
+        $classification = ClasificacionArea::query()->firstOrFail();
+        $this->mock(GenerarSolicitudReemplazoPdfAction::class, function ($mock): void {
+            $mock->shouldReceive('execute')->once()->andThrow(new \RuntimeException('Falla PDF ficticia'));
+        });
+
+        $this->actingAs($this->gp())->putJson(route('reemplazos.review.save', $tramite), [
+            'grado_eus_informado' => 15,
+            'clasificacion_area_id' => $classification->id,
+            'cumple_normativa' => 1,
+            'accion' => 'aprobar',
+        ])->assertStatus(500)->assertJsonPath('redirect', route('tramites.show', $tramite));
+
+        $this->assertSame('LISTA_GENERAR_DOCUMENTO', $tramite->fresh('estadoTramite')->estadoTramite->codigo);
+        $this->assertSame(1, $tramite->historial()->where('action_code', 'COMPLETAR_REVISION')->count());
+        $this->assertDatabaseCount('documentos_generados', 0);
     }
 
     public function test_returning_for_correction_requires_an_observation_and_preserves_review(): void

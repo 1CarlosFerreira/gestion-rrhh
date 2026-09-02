@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Reemplazos\ActualizarGradoEusPendiente;
+use App\Actions\Reemplazos\AgregarCoberturaAusencia;
+use App\Actions\Reemplazos\CerrarAusenciaReemplazable;
 use App\Actions\Reemplazos\CompletarRevisionReemplazo;
 use App\Actions\Reemplazos\CrearReemplazo;
 use App\Actions\Reemplazos\EnviarReemplazo;
+use App\Actions\Reemplazos\GenerarSolicitudReemplazoPdfAction;
 use App\Actions\Reemplazos\GuardarBorradorReemplazo;
 use App\Actions\Reemplazos\GuardarRevisionReemplazo;
 use App\Actions\Reemplazos\ReemplazoTransitionGuard;
@@ -12,6 +16,8 @@ use App\Actions\Tramites\Adjuntos\CargarAdjunto;
 use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\SaveReemplazoRequest;
 use App\Http\Requests\SaveRevisionReemplazoRequest;
+use App\Http\Requests\UpdateGradoEusReemplazoRequest;
+use App\Models\AusenciaReemplazable;
 use App\Models\ClasificacionArea;
 use App\Models\Estamento;
 use App\Models\GradoEus;
@@ -21,6 +27,8 @@ use App\Models\TipoDocumento;
 use App\Models\TipoReemplazo;
 use App\Models\Tramite;
 use App\Models\UnidadServicio;
+use App\Services\Reemplazos\CoberturaAusenciaService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -77,7 +85,7 @@ class ReemplazoController extends Controller
     {
         Gate::authorize('view', $tramite);
         abort_unless($tramite->tipoTramite()->value('codigo') === 'REEMPLAZO' && auth()->user()->can('reemplazos.crear') && in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_CORRECCION'], true), 403);
-        $tramite->load(['reemplazo.funcionario', 'reemplazo.funcionarioVinculo', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']);
+        $tramite->load(['reemplazo.ausencia', 'reemplazo.funcionario', 'reemplazo.funcionarioVinculo', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']);
 
         return view('reemplazos.edit', ['tramite' => $tramite, 'sendErrors' => $guard->sendErrors($tramite), ...$this->catalogs($tramite)]);
     }
@@ -137,7 +145,7 @@ class ReemplazoController extends Controller
 
         $tramite->load([
             'tipoTramite', 'unidadServicio', 'estadoTramite', 'creador',
-            'reemplazo.tipoReemplazo', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.estamento', 'reemplazo.profesion',
+            'reemplazo.ausencia.coberturas.tramite.estadoTramite', 'reemplazo.ausencia.coberturas.reemplazante', 'reemplazo.tipoReemplazo', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.estamento', 'reemplazo.profesion',
             'revisionReemplazo.gradoEus', 'revisionReemplazo.clasificacionArea',
             'adjuntos.tipoDocumento', 'adjuntos.cargadoPor',
             'historial.usuario', 'historial.estadoOrigen', 'historial.estadoDestino',
@@ -151,7 +159,7 @@ class ReemplazoController extends Controller
         ]);
     }
 
-    public function saveReview(SaveRevisionReemplazoRequest $request, Tramite $tramite, GuardarRevisionReemplazo $guardar, CompletarRevisionReemplazo $complete): RedirectResponse
+    public function saveReview(SaveRevisionReemplazoRequest $request, Tramite $tramite, GuardarRevisionReemplazo $guardar, CompletarRevisionReemplazo $complete, GenerarSolicitudReemplazoPdfAction $generar): RedirectResponse|JsonResponse
     {
         $changed = $guardar->execute($tramite->load('estadoTramite'), $request->validated(), $request->user());
 
@@ -159,10 +167,39 @@ class ReemplazoController extends Controller
             try {
                 $complete->execute($tramite->fresh(), $request->user());
             } catch (ValidationException $exception) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Revisa los antecedentes ingresados.',
+                        'errors' => $exception->errors(),
+                    ], 422);
+                }
+
                 return redirect()->route('reemplazos.review.show', $tramite)->withErrors($exception->errors())->withInput();
             }
 
-            return redirect()->route('gestion-personas.bandeja')->with('status', 'Revisión completada. La solicitud está lista para generar el documento.');
+            try {
+                $generar->execute($tramite->fresh(), $request->user());
+            } catch (Throwable $exception) {
+                report($exception);
+
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Los antecedentes fueron guardados, pero no fue posible generar el PDF. Corrige los datos pendientes o intenta nuevamente.',
+                        'redirect' => route('tramites.show', $tramite),
+                    ], 500);
+                }
+
+                return redirect()->route('tramites.show', $tramite)->with('error', 'Los antecedentes fueron guardados, pero no fue posible generar el PDF. Corrige los datos pendientes o intenta nuevamente.');
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Antecedentes aprobados y documento oficial generado correctamente.',
+                    'redirect' => route('tramites.show', $tramite),
+                ]);
+            }
+
+            return redirect()->route('tramites.show', $tramite)->with('status', 'Antecedentes aprobados y documento oficial generado correctamente.');
         }
 
         return back()->with('status', $changed ? 'Avance de revisión guardado correctamente.' : 'No hay cambios pendientes por guardar.');
@@ -184,6 +221,53 @@ class ReemplazoController extends Controller
         $complete->execute($tramite, $request->user());
 
         return redirect()->route('gestion-personas.bandeja')->with('status', 'Revisión completada. La solicitud está lista para generar el documento.');
+    }
+
+    public function retryPdf(Request $request, Tramite $tramite, GenerarSolicitudReemplazoPdfAction $generar): RedirectResponse
+    {
+        try {
+            $generar->execute($tramite, $request->user());
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Los antecedentes fueron guardados, pero no fue posible generar el PDF. Corrige los datos pendientes o intenta nuevamente.');
+        }
+
+        return redirect()->route('tramites.show', $tramite)->with('status', 'Documento oficial generado correctamente.');
+    }
+
+    public function updatePendingGrade(UpdateGradoEusReemplazoRequest $request, Tramite $tramite, ActualizarGradoEusPendiente $actualizar): RedirectResponse
+    {
+        $actualizar->execute($tramite, $request->integer('grado_eus_informado'), $request->user());
+
+        return back()->with('status', 'Último grado E.U.S. guardado correctamente. Ya puedes reintentar la generación.');
+    }
+
+    public function showAbsence(Request $request, AusenciaReemplazable $ausencia, CoberturaAusenciaService $coberturas): View
+    {
+        abort_unless($request->user()->can('tramites.ver_todos') || $request->user()->unidadesHabilitadas()->whereKey($ausencia->unidad_servicio_id)->exists(), 403);
+        $ausencia->load(['funcionario', 'unidad', 'tipoReemplazo', 'creador', 'cerradoPor', 'historial.usuario', 'coberturas.tramite.estadoTramite', 'coberturas.tramite.documentosGenerados.adjunto', 'coberturas.reemplazante']);
+
+        return view('reemplazos.ausencias.show', ['ausencia' => $ausencia, 'resumen' => $coberturas->summary($ausencia)]);
+    }
+
+    public function addCoverage(Request $request, AusenciaReemplazable $ausencia, AgregarCoberturaAusencia $agregar): RedirectResponse
+    {
+        try {
+            $tramite = $agregar->execute($ausencia, $request->user());
+        } catch (ValidationException $exception) {
+            return back()->withErrors($exception->errors());
+        }
+
+        return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Nueva cobertura creada. Completa el reemplazante y confirma su periodo efectivo.');
+    }
+
+    public function closeAbsence(Request $request, AusenciaReemplazable $ausencia, CerrarAusenciaReemplazable $cerrar): RedirectResponse
+    {
+        $validated = $request->validate(['motivo' => ['required', 'string', 'max:5000']]);
+        $cerrar->execute($ausencia, $validated['motivo'], $request->user());
+
+        return back()->with('status', 'Ausencia cerrada correctamente. Las coberturas existentes se conservaron.');
     }
 
     private function catalogs(Tramite $tramite): array

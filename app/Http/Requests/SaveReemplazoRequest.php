@@ -32,6 +32,8 @@ class SaveReemplazoRequest extends FormRequest
             'profesion_id' => ['nullable', Rule::exists('profesiones', 'id')],
             'cargo_texto' => ['nullable', 'string', 'max:190'],
             'justificacion' => ['nullable', 'string', 'max:5000'],
+            'fecha_inicio_ausencia' => ['nullable', 'date'],
+            'fecha_termino_ausencia' => ['nullable', 'date', 'after_or_equal:fecha_inicio_ausencia'],
             'fecha_inicio' => ['nullable', 'date'],
             'fecha_termino' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
             'accion' => ['nullable', Rule::in(['guardar', 'adjuntar', 'enviar'])],

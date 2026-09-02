@@ -74,7 +74,7 @@ class CatalogosSeeder extends Seeder
                     ['EN_REVISION', 'DEVUELTA_CORRECCION', 'DEVOLVER_CORRECCION', 'reemplazos.devolver', true],
                     ['DEVUELTA_CORRECCION', 'ENVIADA_GESTION_PERSONAS', 'ENVIAR_A_GESTION_PERSONAS', 'tramites.transicionar', false],
                     ['EN_REVISION', 'LISTA_GENERAR_DOCUMENTO', 'COMPLETAR_REVISION', 'reemplazos.revisar_personal', false],
-                    ['LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO', 'GENERAR_DOCUMENTO', 'documentos.generar', false],
+                    ['LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO', 'GENERAR_DOCUMENTO', 'reemplazos.generar_documento', false],
                     ['DOCUMENTO_GENERADO', 'ENVIADA_DOCDIGITAL', 'REGISTRAR_ENVIO_DOCDIGITAL', 'docdigital.registrar_envio', false],
                     ['ENVIADA_DOCDIGITAL', 'FORMALIZADA', 'REGISTRAR_FORMALIZACION', 'docdigital.registrar_formalizacion', false],
                 ],

@@ -18,7 +18,7 @@ class RolesPermisosSeeder extends Seeder
             'tramites.crear', 'tramites.transicionar',
             'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar',
             'tramites.adjuntos.anular',
-            'reemplazos.crear', 'reemplazos.revisar_personal', 'reemplazos.devolver',
+            'reemplazos.crear', 'reemplazos.revisar_personal', 'reemplazos.devolver', 'reemplazos.generar_documento',
             'horas_extra.crear', 'horas_extra.cargar_planilla',
             'horas_extra.revisar_planilla', 'horas_extra.registrar_horas',
             'documentos.generar', 'docdigital.registrar_envio',
@@ -45,11 +45,17 @@ class RolesPermisosSeeder extends Seeder
             'tramites.ver_todos', 'tramites.transicionar',
             'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar',
             'tramites.adjuntos.anular',
-            'reemplazos.revisar_personal', 'reemplazos.devolver',
+            'reemplazos.revisar_personal', 'reemplazos.devolver', 'reemplazos.generar_documento',
             'horas_extra.cargar_planilla', 'horas_extra.registrar_horas',
             'docdigital.registrar_envio',
             'docdigital.registrar_formalizacion',
             'personas.ver', 'personas.gestionar', 'dotacion.ver',
+        ]);
+
+        Role::findOrCreate('Subdirector/a de Gestión y Desarrollo de las Personas', 'web')->syncPermissions([
+            'tramites.ver_propios', 'tramites.ver_unidad', 'tramites.crear', 'tramites.transicionar',
+            'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar', 'reemplazos.crear',
+            'horas_extra.crear', 'horas_extra.revisar_planilla', 'documentos.generar', 'personas.ver', 'dotacion.ver',
         ]);
 
         Role::findOrCreate('Administrador', 'web')->syncPermissions($permissions);

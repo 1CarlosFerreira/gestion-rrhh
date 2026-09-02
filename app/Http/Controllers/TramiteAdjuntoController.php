@@ -39,6 +39,19 @@ class TramiteAdjuntoController extends Controller
         return Storage::disk('private')->download($adjunto->storage_path, $adjunto->original_name, ['Content-Type' => $adjunto->mime_type]);
     }
 
+    public function view(Tramite $tramite, TramiteAdjunto $adjunto): StreamedResponse
+    {
+        if ($adjunto->tramite_id !== $tramite->id || $adjunto->mime_type !== 'application/pdf' || ! auth()->user()->can('tramites.adjuntos.descargar') || Gate::denies('view', $tramite)) {
+            throw new AuthorizationException;
+        }
+        abort_unless(Storage::disk('private')->exists($adjunto->storage_path), 404);
+
+        return Storage::disk('private')->response($adjunto->storage_path, $adjunto->original_name, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$adjunto->original_name.'"',
+        ]);
+    }
+
     public function annul(Tramite $tramite, TramiteAdjunto $adjunto, AnularAdjunto $anular): RedirectResponse
     {
         $anular->execute($tramite, $adjunto, auth()->user());

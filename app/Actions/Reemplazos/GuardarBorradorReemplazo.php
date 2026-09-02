@@ -58,6 +58,28 @@ class GuardarBorradorReemplazo
             throw ValidationException::withMessages(['reemplazante_id' => 'El reemplazante propuesto no puede ser la misma persona que el funcionario a reemplazar.']);
         }
 
+        $absence = $tramite->reemplazo->ausencia()->firstOrFail();
+        $absenceFields = [];
+        foreach (['funcionario_id', 'tipo_reemplazo_id', 'justificacion'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $absenceFields[$field] = $data[$field];
+            }
+        }
+        if (array_key_exists('fecha_inicio_ausencia', $data)) {
+            $absenceFields['fecha_inicio'] = $data['fecha_inicio_ausencia'];
+        }
+        if (array_key_exists('fecha_termino_ausencia', $data)) {
+            $absenceFields['fecha_termino'] = $data['fecha_termino_ausencia'];
+        }
+        // Compatibilidad para llamadas internas anteriores a la separación de periodos.
+        if (! array_key_exists('fecha_inicio_ausencia', $data) && ! $absence->fecha_inicio && array_key_exists('fecha_inicio', $data)) {
+            $absenceFields['fecha_inicio'] = $data['fecha_inicio'];
+        }
+        if (! array_key_exists('fecha_termino_ausencia', $data) && ! $absence->fecha_termino && array_key_exists('fecha_termino', $data)) {
+            $absenceFields['fecha_termino'] = $data['fecha_termino'];
+        }
+        $absence->update($absenceFields);
+
         $fields = collect($data)->only(['tipo_reemplazo_id', 'funcionario_id', 'funcionario_vinculo_id', 'estamento_id', 'profesion_id', 'cargo_texto', 'justificacion', 'fecha_inicio', 'fecha_termino'])->all();
         if (array_key_exists('reemplazante_id', $data) || ($data['nuevo_reemplazante_rut'] ?? null)) {
             $fields['reemplazante_id'] = $reemplazanteId;

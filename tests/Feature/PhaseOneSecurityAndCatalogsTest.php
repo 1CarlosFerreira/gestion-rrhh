@@ -75,8 +75,8 @@ class PhaseOneSecurityAndCatalogsTest extends TestCase
 
     public function test_roles_and_permissions_are_seeded(): void
     {
-        $this->assertSame(3, Role::query()->count());
-        $this->assertSame(25, Permission::query()->count());
+        $this->assertSame(4, Role::query()->count());
+        $this->assertSame(26, Permission::query()->count());
         $this->assertTrue(Role::findByName('Administrador')->hasPermissionTo('admin.usuarios'));
         $this->assertTrue(Role::findByName('Administrador')->hasPermissionTo('docdigital.registrar_formalizacion'));
     }

@@ -44,12 +44,12 @@ class PhaseSevenDocumentGenerationTest extends TestCase
 
     public function test_real_template_is_registered_without_replacement_template(): void
     {
-        $template = DocumentoPlantilla::query()->sole();
+        $template = DocumentoPlantilla::query()->where('codigo', 'HE_INFORME_TECNICO')->sole();
         $this->assertSame('HE_INFORME_TECNICO', $template->codigo);
         $this->assertSame(1, $template->version);
         $this->assertSame(hash_file('sha256', base_path($template->template_path)), $template->sha256);
         $this->assertSame('HORAS_EXTRAORDINARIAS', $template->tipoTramite->codigo);
-        $this->assertDatabaseMissing('documento_plantillas', ['codigo' => 'REEMPLAZO']);
+        $this->assertDatabaseHas('documento_plantillas', ['codigo' => 'REEMPLAZO_SOLICITUD_PDF', 'mime_type' => 'application/pdf', 'active' => true]);
     }
 
     public function test_duration_helper_never_uses_visible_string_for_calculation(): void

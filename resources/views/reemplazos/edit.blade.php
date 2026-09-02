@@ -3,6 +3,11 @@
         'unidad' => (string) old('unidad_servicio_id', $tramite->unidad_servicio_id),
         'nuevo' => (bool) old('nuevo_reemplazante_rut'),
         'seleccionado' => (bool) old('reemplazante_id', $tramite->reemplazo->reemplazante_id),
+        'mismoPeriodo' => false,
+        'inicioAusencia' => old('fecha_inicio_ausencia', $tramite->reemplazo->ausencia?->fecha_inicio?->format('Y-m-d')),
+        'terminoAusencia' => old('fecha_termino_ausencia', $tramite->reemplazo->ausencia?->fecha_termino?->format('Y-m-d')),
+        'inicioCobertura' => old('fecha_inicio', $tramite->reemplazo->fecha_inicio?->format('Y-m-d')),
+        'terminoCobertura' => old('fecha_termino', $tramite->reemplazo->fecha_termino?->format('Y-m-d')),
         'confirmarEnvio' => false,
         'enviando' => false,
     ])">
@@ -28,12 +33,14 @@
             </div>
             <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm print-card">
                 <h3 class="text-lg font-semibold">1. Origen del reemplazo y justificación</h3>
+                <p class="mt-1 text-sm text-slate-600">Periodo de ausencia que origina la solicitud.</p>
                 <p class="text-sm">Unidad: <strong>{{ $tramite->unidadServicio->nombre }}</strong></p>
                 <p class="mt-2 text-sm text-slate-600">Los campos marcados con <span aria-hidden="true">*</span> son obligatorios para enviar la solicitud.</p>
                 <div class="mt-3 grid gap-3 md:grid-cols-5">
                     <label class="md:col-span-2">Tipo de reemplazo <span class="text-amber-700">*</span><select name="tipo_reemplazo_id" class="mt-1 w-full rounded border-gray-300"><option value="">Seleccione</option>@foreach($tiposReemplazo as $tipo)<option value="{{ $tipo->id }}" @selected($tramite->reemplazo->tipo_reemplazo_id === $tipo->id)>{{ $tipo->nombre }}</option>@endforeach</select></label>
                     <label class="md:col-span-3">Funcionario a reemplazar<select name="funcionario_id" id="funcionario_id" class="mt-1 w-full rounded border-gray-300"><option value="">Sin funcionario asociado</option>@foreach($funcionariosUnidad as $persona) @php($vinculo=$persona->vinculos->first())<option value="{{ $persona->id }}" data-vinculo="{{ $vinculo->id }}" data-rut="{{ $persona->rut }}" @selected($tramite->reemplazo->funcionario_id === $persona->id)>{{ $persona->nombre_completo }} · {{ \App\Support\Rut\Rut::format($persona->rut) }}</option>@endforeach</select><input type="hidden" name="funcionario_vinculo_id" id="funcionario_vinculo_id" value="{{ $tramite->reemplazo->funcionario_vinculo_id }}"></label>
                 </div>
+                <div class="mt-4 grid gap-3 md:grid-cols-2"><label>Inicio de ausencia <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_inicio_ausencia" x-ref="inicioAusencia" x-model="inicioAusencia" @change="if (mismoPeriodo) inicioCobertura = inicioAusencia" class="mt-1 w-full"/></label><label>Término de ausencia <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_termino_ausencia" x-ref="terminoAusencia" x-model="terminoAusencia" @change="if (mismoPeriodo) terminoCobertura = terminoAusencia" class="mt-1 w-full"/></label></div>
                 <label class="mt-5 block">Justificación <span class="text-amber-700">*</span><textarea name="justificacion" rows="4" class="mt-2 w-full rounded border-gray-300">{{ old('justificacion', $tramite->reemplazo->justificacion) }}</textarea></label>
             </section>
             <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm print-card">
@@ -64,13 +71,14 @@
                 </div>
             </section>
             <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm print-card">
-                <h3 class="mb-3 text-lg font-semibold">3. Función y período</h3>
+                <h3 class="mb-3 text-lg font-semibold">3. Función y período efectivo del reemplazo</h3>
                 <div class="grid gap-3 md:grid-cols-2">
                     <label>Estamento <span class="text-amber-700">*</span><select name="estamento_id" id="estamento_id" class="mt-1 w-full rounded border-gray-300"><option value="">Seleccione</option>@foreach($estamentos as $item)<option value="{{ $item->id }}" @selected($tramite->reemplazo->estamento_id === $item->id)>{{ $item->nombre }}</option>@endforeach</select></label>
                     <label>Profesión<select name="profesion_id" id="profesion_id" class="mt-1 w-full rounded border-gray-300"><option value="">Seleccione</option>@foreach($profesiones as $item)<option value="{{ $item->id }}" @selected($tramite->reemplazo->profesion_id === $item->id)>{{ $item->nombre }}</option>@endforeach</select></label>
                     <label class="md:col-span-2">Cargo o función<x-text-input name="cargo_texto" id="cargo_texto" :value="$tramite->reemplazo->cargo_texto" class="mt-1 w-full"/></label>
-                    <label>Fecha de inicio <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_inicio" :value="$tramite->reemplazo->fecha_inicio?->format('Y-m-d')" class="mt-1 w-full"/></label>
-                    <label>Fecha de término <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_termino" :value="$tramite->reemplazo->fecha_termino?->format('Y-m-d')" class="mt-1 w-full"/></label>
+                    <label class="flex items-center gap-2 md:col-span-2"><input type="checkbox" name="usar_mismo_periodo" value="1" x-model="mismoPeriodo" @change="mismoPeriodo = $event.target.checked; if (mismoPeriodo) { inicioCobertura = $refs.inicioAusencia.value; terminoCobertura = $refs.terminoAusencia.value }"> Usar el mismo periodo de ausencia</label>
+                    <label>Fecha de inicio efectiva de cobertura <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_inicio" x-model="inicioCobertura" class="mt-1 w-full"/></label>
+                    <label>Fecha de término efectiva de cobertura <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_termino" x-model="terminoCobertura" class="mt-1 w-full"/></label>
                     <p class="rounded bg-gray-50 p-3 md:col-span-2">Unidad donde desempeñará funciones: <strong>{{ $tramite->unidadServicio->nombre }}</strong></p>
                 </div>
             </section>

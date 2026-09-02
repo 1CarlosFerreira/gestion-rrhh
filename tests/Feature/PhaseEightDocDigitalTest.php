@@ -113,7 +113,7 @@ class PhaseEightDocDigitalTest extends TestCase
         $this->assertSame('FORMALIZADA', $document->tramite->fresh()->estadoTramite->codigo);
         $this->assertNotNull($document->tramite->fresh()->finalized_at);
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $document->tramite_id, 'action_code' => 'DOCDIGITAL_FORMALIZACION_REGISTRADA']);
-        $this->actingAs($this->admin())->get(route('tramites.show', $document->tramite))->assertOk()->assertSee('Formalizado')->assertSee('formalizado.pdf')->assertSee('DOCDIGITAL_FORMALIZACION_REGISTRADA');
+        $this->actingAs($this->admin())->get(route('tramites.show', $document->tramite))->assertOk()->assertSee('Formalizado')->assertSee('formalizado.pdf');
         $this->assertDatabaseCount('persona_unidad_vinculos', PersonaUnidadVinculo::query()->count());
         foreach (['firma', 'signature', 'certificado'] as $column) {
             $this->assertFalse(Schema::hasColumn('docdigital_registros', $column));

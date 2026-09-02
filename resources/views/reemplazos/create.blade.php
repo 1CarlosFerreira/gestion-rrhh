@@ -6,6 +6,11 @@
                 'unidad' => (string) old('unidad_servicio_id', $unidadInicial?->id),
                 'nuevo' => (bool) old('nuevo_reemplazante_rut'),
                 'seleccionado' => (bool) old('reemplazante_id'),
+                'mismoPeriodo' => (bool) old('usar_mismo_periodo'),
+                'inicioAusencia' => old('fecha_inicio_ausencia', ''),
+                'terminoAusencia' => old('fecha_termino_ausencia', ''),
+                'inicioCobertura' => old('fecha_inicio', ''),
+                'terminoCobertura' => old('fecha_termino', ''),
                 ])">
                 @csrf
 
@@ -26,6 +31,7 @@
                 <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
                 <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm print-card">
                     <h3 class="text-lg font-semibold text-gray-900">1. Origen del reemplazo y justificación</h3>
+                    <p class="mt-1 text-sm text-slate-600">Periodo de ausencia que origina la solicitud.</p>
                     <div class="mt-3 grid gap-4 md:grid-cols-5">
                         <label class="md:col-span-2">Unidad/Servicio
                             @if($unidadPreseleccionada)<input type="hidden" name="unidad_servicio_id" value="{{ $unidadPreseleccionada->id }}" data-label="{{ $unidadPreseleccionada->nombre }}"><p class="mt-1 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">{{ $unidadPreseleccionada->nombre }}</p>@else
@@ -58,6 +64,7 @@
                             <p class="mt-1 text-xs text-gray-500">Se muestra únicamente la dotación activa y vigente de la unidad seleccionada.</p>
                         </label>
                     </div>
+                    <div class="mt-4 grid gap-3 md:grid-cols-2"><label>Inicio de ausencia <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_inicio_ausencia" x-ref="inicioAusencia" x-model="inicioAusencia" @change="if (mismoPeriodo) inicioCobertura = inicioAusencia" class="mt-1 w-full"/></label><label>Término de ausencia <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_termino_ausencia" x-ref="terminoAusencia" x-model="terminoAusencia" @change="if (mismoPeriodo) terminoCobertura = terminoAusencia" class="mt-1 w-full"/></label></div>
                     <label class="mt-5 block">Justificación <span class="text-amber-700">*</span>
                         <textarea name="justificacion" rows="4" class="mt-2 w-full rounded border-gray-300">{{ old('justificacion') }}</textarea>
                     </label>
@@ -92,13 +99,14 @@
                 </section>
 
                 <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm print-card">
-                    <h3 class="text-lg font-semibold text-gray-900">3. Función y período</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">3. Función y período efectivo del reemplazo</h3>
                     <div class="mt-3 grid gap-3 md:grid-cols-2">
                         <label>Estamento <span class="text-amber-700">*</span><select name="estamento_id" id="estamento_id" class="mt-1 w-full rounded border-gray-300"><option value="">Seleccione</option>@foreach($estamentos as $item)<option value="{{ $item->id }}" @selected((int) old('estamento_id') === $item->id)>{{ $item->nombre }}</option>@endforeach</select></label>
                         <label>Profesión<select name="profesion_id" id="profesion_id" class="mt-1 w-full rounded border-gray-300"><option value="">Seleccione</option>@foreach($profesiones as $item)<option value="{{ $item->id }}" @selected((int) old('profesion_id') === $item->id)>{{ $item->nombre }}</option>@endforeach</select></label>
                         <label>Cargo o función<x-text-input name="cargo_texto" id="cargo_texto" :value="old('cargo_texto')" class="mt-1 w-full"/></label><span></span>
-                        <label>Fecha de inicio <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_inicio" :value="old('fecha_inicio')" class="mt-1 w-full"/></label>
-                        <label>Fecha de término <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_termino" :value="old('fecha_termino')" class="mt-1 w-full"/></label>
+                        <label class="flex items-center gap-2 md:col-span-2"><input type="checkbox" name="usar_mismo_periodo" value="1" x-model="mismoPeriodo" @change="mismoPeriodo = $event.target.checked; if (mismoPeriodo) { inicioCobertura = $refs.inicioAusencia.value; terminoCobertura = $refs.terminoAusencia.value }"> Usar el mismo periodo de ausencia</label>
+                        <label>Fecha de inicio efectiva de cobertura <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_inicio" x-model="inicioCobertura" class="mt-1 w-full"/></label>
+                        <label>Fecha de término efectiva de cobertura <span class="text-amber-700">*</span><x-text-input type="date" name="fecha_termino" x-model="terminoCobertura" class="mt-1 w-full"/></label>
                         <p class="rounded bg-gray-50 p-3 md:col-span-2">Unidad destino: <strong id="unidad_destino">Se completará al seleccionar la unidad</strong></p>
                     </div>
                 </section>

@@ -18,7 +18,7 @@ class GuardarRevisionReemplazo
 
         return DB::transaction(function () use ($tramite, $data, $user): bool {
             $locked = Tramite::query()->lockForUpdate()->findOrFail($tramite->id);
-            $values = collect($data)->only(['grado_eus_id', 'clasificacion_area_id', 'cumple_normativa'])->filter(fn ($value) => $value !== null)->all();
+            $values = collect($data)->only(['grado_eus_informado', 'clasificacion_area_id', 'cumple_normativa'])->all();
             $revision = $locked->revisionReemplazo()->first();
 
             if ($values === [] || ($revision && ! $this->hasChanges($revision, $values))) {
