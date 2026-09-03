@@ -49,6 +49,11 @@ class UnidadOrganizacional extends Model
         return $this->hasMany(PersonaUnidadVinculo::class);
     }
 
+    public function tramites(): HasMany
+    {
+        return $this->hasMany(Tramite::class);
+    }
+
     public function scopeActivas(Builder $query): Builder
     {
         return $query->where('activo', true);

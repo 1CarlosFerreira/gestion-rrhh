@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tramite extends Model
 {
-    protected $fillable = ['public_id', 'codigo', 'tipo_tramite_id', 'estado_tramite_id', 'created_by', 'submitted_at', 'finalized_at'];
+    protected $fillable = ['public_id', 'codigo', 'tipo_tramite_id', 'estado_tramite_id', 'unidad_organizacional_id', 'created_by', 'submitted_at', 'finalized_at'];
 
     public function getRouteKeyName(): string
     {
@@ -29,6 +29,16 @@ class Tramite extends Model
     public function creador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function unidadOrganizacional(): BelongsTo
+    {
+        return $this->belongsTo(UnidadOrganizacional::class);
+    }
+
+    public function reemplazo(): HasOne
+    {
+        return $this->hasOne(TramiteReemplazo::class);
     }
 
     public function historial(): HasMany

@@ -15,11 +15,11 @@ class V2BaseTest extends TestCase
 
     public function test_clean_schema_preserves_transversal_tables_and_removes_v1_domains(): void
     {
-        foreach (['users', 'personas', 'roles', 'permissions', 'tramites', 'tramite_historial', 'tramite_adjuntos', 'documento_plantillas', 'documentos_generados', 'calidades_contractuales', 'persona_unidad_vinculos'] as $table) {
+        foreach (['users', 'personas', 'roles', 'permissions', 'tramites', 'tramite_historial', 'tramite_adjuntos', 'documento_plantillas', 'documentos_generados', 'calidades_contractuales', 'persona_unidad_vinculos', 'tipos_reemplazo', 'tramite_reemplazos'] as $table) {
             $this->assertTrue(Schema::hasTable($table), "Falta la tabla transversal {$table}.");
         }
 
-        foreach (['unidades_servicios', 'user_unidades', 'grados_eus', 'tramite_reemplazos', 'tramite_horas_extra', 'docdigital_registros'] as $table) {
+        foreach (['unidades_servicios', 'user_unidades', 'grados_eus', 'reemplazo_coberturas', 'tramite_horas_extra', 'docdigital_registros'] as $table) {
             $this->assertFalse(Schema::hasTable($table), "La tabla v1 {$table} no debe existir.");
         }
     }
