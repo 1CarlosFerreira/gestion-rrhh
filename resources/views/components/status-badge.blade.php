@@ -4,7 +4,7 @@
     $codigo = $estado?->codigo ?? '';
     [$label, $classes] = match ($codigo) {
         'BORRADOR' => ['Borrador', 'bg-slate-100 text-slate-700'],
-        'DEVUELTA_CORRECCION' => ['Devuelta para corrección', 'bg-amber-100 text-amber-900'],
+        'DEVUELTA_CORRECCION', 'DEVUELTA_PARA_CORRECCION' => ['Devuelta para corrección', 'bg-amber-100 text-amber-900'],
         'OBSERVADA' => ['Observada', 'bg-amber-100 text-amber-900'],
         'FORMALIZADA' => ['Formalizada', 'bg-emerald-100 text-emerald-900'],
         'ENVIADA_GESTION_PERSONAS' => ['Enviada a Gestión de Personas', 'bg-blue-100 text-blue-900'],

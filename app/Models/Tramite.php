@@ -41,6 +41,11 @@ class Tramite extends Model
         return $this->hasOne(TramiteReemplazo::class);
     }
 
+    public function revisionReemplazo(): HasOne
+    {
+        return $this->hasOne(ReemplazoRevision::class);
+    }
+
     public function historial(): HasMany
     {
         return $this->hasMany(TramiteHistorial::class)->orderBy('occurred_at')->orderBy('id');

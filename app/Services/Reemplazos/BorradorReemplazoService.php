@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class BorradorReemplazoService
 {
-    public function __construct(private readonly ReemplazoService $reemplazos, private readonly GenerarCodigoTramite $codigo) {}
+    public function __construct(private readonly ReemplazoService $reemplazos, private readonly GenerarCodigoTramite $codigo, private readonly ReemplazoWorkflow $workflow) {}
 
     public function crear(UnidadOrganizacional $unidad, array $datos, User $actor): Tramite
     {
@@ -36,8 +36,8 @@ class BorradorReemplazoService
     {
         return DB::transaction(function () use ($tramite, $unidad, $datos, $actor): Tramite {
             $tramite = Tramite::query()->lockForUpdate()->with(['reemplazo', 'estadoTramite'])->findOrFail($tramite->id);
-            if ($tramite->estadoTramite->codigo !== 'BORRADOR') {
-                throw ValidationException::withMessages(['tramite' => 'Solo se pueden editar solicitudes en borrador.']);
+            if (! in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_PARA_CORRECCION'], true)) {
+                throw ValidationException::withMessages(['tramite' => 'La solicitud no se encuentra en un estado editable.']);
             }
             $this->validarDatos($unidad, $datos, $tramite->reemplazo->id);
             $tramite->update(['unidad_organizacional_id' => $unidad->id]);
@@ -64,7 +64,7 @@ class BorradorReemplazoService
             throw ValidationException::withMessages(['tipo_reemplazo_id' => 'El tipo de reemplazo debe estar activo.']);
         }
         $this->reemplazos->validarBorrador($datos);
-        if (! empty($datos['funcionario_id']) && ! empty($datos['fecha_funcionario_desde']) && ! empty($datos['fecha_funcionario_hasta']) && $this->reemplazos->existeSuperposicion($datos['funcionario_id'], $datos['fecha_funcionario_desde'], $datos['fecha_funcionario_hasta'], $exceptoId)) {
+        if (! empty($datos['funcionario_id']) && ! empty($datos['fecha_funcionario_desde']) && ! empty($datos['fecha_funcionario_hasta']) && $this->reemplazos->existeSuperposicion($datos['funcionario_id'], $datos['fecha_funcionario_desde'], $datos['fecha_funcionario_hasta'], $exceptoId, fn ($q) => $this->workflow->filtrarActivos($q))) {
             throw ValidationException::withMessages(['fecha_funcionario_desde' => 'El funcionario ya posee otro reemplazo con un período superpuesto.']);
         }
     }

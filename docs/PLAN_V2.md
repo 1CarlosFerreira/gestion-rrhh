@@ -67,6 +67,16 @@ El borrador admite datos progresivos: reemplazante, su periodo, tipo, justificac
 
 Se reactivaron las rutas del módulo transversal de adjuntos privados para borradores ya persistidos, conservando MIME, hash, versión, autorización e historial. `ReemplazosV2Seeder` carga idempotentemente `REEMPLAZO`, su único estado actual `BORRADOR` y los tipos `LICENCIA_MEDICA`, `PERMISO`, `LICENCIA_MATERNAL` y `CARGO_VACANTE`. La suite completa de V2B ejecuta 102 pruebas y 512 aserciones. V2B no implementa envío, Gestión de Personas, revisión, PDF, DocDigital ni alta automática en dotación; esas capacidades quedan para V2C y fases documentales posteriores.
 
+## Reemplazos V2C implementado: envío y revisión administrativa
+
+El flujo configurable de Reemplazos incorpora `ENVIADA_GESTION_PERSONAS`, `EN_REVISION`, `DEVUELTA_PARA_CORRECCION` y `LISTA_GENERAR_DOCUMENTO`. Las únicas transiciones de esta fase son envío desde `BORRADOR`, inicio de revisión, devolución con observación obligatoria, reenvío desde devuelta y aprobación de antecedentes. Todas pasan por `TransicionarTramite`, respetan bloqueo transaccional y generan el historial transversal con actor, estados, acción, fecha y observación cuando corresponde.
+
+Las validaciones de borrador continúan admitiendo datos incompletos; el envío exige unidad, funcionario vigente en su dotación, tipo activo, reemplazante distinto, cuatro fechas válidas, cobertura contenida —total o parcial—, justificación, ausencia de superposición en estados activos y documentos solo cuando exista configuración obligatoria activa. Los estados que bloquean superposición se mantienen centralizados y son `BORRADOR`, `ENVIADA_GESTION_PERSONAS`, `EN_REVISION`, `DEVUELTA_PARA_CORRECCION` y `LISTA_GENERAR_DOCUMENTO`.
+
+Gestión de Personas usa `reemplazos.revisar` junto con acceso operativo vigente, sin autorización por nombre de rol. Su bandeja se limita a unidades accesibles y permite iniciar revisión, guardar una revisión administrativa única, devolver conservando datos y adjuntos, o aprobar. La revisión registra grado E.U.S. numérico manual, clasificación de área configurable, cumplimiento normativo, observación administrativa, revisor y fecha. No se siembran grados ni clasificaciones oficiales inventadas.
+
+`LISTA_GENERAR_DOCUMENTO` es la frontera terminal de V2C. La generación PDF y `DOCUMENTO_GENERADO` quedan para V2D. DocDigital, formalización, alta automática en dotación y múltiples reemplazantes continúan pendientes.
+
 ## Inventario resumido
 
 Riesgo: B=bajo, M=medio, A=alto. Conteo por clasificación: **MANTENER 19**, **ADAPTAR 10**, **REEMPLAZAR 7**, **ELIMINAR EN V2 1**, **DIFERIR 7** (total 44).

@@ -47,13 +47,16 @@ class ReemplazoService
         $desde = CarbonImmutable::parse($desde)->toDateString();
         $hasta = CarbonImmutable::parse($hasta)->toDateString();
 
-        return TramiteReemplazo::query()
+        $query = TramiteReemplazo::query()
             ->where('funcionario_id', $funcionarioId)
             ->when($exceptoReemplazoId, fn (Builder $query) => $query->whereKeyNot($exceptoReemplazoId))
-            ->when($filtrarTramitesActivos, fn (Builder $query) => $query->whereHas('tramite', $filtrarTramitesActivos))
             ->whereDate('fecha_funcionario_desde', '<=', $hasta)
-            ->whereDate('fecha_funcionario_hasta', '>=', $desde)
-            ->exists();
+            ->whereDate('fecha_funcionario_hasta', '>=', $desde);
+        if ($filtrarTramitesActivos !== null) {
+            $query->whereHas('tramite', $filtrarTramitesActivos);
+        }
+
+        return $query->exists();
     }
 
     public function validar(array $datos): void

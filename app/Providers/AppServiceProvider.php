@@ -15,6 +15,7 @@ use App\Policies\TramiteReemplazoPolicy;
 use App\Policies\UnidadOrganizacionalPolicy;
 use App\Policies\UnidadResponsablePolicy;
 use App\Policies\UserUnidadAccesoPolicy;
+use App\Services\Reemplazos\ReemplazoTransitionGuard;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->tag([ReemplazoTransitionGuard::class], 'tramite.transition.guards');
     }
 
     public function boot(): void
@@ -31,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('crear-reemplazo', TramiteReemplazoPolicy::class.'@create');
         Gate::define('ver-reemplazo', TramiteReemplazoPolicy::class.'@view');
         Gate::define('editar-reemplazo', TramiteReemplazoPolicy::class.'@update');
+        Gate::define('revisar-reemplazo', TramiteReemplazoPolicy::class.'@review');
         Gate::policy(CalidadContractual::class, CalidadContractualPolicy::class);
         Gate::policy(PersonaUnidadVinculo::class, PersonaUnidadVinculoPolicy::class);
         Gate::policy(UnidadOrganizacional::class, UnidadOrganizacionalPolicy::class);

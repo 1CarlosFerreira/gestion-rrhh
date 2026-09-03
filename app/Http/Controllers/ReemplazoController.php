@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\SaveBorradorReemplazoRequest;
 use App\Models\Persona;
 use App\Models\TipoDocumento;
@@ -59,6 +60,15 @@ class ReemplazoController extends Controller
         });
 
         return back()->with('status', 'Borrador actualizado.');
+    }
+
+    public function send(Request $request, Tramite $tramite, TransicionarTramite $transition): RedirectResponse
+    {
+        $this->autorizarTramite($tramite, 'editar-reemplazo');
+        $action = $tramite->estadoTramite?->codigo === 'DEVUELTA_PARA_CORRECCION' ? 'REENVIAR_A_GESTION_PERSONAS' : 'ENVIAR_A_GESTION_PERSONAS';
+        $transition->execute($tramite, $action, $request->user());
+
+        return redirect()->route('dashboard')->with('status', 'Solicitud enviada a Gestión de Personas.');
     }
 
     public function funcionarios(Request $request, AccesoOperativoService $accesos): JsonResponse

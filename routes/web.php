@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\UnidadResponsableController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserUnidadAccesoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GestionPersonasReemplazoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReemplazoController;
 use App\Http\Controllers\TramiteAdjuntoController;
@@ -26,11 +27,21 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reemplazos/funcionarios', [ReemplazoController::class, 'funcionarios'])->name('reemplazos.funcionarios');
     Route::get('/reemplazos/{tramite}/editar', [ReemplazoController::class, 'edit'])->name('reemplazos.edit');
     Route::put('/reemplazos/{tramite}', [ReemplazoController::class, 'update'])->name('reemplazos.update');
+    Route::post('/reemplazos/{tramite}/enviar', [ReemplazoController::class, 'send'])->name('reemplazos.send');
     Route::post('/reemplazos/{tramite}/adjuntos', [TramiteAdjuntoController::class, 'store'])->name('reemplazos.adjuntos.store');
     Route::post('/reemplazos/{tramite}/adjuntos/{adjunto}/version', [TramiteAdjuntoController::class, 'version'])->name('reemplazos.adjuntos.version');
     Route::get('/reemplazos/{tramite}/adjuntos/{adjunto}/descargar', [TramiteAdjuntoController::class, 'download'])->name('reemplazos.adjuntos.download');
     Route::get('/reemplazos/{tramite}/adjuntos/{adjunto}/ver', [TramiteAdjuntoController::class, 'view'])->name('reemplazos.adjuntos.view');
     Route::patch('/reemplazos/{tramite}/adjuntos/{adjunto}/anular', [TramiteAdjuntoController::class, 'annul'])->name('reemplazos.adjuntos.annul');
+
+    Route::prefix('gestion-personas/reemplazos')->name('gestion-personas.reemplazos.')->group(function (): void {
+        Route::get('/', [GestionPersonasReemplazoController::class, 'index'])->name('index');
+        Route::get('/{tramite}', [GestionPersonasReemplazoController::class, 'show'])->name('show');
+        Route::post('/{tramite}/iniciar', [GestionPersonasReemplazoController::class, 'start'])->name('start');
+        Route::put('/{tramite}/revision', [GestionPersonasReemplazoController::class, 'save'])->name('save');
+        Route::post('/{tramite}/devolver', [GestionPersonasReemplazoController::class, 'return'])->name('return');
+        Route::post('/{tramite}/aprobar', [GestionPersonasReemplazoController::class, 'approve'])->name('approve');
+    });
 
     Route::middleware('can:admin.usuarios')->prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');

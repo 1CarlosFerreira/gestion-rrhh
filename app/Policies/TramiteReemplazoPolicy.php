@@ -22,7 +22,13 @@ class TramiteReemplazoPolicy
 
     public function update(User $user, Tramite $tramite): bool
     {
-        return $tramite->estadoTramite?->codigo === 'BORRADOR' && $this->puedeOperar($user, $tramite);
+        return in_array($tramite->estadoTramite?->codigo, ['BORRADOR', 'DEVUELTA_PARA_CORRECCION'], true) && $this->puedeOperar($user, $tramite);
+    }
+
+    public function review(User $user, Tramite $tramite): bool
+    {
+        return $tramite->unidadOrganizacional !== null
+            && $this->accesos->tienePermisoYAcceso($user, 'reemplazos.revisar', $tramite->unidadOrganizacional, today());
     }
 
     private function puedeOperar(User $user, Tramite $tramite): bool
