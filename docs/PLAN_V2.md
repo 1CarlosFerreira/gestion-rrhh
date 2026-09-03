@@ -16,6 +16,17 @@ Los requisitos v2 confirmados son: organización jerárquica; dotación históri
 - Reutilizar el enfoque de Policies y visibilidad por unidad, pero resolver alcance por descendencia jerárquica y responsabilidad vigente.
 - Reutilizar de `CoberturaAusenciaService` el cálculo inclusivo, intervalos disponibles y detección de superposición; no su modelo de dominio actual.
 
+## Decisiones confirmadas para v2
+
+- La organización será un árbol configurable de Dirección, subdirecciones, departamentos, áreas, unidades y servicios. Cada nodo podrá depender de otro; la jerarquía oficial se cargará y validará posteriormente y no dependerá de nombres de roles hardcodeados.
+- Se separan `Persona` (identidad única por RUT), `Usuario` (cuenta personal), dotación histórica, responsabilidad titular/subrogante, acceso operativo a unidades y roles/permisos generales de Spatie. Preparar solicitudes para una unidad no convierte a una secretaria o administrativo en jefatura ni le permite aprobar.
+- Cada funcionario autorizado usará su propia cuenta, sin autorregistro ni cuentas compartidas, con acceso por RUT o correo institucional y contraseña. El usuario debe estar activo, podrá tener varios roles y conservará su cuenta aunque cambien su unidad o responsabilidad. Un `User` funcionario referencia a su `Persona`; el administrador técnico puede existir sin dotación activa.
+- El alcance organizacional se resolverá después mediante dotación, responsabilidades y accesos vigentes. Una jefatura sigue siendo funcionaria y puede presentar solicitudes propias, pero nadie puede autoaprobarse.
+- Los funcionarios podrán solicitar permisos y feriados. Las licencias médicas se informarán; Gestión de Personas las validará y registrará su ingreso a SIRH, sin aprobación de jefatura. Las aprobaciones seguirán la responsabilidad vigente: jefatura de la unidad, superior de la jefatura y Dirección para subdirectores. La subrogancia tendrá vigencia fechada.
+- Ausencia, necesidad de cobertura y reemplazo son conceptos distintos. Una necesidad puede originarse por ausencia o vacante, cubrir parcialmente el período y dividirse entre varios reemplazantes sin superposición. Cada cobertura genera su propio trámite y documento.
+- El reemplazante permanece como cobertura en trámite hasta registrar el documento firmado. Solo entonces se crea idempotentemente su dotación temporal, con trazabilidad; al finalizar, el vínculo permanece en el historial.
+- El grado E.U.S. será un número informado manualmente por Gestión de Personas; `grados_eus` se retira. Se preservan la plantilla institucional de Reemplazo, sus assets y el generador Dompdf. La integración automática con DocDigital y Horas Extraordinarias quedan diferidas; el registro manual del documento firmado formará parte del flujo futuro.
+
 ## Inventario resumido
 
 Riesgo: B=bajo, M=medio, A=alto. Conteo por clasificación: **MANTENER 19**, **ADAPTAR 10**, **REEMPLAZAR 7**, **ELIMINAR EN V2 1**, **DIFERIR 7** (total 44).
