@@ -1,0 +1,7 @@
+<div class="border-l border-gray-200 py-2" style="padding-left: {{ $nivel * 1.5 + .75 }}rem">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded border p-3 {{ $unidad->activo ? '' : 'bg-gray-100 text-gray-500' }}">
+        <div><span class="font-semibold">{{ $unidad->nombre }}</span> @if($unidad->sigla)<span class="text-sm">({{ $unidad->sigla }})</span>@endif <span class="ml-2 rounded bg-slate-100 px-2 py-1 text-xs">{{ $unidad->tipo->nombre }}</span><p class="text-xs text-gray-500">{{ $unidad->codigo }} · {{ $unidad->activo ? 'Activa' : 'Inactiva' }} · {{ $unidad->participa_en_aprobacion ? 'Participa en aprobación futura' : 'Sin participación en aprobación' }}</p></div>
+        @can('estructura_organizacional.gestionar')<div class="flex gap-2"><a class="text-sm text-indigo-700" href="{{ route('admin.estructura.create', ['parent_id' => $unidad->id]) }}">Crear hijo</a><a class="text-sm text-indigo-700" href="{{ route('admin.estructura.edit', $unidad) }}">Editar/mover</a><form method="POST" action="{{ route('admin.estructura.toggle', $unidad) }}">@csrf @method('PATCH')<button class="text-sm text-indigo-700">{{ $unidad->activo ? 'Desactivar' : 'Activar' }}</button></form></div>@endcan
+    </div>
+    @if($recursivo) @foreach($unidad->children()->when(!request()->boolean('incluir_inactivos'), fn($q) => $q->where('activo', true))->with('tipo')->get() as $hijo) @include('admin.estructura.partials.node', ['unidad' => $hijo, 'nivel' => $nivel + 1, 'recursivo' => true]) @endforeach @endif
+</div>

@@ -27,6 +27,10 @@ Los requisitos v2 confirmados son: organización jerárquica; dotación históri
 - El reemplazante permanece como cobertura en trámite hasta registrar el documento firmado. Solo entonces se crea idempotentemente su dotación temporal, con trazabilidad; al finalizar, el vínculo permanece en el historial.
 - El grado E.U.S. será un número informado manualmente por Gestión de Personas; `grados_eus` se retira. Se preservan la plantilla institucional de Reemplazo, sus assets y el generador Dompdf. La integración automática con DocDigital y Horas Extraordinarias quedan diferidas; el registro manual del documento firmado formará parte del flujo futuro.
 
+## Fase 1 implementada: estructura organizacional
+
+La estructura usa lista de adyacencia en `unidades_organizacionales.parent_id` y tipos configurables en `tipos_unidad_organizacional`. Se optó por desactivación lógica mediante `activo`, sin fechas ni versionado completo del árbol hasta validar el organigrama oficial. El modelo ofrece padres, hijos, ancestros, descendientes, profundidad y ruta legible; los movimientos rechazan la autoasignación y cualquier descendiente para impedir ciclos. Se incorporaron los permisos `estructura_organizacional.ver`, `estructura_organizacional.gestionar` y `tipos_unidad_organizacional.gestionar`, asignados al rol Administrador. Se sembraron solo ocho tipos genéricos, sin unidades institucionales. Las pruebas cubren jerarquía, integridad, búsqueda, visibilidad y autorización. Continúan pendientes responsables, subrogancias, accesos operativos, dotación y la validación del organigrama oficial.
+
 ## Inventario resumido
 
 Riesgo: B=bajo, M=medio, A=alto. Conteo por clasificación: **MANTENER 19**, **ADAPTAR 10**, **REEMPLAZAR 7**, **ELIMINAR EN V2 1**, **DIFERIR 7** (total 44).

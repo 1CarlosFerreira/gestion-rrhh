@@ -13,7 +13,7 @@ class RolesPermisosSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $permissions = ['admin.usuarios', 'admin.roles_permisos', 'tramites.ver_propios', 'tramites.ver_todos', 'tramites.crear'];
+        $permissions = ['admin.usuarios', 'admin.roles_permisos', 'tramites.ver_propios', 'tramites.ver_todos', 'tramites.crear', 'estructura_organizacional.ver', 'estructura_organizacional.gestionar', 'tipos_unidad_organizacional.gestionar'];
         foreach ($permissions as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
