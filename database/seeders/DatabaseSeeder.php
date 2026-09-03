@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             EstructuraOrganizacionalOficialSeeder::class,
             ReemplazosV2Seeder::class,
             TiposDocumentoSeeder::class,
+            DocumentoPlantillaReemplazoV2Seeder::class,
             AdminUserSeeder::class,
         ]);
     }

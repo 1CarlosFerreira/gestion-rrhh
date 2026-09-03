@@ -19,7 +19,7 @@ class GestionPersonasReemplazoController extends Controller
     {
         abort_unless($request->user()->can('reemplazos.revisar'), 403);
         $ids = $accesos->unidadesAccesibles($request->user(), today())->pluck('id');
-        $tramites = Tramite::query()->with(['unidadOrganizacional', 'estadoTramite', 'reemplazo.funcionario', 'reemplazo.reemplazante'])->whereHas('tipoTramite', fn ($q) => $q->where('codigo', 'REEMPLAZO'))->whereIn('unidad_organizacional_id', $ids)->whereHas('estadoTramite', fn ($q) => $q->whereIn('codigo', ['ENVIADA_GESTION_PERSONAS', 'EN_REVISION']))->orderBy('submitted_at')->paginate(20);
+        $tramites = Tramite::query()->with(['unidadOrganizacional', 'estadoTramite', 'reemplazo.funcionario', 'reemplazo.reemplazante'])->whereHas('tipoTramite', fn ($q) => $q->where('codigo', 'REEMPLAZO'))->whereIn('unidad_organizacional_id', $ids)->whereHas('estadoTramite', fn ($q) => $q->whereIn('codigo', ['ENVIADA_GESTION_PERSONAS', 'EN_REVISION', 'LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO']))->orderBy('submitted_at')->paginate(20);
 
         return view('reemplazos.bandeja-revision', compact('tramites'));
     }
@@ -27,7 +27,11 @@ class GestionPersonasReemplazoController extends Controller
     public function show(Tramite $tramite): View
     {
         $this->authorizeReview($tramite);
-        $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'adjuntos.tipoDocumento', 'historial.usuario']);
+        $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'adjuntos.tipoDocumento', 'historial.usuario', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor']);
+
+        if (in_array($tramite->estadoTramite->codigo, ['LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO'], true)) {
+            return view('reemplazos.documento', compact('tramite'));
+        }
 
         return view('reemplazos.revision', ['tramite' => $tramite, 'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get()]);
     }

@@ -19,7 +19,7 @@ class TramitePolicy
     {
         return $user->can('tramites.ver_todos')
             || ($user->can('tramites.ver_propios') && $tramite->created_by === $user->id)
-            || ($tramite->tipoTramite?->codigo === 'REEMPLAZO' && $tramite->unidadOrganizacional !== null && ($this->accesos->tienePermisoYAcceso($user, 'reemplazos.crear', $tramite->unidadOrganizacional, today()) || $this->accesos->tienePermisoYAcceso($user, 'reemplazos.revisar', $tramite->unidadOrganizacional, today())));
+            || ($tramite->tipoTramite?->codigo === 'REEMPLAZO' && $tramite->unidadOrganizacional !== null && ($this->accesos->tienePermisoYAcceso($user, 'reemplazos.crear', $tramite->unidadOrganizacional, today()) || $this->accesos->tienePermisoYAcceso($user, 'reemplazos.revisar', $tramite->unidadOrganizacional, today()) || $this->accesos->tienePermisoYAcceso($user, 'reemplazos.generar_documento', $tramite->unidadOrganizacional, today())));
     }
 
     public function create(User $user): bool

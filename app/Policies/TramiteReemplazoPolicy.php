@@ -31,6 +31,12 @@ class TramiteReemplazoPolicy
             && $this->accesos->tienePermisoYAcceso($user, 'reemplazos.revisar', $tramite->unidadOrganizacional, today());
     }
 
+    public function generateDocument(User $user, Tramite $tramite): bool
+    {
+        return $tramite->unidadOrganizacional !== null
+            && $this->accesos->tienePermisoYAcceso($user, 'reemplazos.generar_documento', $tramite->unidadOrganizacional, today());
+    }
+
     private function puedeOperar(User $user, Tramite $tramite): bool
     {
         return $tramite->unidadOrganizacional !== null

@@ -77,6 +77,16 @@ Gestión de Personas usa `reemplazos.revisar` junto con acceso operativo vigente
 
 `LISTA_GENERAR_DOCUMENTO` es la frontera terminal de V2C. La generación PDF y `DOCUMENTO_GENERADO` quedan para V2D. DocDigital, formalización, alta automática en dotación y múltiples reemplazantes continúan pendientes.
 
+## Reemplazos V2D implementado: documento institucional
+
+V2D agrega únicamente la transición configurable `LISTA_GENERAR_DOCUMENTO -> DOCUMENTO_GENERADO`, ejecutada como `GENERAR_DOCUMENTO` mediante el motor central. La generación requiere `reemplazos.generar_documento` y acceso operativo vigente a la unidad, sin inferencias por nombre de rol. El Administrador recibe el permiso desde el seeder, pero no obtiene excepciones al alcance operativo.
+
+La plantilla institucional histórica conserva encabezado, logos, estructura de memorándum, tablas y espacios visuales para la tramitación externa, adaptados exclusivamente al dominio V2. El PDF distingue las cuatro fechas: periodo total del funcionario y periodo efectivo del reemplazante; también muestra cobertura parcial, tipo, justificación, grado E.U.S., clasificación de área y cumplimiento normativo. La regla histórica excepcional de destinatario dependiente de un rol eliminado no se reutiliza por falta de respaldo vigente; se mantiene el destinatario general de la Subdirección de Gestión y Desarrollo de las Personas.
+
+Cada primera generación crea un `TramiteAdjunto` en el disco privado y un `DocumentoGenerado` versión 1 ligado a la plantilla lógica `REEMPLAZO_SOLICITUD_PDF`. Se usan nombre físico ULID, MIME PDF, tamaño, SHA-256, actor y fecha. `metadata` conserva un snapshot versionado de trámite, unidad, creador, funcionario y su vínculo laboral vigente, reemplazante, cuatro fechas, solicitud, cobertura, revisión administrativa, clasificación y versión/hash de plantilla. Los cambios posteriores de nombres o catálogos no alteran el contexto emitido.
+
+El archivo se renderiza y almacena antes de registrar el documento y transicionar. Un fallo revierte los registros y elimina el archivo escrito, manteniendo `LISTA_GENERAR_DOCUMENTO`. La descarga pasa por controlador autorizado y nunca expone la ruta física. V2D implementa solo la primera generación; regeneración/versiones posteriores quedan explícitamente pendientes. DocDigital, firma, visaciones, formalización, vínculo automático de dotación y múltiples reemplazantes no forman parte de esta fase.
+
 ## Inventario resumido
 
 Riesgo: B=bajo, M=medio, A=alto. Conteo por clasificación: **MANTENER 19**, **ADAPTAR 10**, **REEMPLAZAR 7**, **ELIMINAR EN V2 1**, **DIFERIR 7** (total 44).
