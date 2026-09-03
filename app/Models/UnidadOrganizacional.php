@@ -39,6 +39,11 @@ class UnidadOrganizacional extends Model
         return $this->hasMany(UnidadResponsable::class);
     }
 
+    public function accesosOperativos(): HasMany
+    {
+        return $this->hasMany(UserUnidadAcceso::class);
+    }
+
     public function scopeActivas(Builder $query): Builder
     {
         return $query->where('activo', true);

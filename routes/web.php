@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\EstructuraOrganizacionalController;
 use App\Http\Controllers\Admin\TipoUnidadOrganizacionalController;
 use App\Http\Controllers\Admin\UnidadResponsableController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\UserUnidadAccesoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +39,12 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/responsabilidades/{responsabilidad}/editar', [UnidadResponsableController::class, 'edit'])->name('responsabilidades.edit');
         Route::put('/responsabilidades/{responsabilidad}', [UnidadResponsableController::class, 'update'])->name('responsabilidades.update');
         Route::patch('/responsabilidades/{responsabilidad}/cerrar', [UnidadResponsableController::class, 'close'])->name('responsabilidades.close');
+        Route::get('/accesos-operativos', [UserUnidadAccesoController::class, 'index'])->name('accesos.index');
+        Route::get('/accesos-operativos/crear', [UserUnidadAccesoController::class, 'create'])->name('accesos.create');
+        Route::post('/accesos-operativos', [UserUnidadAccesoController::class, 'store'])->name('accesos.store');
+        Route::get('/accesos-operativos/{acceso}/editar', [UserUnidadAccesoController::class, 'edit'])->name('accesos.edit');
+        Route::put('/accesos-operativos/{acceso}', [UserUnidadAccesoController::class, 'update'])->name('accesos.update');
+        Route::patch('/accesos-operativos/{acceso}/cerrar', [UserUnidadAccesoController::class, 'close'])->name('accesos.close');
     });
 });
 
