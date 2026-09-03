@@ -40,7 +40,7 @@ class EstructuraOrganizacionalTest extends TestCase
         $this->assertSame(2, $service->nivel($nieto));
         $this->assertSame('Raíz A / Hijo / Nieto', $service->ruta($nieto));
         $this->assertTrue($service->contiene($raizA, $nieto));
-        $this->assertSame([$raizA->id, $raizB->id], UnidadOrganizacional::query()->activas()->raices()->pluck('id')->all());
+        $this->assertSame([$raizA->id, $raizB->id], UnidadOrganizacional::query()->activas()->raices()->whereIn('codigo', ['A', 'B'])->pluck('id')->all());
     }
 
     public function test_active_children_are_filtered_and_ordered(): void

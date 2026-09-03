@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RolesPermisosSeeder::class,
             CatalogosSeeder::class,
             TiposUnidadOrganizacionalSeeder::class,
+            EstructuraOrganizacionalOficialSeeder::class,
             TiposDocumentoSeeder::class,
             AdminUserSeeder::class,
         ]);
