@@ -5,7 +5,7 @@
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            Actualiza tu nombre y correo electrónico. Los roles, permisos y unidades son administrados institucionalmente.
+            Actualiza tu nombre y correo electrónico. Los roles y permisos son administrados institucionalmente.
         </p>
     </header>
 

@@ -5,40 +5,15 @@ namespace App\Models;
 use App\Support\Rut\Rut;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Persona extends Model
 {
     protected $fillable = ['rut', 'nombres', 'apellido_paterno', 'apellido_materno', 'active'];
 
-    public function vinculos(): HasMany
+    public function user(): HasOne
     {
-        return $this->hasMany(PersonaUnidadVinculo::class)->latest('start_date');
-    }
-
-    public function vinculosOperativos(): HasMany
-    {
-        return $this->vinculos()->whereIn('status', PersonaUnidadVinculo::ESTADOS_OPERATIVOS);
-    }
-
-    public function adjuntosTramite(): HasMany
-    {
-        return $this->hasMany(TramiteAdjunto::class);
-    }
-
-    public function reemplazosComoFuncionario(): HasMany
-    {
-        return $this->hasMany(TramiteReemplazo::class, 'funcionario_id');
-    }
-
-    public function reemplazosComoReemplazante(): HasMany
-    {
-        return $this->hasMany(TramiteReemplazo::class, 'reemplazante_id');
-    }
-
-    public function participacionesHorasExtra(): HasMany
-    {
-        return $this->hasMany(HorasExtraFuncionario::class);
+        return $this->hasOne(User::class);
     }
 
     public function scopeBuscar(Builder $query, string $term): Builder

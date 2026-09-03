@@ -19,7 +19,6 @@ class ConsultarTramites
                     $query->whereHas('estadoTramite', fn (Builder $state) => $state->where('tipo_tramite_id', $filters['tipo_tramite_id']));
                 }
             })
-            ->when($filters['unidad_servicio_id'] ?? null, fn (Builder $query, $value) => $query->where('unidad_servicio_id', $value))
             ->when($filters['codigo'] ?? null, function (Builder $query, $value): void {
                 $term = trim($value);
                 $query->where(function (Builder $match) use ($term): void {

@@ -6,7 +6,7 @@ namespace App\Models;
 use App\Support\Rut\Rut;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -25,30 +25,15 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'rut',
+        'persona_id',
         'email',
         'password',
         'active',
     ];
 
-    public function asignacionesUnidad(): HasMany
+    public function persona(): BelongsTo
     {
-        return $this->hasMany(UserUnidad::class);
-    }
-
-    public function unidadesHabilitadas(): BelongsToMany
-    {
-        $today = now()->toDateString();
-
-        return $this->belongsToMany(UnidadServicio::class, 'user_unidades')
-            ->withPivot(['id', 'active', 'valid_from', 'valid_to'])
-            ->withTimestamps()
-            ->where('user_unidades.active', true)
-            ->where(function ($query) use ($today): void {
-                $query->whereNull('valid_from')->orWhere('valid_from', '<=', $today);
-            })
-            ->where(function ($query) use ($today): void {
-                $query->whereNull('valid_to')->orWhere('valid_to', '>=', $today);
-            });
+        return $this->belongsTo(Persona::class);
     }
 
     public function tramitesCreados(): HasMany
@@ -64,16 +49,6 @@ class User extends Authenticatable
     public function adjuntosCargados(): HasMany
     {
         return $this->hasMany(TramiteAdjunto::class, 'uploaded_by');
-    }
-
-    public function registrosDocDigitalEnviados(): HasMany
-    {
-        return $this->hasMany(DocDigitalRegistro::class, 'registrado_por');
-    }
-
-    public function formalizacionesDocDigital(): HasMany
-    {
-        return $this->hasMany(DocDigitalRegistro::class, 'formalizado_por');
     }
 
     public function setRutAttribute(?string $value): void

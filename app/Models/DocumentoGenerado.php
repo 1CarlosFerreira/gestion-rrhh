@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DocumentoGenerado extends Model
 {
@@ -39,11 +38,6 @@ class DocumentoGenerado extends Model
     public function generadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'generated_by');
-    }
-
-    public function registrosDocDigital(): HasMany
-    {
-        return $this->hasMany(DocDigitalRegistro::class);
     }
 
     protected function casts(): array

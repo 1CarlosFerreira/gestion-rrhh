@@ -9,16 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('rut', 12)->nullable()->unique()->after('name');
-            $table->dateTime('last_login_at')->nullable()->after('active');
+            $table->foreignId('persona_id')->nullable()->unique()->after('rut')->constrained('personas')->restrictOnDelete();
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropUnique(['rut']);
-            $table->dropColumn(['rut', 'last_login_at']);
+            $table->dropConstrainedForeignId('persona_id');
         });
     }
 };

@@ -1,1 +1,0 @@
-<x-app-layout><x-slot name="header"><h2 class="text-xl font-semibold text-gray-800">Nueva persona</h2></x-slot><div class="py-10"><form method="POST" action="{{ route('personas.store') }}" class="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-sm">@include('personas._form')</form></div></x-app-layout>

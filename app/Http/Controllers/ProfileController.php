@@ -15,7 +15,7 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
-        $request->user()->load(['roles', 'asignacionesUnidad.unidad']);
+        $request->user()->load(['persona', 'roles']);
 
         return view('profile.edit', [
             'user' => $request->user(),

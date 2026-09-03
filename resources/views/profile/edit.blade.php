@@ -9,7 +9,7 @@
         <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
             <x-flash-toast />
 
-            <p class="text-gray-600">Consulta la información de tu cuenta y tus asignaciones en el sistema.</p>
+            <p class="text-gray-600">Consulta la información de tu cuenta personal y sus roles.</p>
 
             <div class="grid items-start gap-6 lg:grid-cols-3">
                 <div class="space-y-6 lg:col-span-2">
@@ -24,7 +24,7 @@
 
                 <aside class="space-y-6">
                     <section class="rounded-xl bg-white p-6 shadow-sm">
-                        <h3 class="font-semibold text-gray-900">Rol y asignación</h3>
+                        <h3 class="font-semibold text-gray-900">Roles y cuenta</h3>
 
                         <p class="mt-4 text-xs font-medium uppercase tracking-wide text-gray-500">Roles vigentes</p>
                         <div class="mt-2 flex flex-wrap gap-2">
@@ -42,21 +42,7 @@
                         <p class="mt-2 text-sm text-gray-700">{{ $user->last_login_at?->format('d-m-Y H:i') ?? 'Aún no hay un acceso registrado.' }}</p>
                     </section>
 
-                    <section class="rounded-xl bg-white p-6 shadow-sm">
-                        <h3 class="font-semibold text-gray-900">Unidades asignadas</h3>
-
-                        <div class="mt-4 space-y-3">
-                            @forelse($user->asignacionesUnidad as $asignacion)
-                                <article class="rounded-lg border border-gray-200 p-3 text-sm">
-                                    <p class="font-medium text-gray-800">{{ $asignacion->unidad->nombre }}</p>
-                                    <p class="mt-2 text-xs text-gray-500">Vigencia: {{ $asignacion->valid_from?->format('d-m-Y') ?? 'Sin fecha de inicio' }}{{ $asignacion->valid_to ? ' a '.$asignacion->valid_to->format('d-m-Y') : '' }}</p>
-                                    <span class="mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $asignacion->active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $asignacion->active ? 'Vigente' : 'Inactiva' }}</span>
-                                </article>
-                            @empty
-                                <p class="text-sm text-gray-500">Sin unidades asignadas.</p>
-                            @endforelse
-                        </div>
-                    </section>
+                    <section class="rounded-xl bg-white p-6 text-sm text-gray-600 shadow-sm">La dotación, las responsabilidades y los accesos operativos se incorporarán en una fase posterior.</section>
                 </aside>
             </div>
         </div>

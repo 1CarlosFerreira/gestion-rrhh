@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TramiteAdjunto extends Model
@@ -51,16 +50,6 @@ class TramiteAdjunto extends Model
     public function documentoGenerado(): HasOne
     {
         return $this->hasOne(DocumentoGenerado::class, 'adjunto_id');
-    }
-
-    public function registrosComoEnviado(): HasMany
-    {
-        return $this->hasMany(DocDigitalRegistro::class, 'adjunto_enviado_id');
-    }
-
-    public function registrosComoFinal(): HasMany
-    {
-        return $this->hasMany(DocDigitalRegistro::class, 'adjunto_final_id');
     }
 
     public function scopeActivos(Builder $query): Builder

@@ -21,7 +21,7 @@ class ProfileTest extends TestCase
         $response->assertOk()
             ->assertSee('Información personal')
             ->assertSee('RUT')
-            ->assertSee('Rol y asignación')
+            ->assertSee('Roles y cuenta')
             ->assertSee('Cambiar contraseña');
     }
 

@@ -14,7 +14,8 @@ class TramitePolicy
 
     public function view(User $user, Tramite $tramite): bool
     {
-        return Tramite::query()->visiblePara($user)->whereKey($tramite->id)->exists();
+        return $user->can('tramites.ver_todos')
+            || ($user->can('tramites.ver_propios') && $tramite->created_by === $user->id);
     }
 
     public function create(User $user): bool

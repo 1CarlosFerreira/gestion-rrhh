@@ -43,9 +43,9 @@ class SessionLogoutTest extends TestCase
         $this->assertRoleCanLogout('Administrador');
     }
 
-    public function test_service_manager_can_logout(): void
+    public function test_manager_can_logout(): void
     {
-        $this->assertRoleCanLogout('Jefe de Servicio');
+        $this->assertRoleCanLogout('Jefatura');
     }
 
     public function test_people_management_can_logout(): void
