@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Rut\Rut;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Persona extends Model
@@ -14,6 +15,11 @@ class Persona extends Model
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
+    }
+
+    public function responsabilidades(): HasMany
+    {
+        return $this->hasMany(UnidadResponsable::class);
     }
 
     public function scopeBuscar(Builder $query, string $term): Builder

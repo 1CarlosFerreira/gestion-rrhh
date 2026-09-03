@@ -34,6 +34,11 @@ class UnidadOrganizacional extends Model
         return $this->belongsTo(TipoUnidadOrganizacional::class, 'tipo_unidad_organizacional_id');
     }
 
+    public function responsables(): HasMany
+    {
+        return $this->hasMany(UnidadResponsable::class);
+    }
+
     public function scopeActivas(Builder $query): Builder
     {
         return $query->where('activo', true);

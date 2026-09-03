@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\EstructuraOrganizacionalController;
 use App\Http\Controllers\Admin\TipoUnidadOrganizacionalController;
+use App\Http\Controllers\Admin\UnidadResponsableController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
@@ -31,6 +32,12 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/tipos-organizacionales', [TipoUnidadOrganizacionalController::class, 'index'])->name('tipos-organizacionales.index');
         Route::post('/tipos-organizacionales', [TipoUnidadOrganizacionalController::class, 'store'])->name('tipos-organizacionales.store');
         Route::put('/tipos-organizacionales/{tipo}', [TipoUnidadOrganizacionalController::class, 'update'])->name('tipos-organizacionales.update');
+        Route::get('/responsabilidades', [UnidadResponsableController::class, 'index'])->name('responsabilidades.index');
+        Route::get('/responsabilidades/crear', [UnidadResponsableController::class, 'create'])->name('responsabilidades.create');
+        Route::post('/responsabilidades', [UnidadResponsableController::class, 'store'])->name('responsabilidades.store');
+        Route::get('/responsabilidades/{responsabilidad}/editar', [UnidadResponsableController::class, 'edit'])->name('responsabilidades.edit');
+        Route::put('/responsabilidades/{responsabilidad}', [UnidadResponsableController::class, 'update'])->name('responsabilidades.update');
+        Route::patch('/responsabilidades/{responsabilidad}/cerrar', [UnidadResponsableController::class, 'close'])->name('responsabilidades.close');
     });
 });
 

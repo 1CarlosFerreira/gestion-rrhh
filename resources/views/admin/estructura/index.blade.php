@@ -4,7 +4,7 @@
         @if(session('status'))<div class="rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</div>@endif
         <div class="flex flex-wrap items-center justify-between gap-3">
             <form class="flex flex-wrap gap-2"><x-text-input name="buscar" value="{{ $buscar }}" placeholder="Nombre, código o sigla"/><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="incluir_inactivos" value="1" @checked($incluirInactivos)>Mostrar inactivos</label><x-secondary-button>Buscar</x-secondary-button></form>
-            @can('estructura_organizacional.gestionar')<div class="flex gap-2"><a class="rounded bg-indigo-700 px-4 py-2 text-sm font-semibold text-white" href="{{ route('admin.estructura.create') }}">Crear nodo raíz</a><a class="rounded border px-4 py-2 text-sm" href="{{ route('admin.tipos-organizacionales.index') }}">Tipos organizacionales</a></div>@endcan
+            <div class="flex gap-2">@can('estructura_organizacional.gestionar')<a class="rounded bg-indigo-700 px-4 py-2 text-sm font-semibold text-white" href="{{ route('admin.estructura.create') }}">Crear nodo raíz</a><a class="rounded border px-4 py-2 text-sm" href="{{ route('admin.tipos-organizacionales.index') }}">Tipos organizacionales</a>@endcan @can('responsabilidades.ver')<a class="rounded border px-4 py-2 text-sm" href="{{ route('admin.responsabilidades.index') }}">Responsables</a>@endcan</div>
         </div>
         <section class="rounded-xl bg-white p-5 shadow-sm">
             @if($buscar !== '')
