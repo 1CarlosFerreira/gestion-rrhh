@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tramite extends Model
 {
@@ -43,6 +44,11 @@ class Tramite extends Model
     public function documentosGenerados(): HasMany
     {
         return $this->hasMany(DocumentoGenerado::class)->latest('generated_at');
+    }
+
+    public function vinculoDotacion(): HasOne
+    {
+        return $this->hasOne(PersonaUnidadVinculo::class, 'origen_tramite_id');
     }
 
     protected function casts(): array

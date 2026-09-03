@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\CalidadContractualController;
+use App\Http\Controllers\Admin\DotacionController;
 use App\Http\Controllers\Admin\EstructuraOrganizacionalController;
 use App\Http\Controllers\Admin\TipoUnidadOrganizacionalController;
 use App\Http\Controllers\Admin\UnidadResponsableController;
@@ -45,6 +47,17 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/accesos-operativos/{acceso}/editar', [UserUnidadAccesoController::class, 'edit'])->name('accesos.edit');
         Route::put('/accesos-operativos/{acceso}', [UserUnidadAccesoController::class, 'update'])->name('accesos.update');
         Route::patch('/accesos-operativos/{acceso}/cerrar', [UserUnidadAccesoController::class, 'close'])->name('accesos.close');
+        Route::get('/calidades-contractuales', [CalidadContractualController::class, 'index'])->name('calidades.index');
+        Route::post('/calidades-contractuales', [CalidadContractualController::class, 'store'])->name('calidades.store');
+        Route::put('/calidades-contractuales/{calidad}', [CalidadContractualController::class, 'update'])->name('calidades.update');
+        Route::patch('/calidades-contractuales/{calidad}/activo', [CalidadContractualController::class, 'toggle'])->name('calidades.toggle');
+        Route::get('/dotacion', [DotacionController::class, 'index'])->name('dotacion.index');
+        Route::get('/dotacion/crear', [DotacionController::class, 'create'])->name('dotacion.create');
+        Route::post('/dotacion', [DotacionController::class, 'store'])->name('dotacion.store');
+        Route::get('/dotacion/personas/{persona}', [DotacionController::class, 'persona'])->name('dotacion.persona');
+        Route::get('/dotacion/{vinculo}/editar', [DotacionController::class, 'edit'])->name('dotacion.edit');
+        Route::put('/dotacion/{vinculo}', [DotacionController::class, 'update'])->name('dotacion.update');
+        Route::patch('/dotacion/{vinculo}/cerrar', [DotacionController::class, 'close'])->name('dotacion.close');
     });
 });
 

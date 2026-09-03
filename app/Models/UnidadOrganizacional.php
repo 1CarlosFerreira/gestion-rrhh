@@ -44,6 +44,11 @@ class UnidadOrganizacional extends Model
         return $this->hasMany(UserUnidadAcceso::class);
     }
 
+    public function vinculosDotacion(): HasMany
+    {
+        return $this->hasMany(PersonaUnidadVinculo::class);
+    }
+
     public function scopeActivas(Builder $query): Builder
     {
         return $query->where('activo', true);

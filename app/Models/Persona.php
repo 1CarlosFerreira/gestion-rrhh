@@ -22,6 +22,11 @@ class Persona extends Model
         return $this->hasMany(UnidadResponsable::class);
     }
 
+    public function vinculosDotacion(): HasMany
+    {
+        return $this->hasMany(PersonaUnidadVinculo::class);
+    }
+
     public function scopeBuscar(Builder $query, string $term): Builder
     {
         $term = trim($term);

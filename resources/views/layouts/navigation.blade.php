@@ -11,6 +11,7 @@
                     @can('estructura_organizacional.ver')<x-nav-link :href="route('admin.estructura.index')" :active="request()->routeIs('admin.estructura.*', 'admin.tipos-organizacionales.*')">Estructura organizacional</x-nav-link>@endcan
                     @can('responsabilidades.ver')<x-nav-link :href="route('admin.responsabilidades.index')" :active="request()->routeIs('admin.responsabilidades.*')">Responsables</x-nav-link>@endcan
                     @can('accesos_operativos.ver')<x-nav-link :href="route('admin.accesos.index')" :active="request()->routeIs('admin.accesos.*')">Accesos operativos</x-nav-link>@endcan
+                    @can('dotacion.ver')<x-nav-link :href="route('admin.dotacion.index')" :active="request()->routeIs('admin.dotacion.*')">Dotación</x-nav-link>@endcan
                 </div>
             </div>
             <div class="hidden items-center gap-4 sm:flex">
@@ -27,6 +28,7 @@
         @can('estructura_organizacional.ver')<x-responsive-nav-link :href="route('admin.estructura.index')">Estructura organizacional</x-responsive-nav-link>@endcan
         @can('responsabilidades.ver')<x-responsive-nav-link :href="route('admin.responsabilidades.index')">Responsables</x-responsive-nav-link>@endcan
         @can('accesos_operativos.ver')<x-responsive-nav-link :href="route('admin.accesos.index')">Accesos operativos</x-responsive-nav-link>@endcan
+        @can('dotacion.ver')<x-responsive-nav-link :href="route('admin.dotacion.index')">Dotación</x-responsive-nav-link>@endcan
         <x-responsive-nav-link :href="route('profile.edit')">Mi perfil</x-responsive-nav-link>
         <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="block w-full px-4 py-2 text-left text-base text-gray-600">Cerrar sesión</button></form>
     </div>
