@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             CatalogosSeeder::class,
             TiposUnidadOrganizacionalSeeder::class,
             EstructuraOrganizacionalOficialSeeder::class,
+            ReemplazosV2Seeder::class,
             TiposDocumentoSeeder::class,
             AdminUserSeeder::class,
         ]);

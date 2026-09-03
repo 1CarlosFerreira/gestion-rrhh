@@ -5,6 +5,7 @@
                 <a href="{{ route('dashboard') }}"><x-application-logo class="block h-9 w-auto fill-current text-gray-800" /></a>
                 <div class="hidden gap-8 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">Inicio</x-nav-link>
+                    @can('crear-reemplazo')<x-nav-link :href="route('reemplazos.create')" :active="request()->routeIs('reemplazos.*')">Nueva solicitud de reemplazo</x-nav-link>@endcan
                     @can('admin.usuarios')
                         <x-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">Usuarios, roles y permisos</x-nav-link>
                     @endcan
@@ -24,6 +25,7 @@
     </div>
     <div x-show="open" class="border-t px-4 py-3 sm:hidden">
         <x-responsive-nav-link :href="route('dashboard')">Inicio</x-responsive-nav-link>
+        @can('crear-reemplazo')<x-responsive-nav-link :href="route('reemplazos.create')">Nueva solicitud de reemplazo</x-responsive-nav-link>@endcan
         @can('admin.usuarios')<x-responsive-nav-link :href="route('admin.usuarios.index')">Usuarios, roles y permisos</x-responsive-nav-link>@endcan
         @can('estructura_organizacional.ver')<x-responsive-nav-link :href="route('admin.estructura.index')">Estructura organizacional</x-responsive-nav-link>@endcan
         @can('responsabilidades.ver')<x-responsive-nav-link :href="route('admin.responsabilidades.index')">Responsables</x-responsive-nav-link>@endcan

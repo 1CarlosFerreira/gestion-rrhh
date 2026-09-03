@@ -11,6 +11,7 @@ use App\Models\UserUnidadAcceso;
 use App\Policies\CalidadContractualPolicy;
 use App\Policies\PersonaUnidadVinculoPolicy;
 use App\Policies\TramitePolicy;
+use App\Policies\TramiteReemplazoPolicy;
 use App\Policies\UnidadOrganizacionalPolicy;
 use App\Policies\UnidadResponsablePolicy;
 use App\Policies\UserUnidadAccesoPolicy;
@@ -27,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Tramite::class, TramitePolicy::class);
+        Gate::define('crear-reemplazo', TramiteReemplazoPolicy::class.'@create');
+        Gate::define('ver-reemplazo', TramiteReemplazoPolicy::class.'@view');
+        Gate::define('editar-reemplazo', TramiteReemplazoPolicy::class.'@update');
         Gate::policy(CalidadContractual::class, CalidadContractualPolicy::class);
         Gate::policy(PersonaUnidadVinculo::class, PersonaUnidadVinculoPolicy::class);
         Gate::policy(UnidadOrganizacional::class, UnidadOrganizacionalPolicy::class);

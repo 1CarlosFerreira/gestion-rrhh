@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserUnidadAccesoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReemplazoController;
+use App\Http\Controllers\TramiteAdjuntoController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
@@ -18,6 +20,17 @@ Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verif
 Route::middleware('auth')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/reemplazos/crear', [ReemplazoController::class, 'create'])->name('reemplazos.create');
+    Route::post('/reemplazos', [ReemplazoController::class, 'store'])->name('reemplazos.store');
+    Route::get('/reemplazos/funcionarios', [ReemplazoController::class, 'funcionarios'])->name('reemplazos.funcionarios');
+    Route::get('/reemplazos/{tramite}/editar', [ReemplazoController::class, 'edit'])->name('reemplazos.edit');
+    Route::put('/reemplazos/{tramite}', [ReemplazoController::class, 'update'])->name('reemplazos.update');
+    Route::post('/reemplazos/{tramite}/adjuntos', [TramiteAdjuntoController::class, 'store'])->name('reemplazos.adjuntos.store');
+    Route::post('/reemplazos/{tramite}/adjuntos/{adjunto}/version', [TramiteAdjuntoController::class, 'version'])->name('reemplazos.adjuntos.version');
+    Route::get('/reemplazos/{tramite}/adjuntos/{adjunto}/descargar', [TramiteAdjuntoController::class, 'download'])->name('reemplazos.adjuntos.download');
+    Route::get('/reemplazos/{tramite}/adjuntos/{adjunto}/ver', [TramiteAdjuntoController::class, 'view'])->name('reemplazos.adjuntos.view');
+    Route::patch('/reemplazos/{tramite}/adjuntos/{adjunto}/anular', [TramiteAdjuntoController::class, 'annul'])->name('reemplazos.adjuntos.annul');
 
     Route::middleware('can:admin.usuarios')->prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');

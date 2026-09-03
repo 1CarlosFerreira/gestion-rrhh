@@ -32,6 +32,10 @@ class TramiteReemplazo extends Model
 
     public function diasFuncionario(): int
     {
+        if ($this->fecha_funcionario_desde === null || $this->fecha_funcionario_hasta === null) {
+            return 0;
+        }
+
         return $this->diasInclusivos($this->fecha_funcionario_desde, $this->fecha_funcionario_hasta);
     }
 

@@ -58,11 +58,25 @@ class ReemplazoService
 
     public function validar(array $datos): void
     {
+        $this->validarPeriodos($datos, true);
+    }
+
+    public function validarBorrador(array $datos): void
+    {
+        $this->validarPeriodos($datos, false);
+    }
+
+    private function validarPeriodos(array $datos, bool $completo): void
+    {
         $errores = [];
-        $funcionarioDesde = $this->fecha($datos, 'fecha_funcionario_desde', $errores);
-        $funcionarioHasta = $this->fecha($datos, 'fecha_funcionario_hasta', $errores);
+        $funcionarioDesde = $completo ? $this->fecha($datos, 'fecha_funcionario_desde', $errores) : $this->fechaOpcional($datos, 'fecha_funcionario_desde', $errores);
+        $funcionarioHasta = $completo ? $this->fecha($datos, 'fecha_funcionario_hasta', $errores) : $this->fechaOpcional($datos, 'fecha_funcionario_hasta', $errores);
         $reemplazanteDesde = $this->fechaOpcional($datos, 'fecha_reemplazante_desde', $errores);
         $reemplazanteHasta = $this->fechaOpcional($datos, 'fecha_reemplazante_hasta', $errores);
+
+        if (! $completo && (($funcionarioDesde === null) xor ($funcionarioHasta === null))) {
+            $errores['fecha_funcionario_desde'] = 'El período del funcionario debe informar ambas fechas.';
+        }
 
         if ($funcionarioDesde && $funcionarioHasta && $funcionarioDesde->gt($funcionarioHasta)) {
             $errores['fecha_funcionario_hasta'] = 'El término del funcionario debe ser igual o posterior al inicio.';
@@ -73,7 +87,7 @@ class ReemplazoService
         if (($datos['reemplazante_id'] ?? null) === null && ($reemplazanteDesde !== null || $reemplazanteHasta !== null)) {
             $errores['reemplazante_id'] = 'Debe identificar al reemplazante para informar su período.';
         }
-        if (($datos['reemplazante_id'] ?? null) !== null && ($reemplazanteDesde === null || $reemplazanteHasta === null)) {
+        if ($completo && ($datos['reemplazante_id'] ?? null) !== null && ($reemplazanteDesde === null || $reemplazanteHasta === null)) {
             $errores['fecha_reemplazante_desde'] = 'El reemplazante debe tener un período efectivo completo.';
         }
         if ($reemplazanteDesde && $reemplazanteHasta) {
@@ -87,7 +101,7 @@ class ReemplazoService
                 $errores['fecha_reemplazante_hasta'] = 'La cobertura no puede terminar después del período del funcionario.';
             }
         }
-        if (($datos['reemplazante_id'] ?? null) !== null && (int) $datos['funcionario_id'] === (int) $datos['reemplazante_id']) {
+        if (($datos['funcionario_id'] ?? null) !== null && ($datos['reemplazante_id'] ?? null) !== null && (int) $datos['funcionario_id'] === (int) $datos['reemplazante_id']) {
             $errores['reemplazante_id'] = 'El reemplazante debe ser una persona distinta del funcionario.';
         }
         if ($errores !== []) {
