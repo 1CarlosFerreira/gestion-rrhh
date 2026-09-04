@@ -87,6 +87,16 @@ Cada primera generación crea un `TramiteAdjunto` en el disco privado y un `Docu
 
 El archivo se renderiza y almacena antes de registrar el documento y transicionar. Un fallo revierte los registros y elimina el archivo escrito, manteniendo `LISTA_GENERAR_DOCUMENTO`. La descarga pasa por controlador autorizado y nunca expone la ruta física. V2D implementa solo la primera generación; regeneración/versiones posteriores quedan explícitamente pendientes. DocDigital, firma, visaciones, formalización, vínculo automático de dotación y múltiples reemplazantes no forman parte de esta fase.
 
+## Reemplazos V2E implementado: formalización y alta en dotación
+
+V2E incorpora la transición configurable `DOCUMENTO_GENERADO -> FORMALIZADA`, ejecutada como `FORMALIZAR_REEMPLAZO`. Requiere el permiso `reemplazos.formalizar` y acceso operativo vigente a la unidad. No depende del nombre de un rol ni hereda atributos laborales del funcionario reemplazado.
+
+`reemplazo_formalizaciones` conserva un único snapshot por trámite con el documento generado vigente, estamento, profesión opcional, calidad contractual, cargo/función y su valor normalizado, grado E.U.S. reutilizado desde la revisión administrativa, referencia externa y observación opcionales, actor, fecha y un respaldo final opcional mediante `tramite_adjuntos`. El archivo es solo evidencia administrativa en storage privado; no acredita firma electrónica ni implementa DocDigital.
+
+La operación completa se ejecuta en transacción y bajo bloqueo del trámite. Tras validar el estado, el documento y los catálogos activos, registra la formalización, carga opcionalmente el respaldo, usa `DotacionService::crearDesdeDocumentoFirmado()` y transiciona mediante `TransicionarTramite`. La dotación se crea para el reemplazante y la unidad del trámite, exactamente con los antecedentes formalizados y con `fecha_reemplazante_desde`/`fecha_reemplazante_hasta`. Las restricciones únicas de `reemplazo_formalizaciones.tramite_id` y `persona_unidad_vinculos.origen_tramite_id`, junto con la comprobación de dominio, hacen idempotente una petición repetida. Cualquier fallo revierte formalización, vínculo, estado e historial y elimina el archivo recién escrito.
+
+Los formularios solo ofrecen estamentos, profesiones y calidades contractuales activas. Si falta un catálogo obligatorio, la interfaz bloquea la acción con una explicación administrativa; no se siembran calidades contractuales ni otros valores inventados. Regeneración, desformalización, firma/visación, integración DocDigital, múltiples reemplazantes y Horas Extraordinarias continúan fuera de alcance.
+
 ## Inventario resumido
 
 Riesgo: B=bajo, M=medio, A=alto. Conteo por clasificación: **MANTENER 19**, **ADAPTAR 10**, **REEMPLAZAR 7**, **ELIMINAR EN V2 1**, **DIFERIR 7** (total 44).

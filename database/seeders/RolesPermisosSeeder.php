@@ -13,7 +13,7 @@ class RolesPermisosSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $permissions = ['admin.usuarios', 'admin.roles_permisos', 'tramites.ver_propios', 'tramites.ver_todos', 'tramites.crear', 'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar', 'tramites.adjuntos.anular', 'reemplazos.crear', 'reemplazos.revisar', 'reemplazos.generar_documento', 'estructura_organizacional.ver', 'estructura_organizacional.gestionar', 'tipos_unidad_organizacional.gestionar', 'responsabilidades.ver', 'responsabilidades.gestionar', 'accesos_operativos.ver', 'accesos_operativos.gestionar', 'dotacion.ver', 'dotacion.gestionar', 'calidades_contractuales.ver', 'calidades_contractuales.gestionar'];
+        $permissions = ['admin.usuarios', 'admin.roles_permisos', 'tramites.ver_propios', 'tramites.ver_todos', 'tramites.crear', 'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar', 'tramites.adjuntos.anular', 'reemplazos.crear', 'reemplazos.revisar', 'reemplazos.generar_documento', 'reemplazos.formalizar', 'estructura_organizacional.ver', 'estructura_organizacional.gestionar', 'tipos_unidad_organizacional.gestionar', 'responsabilidades.ver', 'responsabilidades.gestionar', 'accesos_operativos.ver', 'accesos_operativos.gestionar', 'dotacion.ver', 'dotacion.gestionar', 'calidades_contractuales.ver', 'calidades_contractuales.gestionar'];
         foreach ($permissions as $permission) {
             Permission::findOrCreate($permission, 'web');
         }

@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\SaveRevisionReemplazoRequest;
+use App\Models\CalidadContractual;
 use App\Models\ClasificacionArea;
+use App\Models\Estamento;
+use App\Models\Profesion;
 use App\Models\Tramite;
 use App\Services\Accesos\AccesoOperativoService;
 use Illuminate\Http\RedirectResponse;
@@ -27,10 +30,14 @@ class GestionPersonasReemplazoController extends Controller
     public function show(Tramite $tramite): View
     {
         $this->authorizeReview($tramite);
-        $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'adjuntos.tipoDocumento', 'historial.usuario', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor']);
+        $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'formalizacionReemplazo.estamento', 'formalizacionReemplazo.profesion', 'formalizacionReemplazo.calidadContractual', 'formalizacionReemplazo.adjunto', 'formalizacionReemplazo.formalizadoPor', 'vinculoDotacion', 'adjuntos.tipoDocumento', 'historial.usuario', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor']);
 
-        if (in_array($tramite->estadoTramite->codigo, ['LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO'], true)) {
-            return view('reemplazos.documento', compact('tramite'));
+        if (in_array($tramite->estadoTramite->codigo, ['LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO', 'FORMALIZADA'], true)) {
+            $estamentos = Estamento::query()->where('activo', true)->orderBy('nombre')->get();
+            $profesiones = Profesion::query()->with('estamento')->where('activo', true)->orderBy('nombre')->get();
+            $calidades = CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get();
+
+            return view('reemplazos.documento', compact('tramite', 'estamentos', 'profesiones', 'calidades'));
         }
 
         return view('reemplazos.revision', ['tramite' => $tramite, 'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get()]);
@@ -76,6 +83,6 @@ class GestionPersonasReemplazoController extends Controller
     private function authorizeReview(Tramite $tramite): void
     {
         abort_unless($tramite->tipoTramite()->where('codigo', 'REEMPLAZO')->exists() && $tramite->reemplazo()->exists(), 404);
-        Gate::authorize('revisar-reemplazo', $tramite);
+        abort_unless(Gate::allows('revisar-reemplazo', $tramite) || Gate::allows('formalizar-reemplazo', $tramite), 403);
     }
 }

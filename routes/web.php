@@ -12,6 +12,7 @@ use App\Http\Controllers\GestionPersonasReemplazoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReemplazoController;
 use App\Http\Controllers\ReemplazoDocumentoController;
+use App\Http\Controllers\ReemplazoFormalizacionController;
 use App\Http\Controllers\TramiteAdjuntoController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/reemplazos/{tramite}/enviar', [ReemplazoController::class, 'send'])->name('reemplazos.send');
     Route::post('/reemplazos/{tramite}/documento', [ReemplazoDocumentoController::class, 'store'])->name('reemplazos.documentos.store');
     Route::get('/reemplazos/{tramite}/documentos/{documento}/descargar', [ReemplazoDocumentoController::class, 'download'])->name('reemplazos.documentos.download');
+    Route::post('/reemplazos/{tramite}/formalizar', [ReemplazoFormalizacionController::class, 'store'])->name('reemplazos.formalizaciones.store');
     Route::post('/reemplazos/{tramite}/adjuntos', [TramiteAdjuntoController::class, 'store'])->name('reemplazos.adjuntos.store');
     Route::post('/reemplazos/{tramite}/adjuntos/{adjunto}/version', [TramiteAdjuntoController::class, 'version'])->name('reemplazos.adjuntos.version');
     Route::get('/reemplazos/{tramite}/adjuntos/{adjunto}/descargar', [TramiteAdjuntoController::class, 'download'])->name('reemplazos.adjuntos.download');

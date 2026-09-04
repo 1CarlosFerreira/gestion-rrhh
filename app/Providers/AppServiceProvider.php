@@ -34,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('editar-reemplazo', TramiteReemplazoPolicy::class.'@update');
         Gate::define('revisar-reemplazo', TramiteReemplazoPolicy::class.'@review');
         Gate::define('generar-documento-reemplazo', TramiteReemplazoPolicy::class.'@generateDocument');
+        Gate::define('formalizar-reemplazo', TramiteReemplazoPolicy::class.'@formalize');
         Gate::policy(CalidadContractual::class, CalidadContractualPolicy::class);
         Gate::policy(PersonaUnidadVinculo::class, PersonaUnidadVinculoPolicy::class);
         Gate::policy(UnidadOrganizacional::class, UnidadOrganizacionalPolicy::class);

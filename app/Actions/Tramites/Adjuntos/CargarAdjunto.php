@@ -23,9 +23,9 @@ class CargarAdjunto
         'text/csv' => 'csv', 'text/plain' => 'csv', 'image/jpeg' => 'jpg', 'image/png' => 'png',
     ];
 
-    public function execute(Tramite $tramite, UploadedFile $file, User $user, ?int $tipoDocumentoId = null, ?int $personaId = null, ?TramiteAdjunto $replaces = null): TramiteAdjunto
+    public function execute(Tramite $tramite, UploadedFile $file, User $user, ?int $tipoDocumentoId = null, ?int $personaId = null, ?TramiteAdjunto $replaces = null, string $permission = 'tramites.adjuntos.cargar'): TramiteAdjunto
     {
-        $this->authorize($tramite, $user);
+        $this->authorize($tramite, $user, $permission);
         if ($replaces && $replaces->tramite_id !== $tramite->id) {
             throw new AuthorizationException('El adjunto a versionar no pertenece al trámite.');
         }
@@ -73,9 +73,9 @@ class CargarAdjunto
         }
     }
 
-    private function authorize(Tramite $tramite, User $user): void
+    private function authorize(Tramite $tramite, User $user, string $permission): void
     {
-        if (! $user->can('tramites.adjuntos.cargar') || Gate::forUser($user)->denies('view', $tramite)) {
+        if (! $user->can($permission) || Gate::forUser($user)->denies('view', $tramite)) {
             throw new AuthorizationException('No está autorizado para cargar adjuntos.');
         }
     }

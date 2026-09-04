@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DocumentoGenerado extends Model
 {
@@ -38,6 +39,11 @@ class DocumentoGenerado extends Model
     public function generadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'generated_by');
+    }
+
+    public function formalizacionReemplazo(): HasOne
+    {
+        return $this->hasOne(ReemplazoFormalizacion::class);
     }
 
     protected function casts(): array
