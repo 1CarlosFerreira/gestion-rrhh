@@ -36,8 +36,9 @@ class GestionPersonasReemplazoController extends Controller
             $estamentos = Estamento::query()->where('activo', true)->orderBy('nombre')->get();
             $profesiones = Profesion::query()->with('estamento')->where('activo', true)->orderBy('nombre')->get();
             $calidades = CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get();
+            $calidadReemplazoId = $calidades->firstWhere('codigo', 'REEMPLAZO')?->id;
 
-            return view('reemplazos.documento', compact('tramite', 'estamentos', 'profesiones', 'calidades'));
+            return view('reemplazos.documento', compact('tramite', 'estamentos', 'profesiones', 'calidades', 'calidadReemplazoId'));
         }
 
         return view('reemplazos.revision', ['tramite' => $tramite, 'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get()]);

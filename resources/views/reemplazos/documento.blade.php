@@ -97,7 +97,7 @@
                                     <label class="block text-sm">Calidad contractual *
                                         <select name="calidad_contractual_id" required class="mt-1 block w-full rounded-md border-slate-300">
                                             <option value="">Seleccione</option>
-                                            @foreach($calidades as $calidad)<option value="{{ $calidad->id }}" @selected(old('calidad_contractual_id') == $calidad->id)>{{ $calidad->nombre }}</option>@endforeach
+                                            @foreach($calidades as $calidad)<option value="{{ $calidad->id }}" @selected(old('calidad_contractual_id', $calidadReemplazoId) == $calidad->id)>{{ $calidad->nombre }}</option>@endforeach
                                         </select>
                                     </label>
                                     <label class="block text-sm">Cargo / función *

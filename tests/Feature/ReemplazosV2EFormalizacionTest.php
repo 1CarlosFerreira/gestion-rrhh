@@ -47,7 +47,7 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $this->actor->givePermissionTo('reemplazos.formalizar');
         $this->unidad = UnidadOrganizacional::query()->where('codigo', 'SDGADM-INF')->firstOrFail();
         $this->estamento = Estamento::query()->firstOrFail();
-        $this->calidad = CalidadContractual::query()->create(['codigo' => 'V2E_TEST', 'nombre' => 'Calidad V2E', 'activo' => true, 'orden' => 1]);
+        $this->calidad = CalidadContractual::query()->where('codigo', 'REEMPLAZO')->firstOrFail();
         UserUnidadAcceso::query()->create([
             'user_id' => $this->actor->id,
             'unidad_organizacional_id' => $this->unidad->id,
@@ -119,7 +119,7 @@ class ReemplazosV2EFormalizacionTest extends TestCase
     public function test_empty_required_catalog_blocks_cleanly_and_ui_explains_the_configuration_needed(): void
     {
         $tramite = $this->tramiteConDocumento();
-        $this->calidad->delete();
+        CalidadContractual::query()->update(['activo' => false]);
 
         $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.show', $tramite))
             ->assertOk()
@@ -128,6 +128,32 @@ class ReemplazosV2EFormalizacionTest extends TestCase
             ->assertSessionHasErrors('catalogos');
         $this->assertDatabaseCount('reemplazo_formalizaciones', 0);
         $this->assertNull($tramite->vinculoDotacion);
+    }
+
+    public function test_form_displays_only_active_official_values_and_preselects_editable_reemplazo(): void
+    {
+        $tramite = $this->tramiteConDocumento();
+        $inactiva = CalidadContractual::query()->where('codigo', 'TITULAR')->firstOrFail();
+        $inactiva->update(['activo' => false]);
+
+        $response = $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.show', $tramite));
+
+        $response->assertOk()
+            ->assertSee('Trabajador Externo')
+            ->assertDontSee('>Titular<', false)
+            ->assertSee('name="calidad_contractual_id"', false)
+            ->assertSee('value="'.$this->calidad->id.'" selected', false);
+    }
+
+    public function test_v2e_can_formalize_with_each_active_official_contractual_quality(): void
+    {
+        foreach (CalidadContractual::query()->where('activo', true)->orderBy('orden')->get() as $calidad) {
+            $tramite = $this->tramiteConDocumento();
+            $datos = [...$this->datosValidos(), 'calidad_contractual_id' => $calidad->id];
+
+            $this->actingAs($this->actor)->post(route('reemplazos.formalizaciones.store', $tramite), $datos)->assertRedirect();
+            $this->assertSame($calidad->id, $tramite->formalizacionReemplazo()->sole()->calidad_contractual_id);
+        }
     }
 
     public function test_permission_and_operational_access_are_both_required(): void
