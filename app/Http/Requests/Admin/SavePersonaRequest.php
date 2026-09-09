@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Rules\ValidRut;
+use App\Support\Rut\Rut;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,14 +22,21 @@ class SavePersonaRequest extends FormRequest
             'rut' => [
                 'required',
                 'string',
-                'max:20',
+                'max:12',
+                new ValidRut,
                 Rule::unique('personas')->ignore($personaId),
-                'regex:/^[0-9]+[-|‐]{1}[0-9kK]{1}$/'
             ],
-            'nombres' => ['required', 'string', 'max:255'],
-            'apellido_paterno' => ['required', 'string', 'max:255'],
-            'apellido_materno' => ['nullable', 'string', 'max:255'],
+            'nombres' => ['required', 'string', 'max:120'],
+            'apellido_paterno' => ['nullable', 'string', 'max:100'],
+            'apellido_materno' => ['nullable', 'string', 'max:100'],
             'active' => ['required', 'boolean'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('rut'))) {
+            $this->merge(['rut' => Rut::normalize($this->input('rut'))]);
+        }
     }
 }

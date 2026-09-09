@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SavePersonaRequest;
 use App\Models\Persona;
-use Illuminate\Http\Request;
-use Illuminate\View\View;
+use App\Models\PersonaUnidadVinculo;
+use App\Models\UnidadOrganizacional;
+use App\Services\Accesos\AccesoOperativoService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\View\View;
 
 class PersonaController extends Controller
 {
@@ -43,13 +46,32 @@ class PersonaController extends Controller
         return redirect()->route('admin.personas.show', $persona)->with('status', 'Persona creada correctamente.');
     }
 
-    public function show(Persona $persona): View
+    public function show(Request $request, Persona $persona, AccesoOperativoService $accesos): View
     {
         Gate::authorize('personas.ver');
 
-        $persona->load(['user', 'vinculosDotacion.unidad', 'vinculosDotacion.estamento', 'vinculosDotacion.profesion', 'vinculosDotacion.calidadContractual']);
+        $verDotacion = $request->user()->active && $request->user()->can('dotacion.ver');
+        $vinculos = collect();
+        $puedeAgregarVinculo = false;
 
-        return view('admin.personas.show', compact('persona'));
+        if ($verDotacion) {
+            $unidades = $request->user()->hasRole('Administrador')
+                ? UnidadOrganizacional::query()->get()
+                : $accesos->unidadesAccesibles($request->user(), today());
+
+            $vinculos = $persona->vinculosDotacion()
+                ->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])
+                ->whereIn('unidad_organizacional_id', $unidades->pluck('id'))
+                ->orderByDesc('vigente_desde')
+                ->get();
+
+            $puedeAgregarVinculo = $persona->active
+                && $request->user()->can('dotacion.gestionar')
+                && $unidades->contains(fn (UnidadOrganizacional $unidad): bool => $unidad->activo
+                    && Gate::allows('create', [PersonaUnidadVinculo::class, $unidad]));
+        }
+
+        return view('admin.personas.show', compact('persona', 'verDotacion', 'vinculos', 'puedeAgregarVinculo'));
     }
 
     public function edit(Persona $persona): View

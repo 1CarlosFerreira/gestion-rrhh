@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CalidadContractualController;
 use App\Http\Controllers\Admin\DotacionController;
 use App\Http\Controllers\Admin\EstructuraOrganizacionalController;
+use App\Http\Controllers\Admin\PersonaController;
 use App\Http\Controllers\Admin\TipoUnidadOrganizacionalController;
 use App\Http\Controllers\Admin\UnidadResponsableController;
 use App\Http\Controllers\Admin\UserController;
@@ -61,14 +62,17 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/estructura-organizacional/{unidad}/editar', [EstructuraOrganizacionalController::class, 'edit'])->name('estructura.edit');
         Route::put('/estructura-organizacional/{unidad}', [EstructuraOrganizacionalController::class, 'update'])->name('estructura.update');
         Route::patch('/estructura-organizacional/{unidad}/activo', [EstructuraOrganizacionalController::class, 'toggle'])->name('estructura.toggle');
+
         Route::get('/tipos-organizacionales', [TipoUnidadOrganizacionalController::class, 'index'])->name('tipos-organizacionales.index');
         Route::post('/tipos-organizacionales', [TipoUnidadOrganizacionalController::class, 'store'])->name('tipos-organizacionales.store');
         Route::put('/tipos-organizacionales/{tipo}', [TipoUnidadOrganizacionalController::class, 'update'])->name('tipos-organizacionales.update');
+
         Route::get('/responsabilidades', [UnidadResponsableController::class, 'index'])->name('responsabilidades.index');
         Route::get('/responsabilidades/crear', [UnidadResponsableController::class, 'create'])->name('responsabilidades.create');
         Route::post('/responsabilidades', [UnidadResponsableController::class, 'store'])->name('responsabilidades.store');
         Route::get('/responsabilidades/{responsabilidad}/editar', [UnidadResponsableController::class, 'edit'])->name('responsabilidades.edit');
         Route::put('/responsabilidades/{responsabilidad}', [UnidadResponsableController::class, 'update'])->name('responsabilidades.update');
+
         Route::patch('/responsabilidades/{responsabilidad}/cerrar', [UnidadResponsableController::class, 'close'])->name('responsabilidades.close');
         Route::get('/accesos-operativos', [UserUnidadAccesoController::class, 'index'])->name('accesos.index');
         Route::get('/accesos-operativos/crear', [UserUnidadAccesoController::class, 'create'])->name('accesos.create');
@@ -80,13 +84,29 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/calidades-contractuales', [CalidadContractualController::class, 'store'])->name('calidades.store');
         Route::put('/calidades-contractuales/{calidad}', [CalidadContractualController::class, 'update'])->name('calidades.update');
         Route::patch('/calidades-contractuales/{calidad}/activo', [CalidadContractualController::class, 'toggle'])->name('calidades.toggle');
-        Route::get('/dotacion', [DotacionController::class, 'index'])->name('dotacion.index');
-        Route::get('/dotacion/crear', [DotacionController::class, 'create'])->name('dotacion.create');
-        Route::post('/dotacion', [DotacionController::class, 'store'])->name('dotacion.store');
-        Route::get('/dotacion/personas/{persona}', [DotacionController::class, 'persona'])->name('dotacion.persona');
-        Route::get('/dotacion/{vinculo}/editar', [DotacionController::class, 'edit'])->name('dotacion.edit');
-        Route::put('/dotacion/{vinculo}', [DotacionController::class, 'update'])->name('dotacion.update');
-        Route::patch('/dotacion/{vinculo}/cerrar', [DotacionController::class, 'close'])->name('dotacion.close');
+
+        Route::middleware('can:dotacion.ver')->group(function (): void {
+            Route::get('/dotacion', [DotacionController::class, 'index'])->name('dotacion.index');
+            Route::get('/dotacion/personas/{persona}', [DotacionController::class, 'persona'])->name('dotacion.persona');
+        });
+        Route::middleware('can:dotacion.gestionar')->group(function (): void {
+            Route::get('/dotacion/crear', [DotacionController::class, 'create'])->name('dotacion.create');
+            Route::post('/dotacion', [DotacionController::class, 'store'])->name('dotacion.store');
+            Route::get('/dotacion/{vinculo}/editar', [DotacionController::class, 'edit'])->name('dotacion.edit');
+            Route::put('/dotacion/{vinculo}', [DotacionController::class, 'update'])->name('dotacion.update');
+            Route::patch('/dotacion/{vinculo}/cerrar', [DotacionController::class, 'close'])->name('dotacion.close');
+        });
+
+        Route::middleware('can:personas.ver')->group(function (): void {
+            Route::get('/personas', [PersonaController::class, 'index'])->name('personas.index');
+            Route::middleware('can:personas.gestionar')->group(function (): void {
+                Route::get('/personas/crear', [PersonaController::class, 'create'])->name('personas.create');
+                Route::post('/personas', [PersonaController::class, 'store'])->name('personas.store');
+                Route::get('/personas/{persona}/editar', [PersonaController::class, 'edit'])->name('personas.edit');
+                Route::put('/personas/{persona}', [PersonaController::class, 'update'])->name('personas.update');
+            });
+            Route::get('/personas/{persona}', [PersonaController::class, 'show'])->name('personas.show');
+        });
     });
 });
 

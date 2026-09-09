@@ -59,7 +59,10 @@ class DotacionController extends Controller
         abort_unless($request->user()->can('dotacion.gestionar'), 403);
         abort_unless($request->user()->hasRole('Administrador') || $accesos->unidadesAccesibles($request->user(), today())->isNotEmpty(), 403);
 
-        return $this->form(null, $request, $accesos, $estructura);
+        $request->validate(['persona_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('personas', 'id')->where('active', true)]]);
+
+        return $this->form(null, $request, $accesos, $estructura)
+            ->with('personaSeleccionadaId', $request->integer('persona_id') ?: null);
     }
 
     public function store(SavePersonaUnidadVinculoRequest $request, DotacionService $service): RedirectResponse
