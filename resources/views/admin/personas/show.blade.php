@@ -22,6 +22,11 @@
             <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
             @can('personas.gestionar')
                 <a href="{{ route('admin.personas.edit', $persona) }}" class="text-indigo-700 hover:underline">Editar Persona</a>
+                <form method="POST" action="{{ route('admin.personas.activo', $persona) }}" class="inline" onsubmit="return confirm('{{ $persona->active ? '¿Confirma que desea inactivar esta persona?' : '¿Confirma que desea reactivar esta persona?' }}')">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="text-indigo-700 hover:underline">{{ $persona->active ? 'Inactivar' : 'Reactivar' }}</button>
+                </form>
             @endcan
             <a href="{{ route('admin.personas.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition duration-150 ease-in-out hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Volver al listado</a>
             </div>
@@ -71,13 +76,13 @@
                                     @can('dotacion.gestionar')
                                     @can('update', $vinculo)
                                     <a href="{{ route('admin.dotacion.edit', $vinculo) }}" class="text-indigo-700 hover:underline">Editar</a>
-                                    @if ($vinculo->estadoEn(now()) !== \App\Enums\EstadoVinculoDotacion::FINALIZADO)
-                                        <form method="POST" action="{{ route('admin.dotacion.close', $vinculo) }}" class="mt-3 flex min-w-max flex-col items-start gap-2">
+                                    @if ($vinculo->vigente_hasta === null)
+                                        <form method="POST" action="{{ route('admin.dotacion.close', $vinculo) }}" class="mt-3 flex min-w-max flex-col items-start gap-2" onsubmit="return confirm('¿Confirma que desea cerrar este vínculo laboral?')">
                                             @csrf
                                             @method('PATCH')
                                             <label class="text-xs text-gray-600" for="vigente_hasta_{{ $vinculo->id }}">Fecha de término</label>
                                             <input type="date" name="vigente_hasta" id="vigente_hasta_{{ $vinculo->id }}" min="{{ $vinculo->vigente_desde->toDateString() }}" value="{{ old('vigente_hasta', $vinculo->vigente_hasta?->toDateString()) }}" class="w-40 rounded border-gray-300 text-sm" required>
-                                            <button type="submit" class="text-indigo-700 hover:underline">Cerrar</button>
+                                            <button type="submit" class="text-indigo-700 hover:underline">Cerrar vínculo</button>
                                         </form>
                                     @endif
                                     @endcan

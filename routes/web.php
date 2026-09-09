@@ -104,6 +104,7 @@ Route::middleware('auth')->group(function (): void {
                 Route::post('/personas', [PersonaController::class, 'store'])->name('personas.store');
                 Route::get('/personas/{persona}/editar', [PersonaController::class, 'edit'])->name('personas.edit');
                 Route::put('/personas/{persona}', [PersonaController::class, 'update'])->name('personas.update');
+                Route::patch('/personas/{persona}/activo', [PersonaController::class, 'toggleActive'])->name('personas.activo');
             });
             Route::get('/personas/{persona}', [PersonaController::class, 'show'])->name('personas.show');
         });

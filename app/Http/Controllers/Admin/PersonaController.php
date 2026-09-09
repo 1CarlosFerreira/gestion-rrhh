@@ -11,6 +11,7 @@ use App\Services\Accesos\AccesoOperativoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PersonaController extends Controller
@@ -22,10 +23,14 @@ class PersonaController extends Controller
         $query = Persona::query();
 
         if ($request->filled('buscar')) {
-            $query->buscar($request->string('buscar'));
+            $query->buscar($request->string('buscar')->toString());
         }
 
-        $personas = $query->orderBy('apellido_paterno')->paginate(20);
+        $personas = $query
+            ->orderBy('apellido_paterno')
+            ->orderBy('nombres')
+            ->paginate(25)
+            ->withQueryString();
 
         return view('admin.personas.index', compact('personas'));
     }
@@ -85,8 +90,23 @@ class PersonaController extends Controller
     {
         Gate::authorize('personas.gestionar');
 
-        $persona->update($request->validated());
+        $persona->update($request->safe()->except('active'));
 
         return redirect()->route('admin.personas.show', $persona)->with('status', 'Persona actualizada correctamente.');
+    }
+
+    public function toggleActive(Persona $persona): RedirectResponse
+    {
+        Gate::authorize('personas.gestionar');
+
+        if ($persona->active && $persona->vinculosDotacion()->vigentesEn(today())->exists()) {
+            throw ValidationException::withMessages([
+                'active' => 'No es posible inactivar a la persona mientras mantenga vínculos laborales vigentes. Cierre primero los vínculos vigentes.',
+            ]);
+        }
+
+        $persona->update(['active' => ! $persona->active]);
+
+        return back()->with('status', $persona->active ? 'Persona reactivada correctamente.' : 'Persona inactivada correctamente.');
     }
 }

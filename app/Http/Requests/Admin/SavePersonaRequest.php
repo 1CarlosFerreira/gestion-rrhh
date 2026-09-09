@@ -29,7 +29,7 @@ class SavePersonaRequest extends FormRequest
             'nombres' => ['required', 'string', 'max:120'],
             'apellido_paterno' => ['nullable', 'string', 'max:100'],
             'apellido_materno' => ['nullable', 'string', 'max:100'],
-            'active' => ['required', 'boolean'],
+            'active' => $this->isMethod('post') ? ['required', 'boolean'] : ['sometimes', 'boolean'],
         ];
     }
 

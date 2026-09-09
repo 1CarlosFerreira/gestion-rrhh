@@ -67,7 +67,15 @@ class DotacionService
 
     public function cerrar(PersonaUnidadVinculo $vinculo, string $fecha, User $actor): PersonaUnidadVinculo
     {
-        return $this->actualizar($vinculo, ['vigente_hasta' => $fecha], $actor);
+        return DB::transaction(function () use ($vinculo, $fecha, $actor): PersonaUnidadVinculo {
+            $vinculo = PersonaUnidadVinculo::query()->lockForUpdate()->findOrFail($vinculo->id);
+
+            if ($vinculo->vigente_hasta !== null) {
+                throw ValidationException::withMessages(['vigente_hasta' => 'El vínculo laboral ya se encuentra cerrado.']);
+            }
+
+            return $this->actualizar($vinculo, ['vigente_hasta' => $fecha], $actor);
+        });
     }
 
     public function dotacionVigente(UnidadOrganizacional $unidad, string|\DateTimeInterface $fecha, bool $incluirDescendientes = false): Collection
