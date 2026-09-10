@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DotacionController extends Controller
@@ -38,20 +39,24 @@ class DotacionController extends Controller
                 $ids = $ids->merge($estructura->descendientes($unidad)->pluck('id'))->intersect($permitidas);
             }
         }
+        $estado = $request->has('estado') ? $request->string('estado')->toString() : EstadoVinculoDotacion::VIGENTE->value;
         $query = PersonaUnidadVinculo::query()->with(['persona.user', 'unidad', 'estamento', 'profesion', 'calidadContractual', 'creadoPor'])->whereIn('unidad_organizacional_id', $ids)
             ->when($request->filled('persona'), fn (Builder $q) => $q->whereHas('persona', fn (Builder $p) => $p->buscar($request->string('persona'))))
             ->when($request->integer('estamento_id'), fn (Builder $q, int $id) => $q->where('estamento_id', $id))
             ->when($request->integer('profesion_id'), fn (Builder $q, int $id) => $q->where('profesion_id', $id))
             ->when($request->integer('calidad_contractual_id'), fn (Builder $q, int $id) => $q->where('calidad_contractual_id', $id));
-        match ($request->string('estado')->toString()) {
+        match ($estado) {
             EstadoVinculoDotacion::FUTURO->value => $query->whereDate('vigente_desde', '>', $fecha),
             EstadoVinculoDotacion::FINALIZADO->value => $query->whereNotNull('vigente_hasta')->whereDate('vigente_hasta', '<', $fecha),
             EstadoVinculoDotacion::VIGENTE->value => $query->vigentesEn($fecha),
             default => null,
         };
         $vinculos = $query->orderByDesc('vigente_desde')->get();
+        $unidades = UnidadOrganizacional::query()->whereIn('id', $permitidas)->orderBy('nombre')->get();
+        $unidadesAgrupadas = UnidadOrganizacional::query()->whereIn('id', $ids)->orderBy('nombre')->get()
+            ->each(fn (UnidadOrganizacional $unidad) => $unidad->setAttribute('ruta_jerarquica', $estructura->ancestros($unidad)->pluck('nombre')->implode(' › ')));
 
-        return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => UnidadOrganizacional::query()->whereIn('id', $permitidas)->orderBy('nombre')->get(), 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get(), 'estructura' => $estructura]);
+        return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estado' => $estado, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => $unidades, 'unidadesAgrupadas' => $unidadesAgrupadas, 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get()]);
     }
 
     public function create(Request $request, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
@@ -59,7 +64,7 @@ class DotacionController extends Controller
         abort_unless($request->user()->can('dotacion.gestionar'), 403);
         abort_unless($request->user()->hasRole('Administrador') || $accesos->unidadesAccesibles($request->user(), today())->isNotEmpty(), 403);
 
-        $request->validate(['persona_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('personas', 'id')->where('active', true)]]);
+        $request->validate(['persona_id' => ['nullable', 'integer', Rule::exists('personas', 'id')->where('active', true)]]);
 
         return $this->form(null, $request, $accesos, $estructura)
             ->with('personaSeleccionadaId', $request->integer('persona_id') ?: null);

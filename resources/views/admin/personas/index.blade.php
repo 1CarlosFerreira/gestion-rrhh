@@ -39,11 +39,89 @@
                         <a href="{{ route('admin.personas.show', $persona) }}" class="text-indigo-700 hover:underline">Ver</a>
                         @can('personas.gestionar')
                             <a href="{{ route('admin.personas.edit', $persona) }}" class="ml-3 text-indigo-700 hover:underline">Editar</a>
-                            <form method="POST" action="{{ route('admin.personas.activo', $persona) }}" class="ml-3 inline" onsubmit="return confirm('{{ $persona->active ? '¿Confirma que desea inactivar esta persona?' : '¿Confirma que desea reactivar esta persona?' }}')">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="text-indigo-700 hover:underline">{{ $persona->active ? 'Inactivar' : 'Reactivar' }}</button>
-                            </form>
+                            @if ($persona->active)
+                                <button
+                                    type="button"
+                                    class="ml-3 text-indigo-700 hover:underline"
+                                    x-data
+                                    x-on:click.prevent="$dispatch('open-modal', 'inactivar-persona-{{ $persona->getKey() }}')"
+                                >Inactivar</button>
+
+                                <x-modal name="inactivar-persona-{{ $persona->getKey() }}" maxWidth="lg" focusable>
+                                    <form
+                                        method="POST"
+                                        action="{{ route('admin.personas.activo', $persona) }}"
+                                        class="p-6"
+                                        x-data="{ submitting: false }"
+                                        x-on:submit="if (submitting) { $event.preventDefault() } else { submitting = true }"
+                                    >
+                                        @csrf
+                                        @method('PATCH')
+
+                                        <h2 class="text-lg font-medium text-gray-900">Inactivar persona</h2>
+
+                                        <div class="mt-4 space-y-1 text-sm text-gray-700">
+                                            <p><span class="font-semibold">Nombre:</span> {{ $persona->nombre_completo }}</p>
+                                            <p><span class="font-semibold">RUT:</span> {{ $persona->rut }}</p>
+                                        </div>
+
+                                        <p class="mt-4 text-sm text-gray-600">
+                                            ¿Confirma que desea inactivar a esta persona? Esta acción solo podrá completarse si no mantiene vínculos vigentes.
+                                        </p>
+
+                                        <div class="mt-6 flex justify-end gap-3">
+                                            <x-secondary-button type="button" x-on:click="$dispatch('close')">
+                                                Cancelar
+                                            </x-secondary-button>
+
+                                            <x-danger-button x-bind:disabled="submitting">
+                                                Inactivar
+                                            </x-danger-button>
+                                        </div>
+                                    </form>
+                                </x-modal>
+                            @else
+                                <button
+                                    type="button"
+                                    class="ml-3 text-indigo-700 hover:underline"
+                                    x-data
+                                    x-on:click.prevent="$dispatch('open-modal', 'reactivar-persona-{{ $persona->getKey() }}')"
+                                >Reactivar</button>
+
+                                <x-modal name="reactivar-persona-{{ $persona->getKey() }}" maxWidth="lg" focusable>
+                                    <form
+                                        method="POST"
+                                        action="{{ route('admin.personas.activo', $persona) }}"
+                                        class="p-6"
+                                        x-data="{ submitting: false }"
+                                        x-on:submit="if (submitting) { $event.preventDefault() } else { submitting = true }"
+                                    >
+                                        @csrf
+                                        @method('PATCH')
+
+                                        <h2 class="text-lg font-medium text-gray-900">Reactivar persona</h2>
+
+                                        <div class="mt-4 space-y-1 text-sm text-gray-700">
+                                            <p><span class="font-semibold">Nombre:</span> {{ $persona->nombre_completo }}</p>
+                                            <p><span class="font-semibold">RUT:</span> {{ $persona->rut }}</p>
+                                        </div>
+
+                                        <p class="mt-4 text-sm text-gray-600">
+                                            ¿Confirma que desea reactivar a esta persona? Volverá a estar disponible para operaciones futuras del sistema.
+                                        </p>
+
+                                        <div class="mt-6 flex justify-end gap-3">
+                                            <x-secondary-button type="button" x-on:click="$dispatch('close')">
+                                                Cancelar
+                                            </x-secondary-button>
+
+                                            <x-primary-button x-bind:disabled="submitting">
+                                                Reactivar
+                                            </x-primary-button>
+                                        </div>
+                                    </form>
+                                </x-modal>
+                            @endif
                         @endcan
                     </td>
                 </tr>

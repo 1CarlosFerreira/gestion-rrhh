@@ -160,6 +160,26 @@ class DotacionHistoricaTest extends TestCase
         $this->actingAs($user)->get(route('admin.dotacion.index'))->assertForbidden();
     }
 
+    public function test_index_defaults_to_current_staff_and_includes_accessible_units_without_links(): void
+    {
+        $this->seed(RolesPermisosSeeder::class);
+        $admin = User::factory()->create(['active' => true]);
+        $admin->assignRole('Administrador');
+        $unidadVacia = $this->otraUnidad();
+        app(DotacionService::class)->crear($this->datos(['vigente_desde' => today()->subDay()->toDateString()]), $this->actor);
+        app(DotacionService::class)->crear($this->datos(['cargo_funcion' => 'Cargo futuro', 'vigente_desde' => today()->addDay()->toDateString()]), $this->actor);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dotacion.index'))
+            ->assertOk()
+            ->assertViewHas('estado', EstadoVinculoDotacion::VIGENTE->value)
+            ->assertViewHas('unidadesAgrupadas', fn ($unidades) => $unidades->contains('id', $unidadVacia->id))
+            ->assertSee('Cargo base')
+            ->assertDontSee('Cargo futuro')
+            ->assertSee($unidadVacia->nombre)
+            ->assertSee('No existen personas vinculadas en la fecha seleccionada.');
+    }
+
     public function test_permission_without_access_access_without_permission_expired_inactive_and_responsibility_do_not_authorize(): void
     {
         Permission::findOrCreate('dotacion.ver');
