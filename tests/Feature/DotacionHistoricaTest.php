@@ -180,6 +180,27 @@ class DotacionHistoricaTest extends TestCase
             ->assertSee('No existen personas vinculadas en la fecha seleccionada.');
     }
 
+    public function test_index_orders_units_by_organizational_hierarchy_and_institutional_order(): void
+    {
+        $this->seed(RolesPermisosSeeder::class);
+        $admin = User::factory()->create(['active' => true]);
+        $admin->assignRole('Administrador');
+        $tipoSubdireccion = TipoUnidadOrganizacional::query()->create(['codigo' => 'SUBDIRECCION', 'nombre' => 'Subdirección', 'activo' => true]);
+        $raiz = UnidadOrganizacional::query()->create(['codigo' => 'RAIZ', 'nombre' => 'Dirección de prueba', 'tipo_unidad_organizacional_id' => $this->unidad->tipo_unidad_organizacional_id, 'activo' => true, 'orden' => 1]);
+        $hijoSegundo = UnidadOrganizacional::query()->create(['codigo' => 'HIJO-A', 'nombre' => 'Área alfabéticamente primera', 'tipo_unidad_organizacional_id' => $this->unidad->tipo_unidad_organizacional_id, 'parent_id' => $raiz->id, 'activo' => true, 'orden' => 20]);
+        $subdireccion = UnidadOrganizacional::query()->create(['codigo' => 'SUB-Z', 'nombre' => 'Subdirección alfabéticamente última', 'tipo_unidad_organizacional_id' => $tipoSubdireccion->id, 'parent_id' => $raiz->id, 'activo' => true, 'orden' => 10]);
+        $nieto = UnidadOrganizacional::query()->create(['codigo' => 'NIETO', 'nombre' => 'Unidad descendiente', 'tipo_unidad_organizacional_id' => $this->unidad->tipo_unidad_organizacional_id, 'parent_id' => $subdireccion->id, 'activo' => true, 'orden' => 1]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dotacion.index', ['unidad_id' => $raiz->id, 'incluir_descendientes' => 1]))
+            ->assertOk()
+            ->assertViewHas('unidadesAgrupadas', function ($unidades) use ($raiz, $subdireccion, $nieto, $hijoSegundo): bool {
+                return $unidades->pluck('id')->all() === [$raiz->id, $subdireccion->id, $nieto->id, $hijoSegundo->id]
+                    && $unidades->firstWhere('id', $raiz->id)->es_encabezado_jerarquico
+                    && $unidades->firstWhere('id', $subdireccion->id)->es_encabezado_jerarquico;
+            });
+    }
+
     public function test_permission_without_access_access_without_permission_expired_inactive_and_responsibility_do_not_authorize(): void
     {
         Permission::findOrCreate('dotacion.ver');

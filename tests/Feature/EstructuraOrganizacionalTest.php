@@ -111,6 +111,37 @@ class EstructuraOrganizacionalTest extends TestCase
         $this->actingAs($admin)->get(route('admin.estructura.index', ['buscar' => 'SIGLA-X', 'incluir_inactivos' => 1]))->assertSee('Nodo oculto');
     }
 
+    public function test_read_only_organizational_chart_shows_active_hierarchy_names_without_management_data(): void
+    {
+        $raiz = $this->unidad('COD-RAIZ', 'Dirección visual');
+        $hijo = $this->unidad('COD-HIJO', 'Departamento visual', $raiz);
+        $this->unidad('COD-NIETO', 'Unidad visual', $hijo);
+        $this->unidad('COD-INACTIVO', 'Nodo inactivo visual', $raiz, 0, false);
+        $reader = User::factory()->create();
+        $reader->givePermissionTo(Permission::findByName('estructura_organizacional.ver'));
+
+        $this->actingAs($reader)
+            ->get(route('admin.estructura.index'))
+            ->assertOk()
+            ->assertSee('Ver organigrama');
+
+        $this->actingAs($reader)
+            ->get(route('admin.estructura.organigrama'))
+            ->assertOk()
+            ->assertSeeInOrder(['Dirección visual', 'Departamento visual', 'Unidad visual'])
+            ->assertSee('Volver a administración')
+            ->assertDontSee('COD-RAIZ')
+            ->assertDontSee('COD-HIJO')
+            ->assertDontSee('COD-NIETO')
+            ->assertDontSee('Nodo inactivo visual')
+            ->assertDontSee('Crear nodo raíz')
+            ->assertDontSee('Editar');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('admin.estructura.organigrama'))
+            ->assertForbidden();
+    }
+
     private function unidad(string $codigo, string $nombre, ?UnidadOrganizacional $parent = null, int $orden = 0, bool $activo = true, ?string $sigla = null): UnidadOrganizacional
     {
         return UnidadOrganizacional::query()->create(['codigo' => $codigo, 'nombre' => $nombre, 'parent_id' => $parent?->id, 'tipo_unidad_organizacional_id' => $this->tipo->id, 'orden' => $orden, 'activo' => $activo, 'sigla' => $sigla]);

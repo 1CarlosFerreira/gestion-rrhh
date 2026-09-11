@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CalidadContractualController;
 use App\Http\Controllers\Admin\DotacionController;
 use App\Http\Controllers\Admin\EstructuraOrganizacionalController;
 use App\Http\Controllers\Admin\PersonaController;
+use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\TipoUnidadOrganizacionalController;
 use App\Http\Controllers\Admin\UnidadResponsableController;
 use App\Http\Controllers\Admin\UserController;
@@ -51,12 +52,23 @@ Route::middleware('auth')->group(function (): void {
 
     Route::middleware('can:admin.usuarios')->prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
+        Route::get('/personas/{persona}/usuario/crear', [UserController::class, 'createForPersona'])->name('usuarios.create-for-persona');
+        Route::post('/personas/{persona}/usuario', [UserController::class, 'storeForPersona'])->name('usuarios.store-for-persona');
         Route::put('/usuarios/{user}/roles', [UserController::class, 'updateRoles'])->name('usuarios.roles.update');
         Route::patch('/usuarios/{user}/activo', [UserController::class, 'toggleActive'])->name('usuarios.activo');
     });
 
+    Route::middleware('can:admin.roles_permisos')->prefix('admin')->name('admin.roles-permisos.')->group(function (): void {
+        Route::get('/roles-permisos', [RolePermissionController::class, 'index'])->name('index');
+        Route::get('/roles-permisos/crear', [RolePermissionController::class, 'create'])->name('create');
+        Route::post('/roles-permisos', [RolePermissionController::class, 'store'])->name('store');
+        Route::get('/roles-permisos/{role}/editar', [RolePermissionController::class, 'edit'])->name('edit');
+        Route::put('/roles-permisos/{role}', [RolePermissionController::class, 'update'])->name('update');
+    });
+
     Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/estructura-organizacional', [EstructuraOrganizacionalController::class, 'index'])->name('estructura.index');
+        Route::get('/estructura-organizacional/organigrama', [EstructuraOrganizacionalController::class, 'organigrama'])->name('estructura.organigrama');
         Route::get('/estructura-organizacional/crear', [EstructuraOrganizacionalController::class, 'create'])->name('estructura.create');
         Route::post('/estructura-organizacional', [EstructuraOrganizacionalController::class, 'store'])->name('estructura.store');
         Route::get('/estructura-organizacional/{unidad}/editar', [EstructuraOrganizacionalController::class, 'edit'])->name('estructura.edit');

@@ -55,6 +55,8 @@ class PersonaController extends Controller
     {
         Gate::authorize('personas.ver');
 
+        $persona->loadMissing('user.roles');
+
         $verDotacion = $request->user()->active && $request->user()->can('dotacion.ver');
         $vinculos = collect();
         $puedeAgregarVinculo = false;

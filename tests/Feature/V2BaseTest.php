@@ -24,7 +24,7 @@ class V2BaseTest extends TestCase
         }
     }
 
-    public function test_administrator_can_manage_multiple_roles_and_see_their_permissions(): void
+    public function test_administrator_can_manage_multiple_roles_without_listing_technical_permissions(): void
     {
         $this->seed();
         $admin = User::query()->where('email', 'admin@example.test')->firstOrFail();
@@ -38,7 +38,8 @@ class V2BaseTest extends TestCase
         $this->assertTrue($target->fresh()->hasAllRoles($roles));
         $this->actingAs($admin)->get(route('admin.usuarios.index'))
             ->assertOk()
-            ->assertSee('admin.roles_permisos');
+            ->assertSee('Gestionar')
+            ->assertDontSee('admin.roles_permisos');
     }
 
     public function test_tramite_policy_does_not_infer_organizational_scope_from_role_name(): void

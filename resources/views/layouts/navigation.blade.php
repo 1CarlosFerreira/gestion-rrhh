@@ -51,13 +51,13 @@
                             </x-slot>
                         </x-dropdown>
                     @endcanany
-                    @canany(['admin.usuarios', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
+                    @canany(['admin.usuarios', 'admin.roles_permisos', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
                         <x-dropdown align="left" width="w-64">
                             <x-slot name="trigger">
                             <button type="button" :aria-expanded="open" @keydown.escape.stop="open = false" @class([
                                 'inline-flex items-center gap-1 border-b-2 px-1 pt-1 text-sm font-medium leading-5 focus:outline-none transition duration-150 ease-in-out',
-                                'border-indigo-400 text-gray-900 focus:border-indigo-700' => request()->routeIs('admin.usuarios.*', 'admin.estructura.*', 'admin.tipos-organizacionales.*', 'admin.responsabilidades.*', 'admin.accesos.*', 'admin.calidades.*'),
-                                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:text-gray-700 focus:border-gray-300' => ! (request()->routeIs('admin.usuarios.*', 'admin.estructura.*', 'admin.tipos-organizacionales.*', 'admin.responsabilidades.*', 'admin.accesos.*', 'admin.calidades.*')),
+                                'border-indigo-400 text-gray-900 focus:border-indigo-700' => request()->routeIs('admin.usuarios.*', 'admin.roles-permisos.*', 'admin.estructura.*', 'admin.tipos-organizacionales.*', 'admin.responsabilidades.*', 'admin.accesos.*', 'admin.calidades.*'),
+                                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:text-gray-700 focus:border-gray-300' => ! (request()->routeIs('admin.usuarios.*', 'admin.roles-permisos.*', 'admin.estructura.*', 'admin.tipos-organizacionales.*', 'admin.responsabilidades.*', 'admin.accesos.*', 'admin.calidades.*')),
                             ])>
                                 Administración<span aria-hidden="true">▾</span>
                             </button>
@@ -65,7 +65,10 @@
                             <x-slot name="content">
                                 <div @keydown.escape.stop="open = false">
                                     @can('admin.usuarios')
-                                        <x-dropdown-link :href="route('admin.usuarios.index')" :class="request()->routeIs('admin.usuarios.*') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''" :aria-current="request()->routeIs('admin.usuarios.*') ? 'page' : null">Usuarios y permisos</x-dropdown-link>
+                                        <x-dropdown-link :href="route('admin.usuarios.index')" :class="request()->routeIs('admin.usuarios.*') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''" :aria-current="request()->routeIs('admin.usuarios.*') ? 'page' : null">Usuarios</x-dropdown-link>
+                                    @endcan
+                                    @can('admin.roles_permisos')
+                                        <x-dropdown-link :href="route('admin.roles-permisos.index')" :class="request()->routeIs('admin.roles-permisos.*') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''" :aria-current="request()->routeIs('admin.roles-permisos.*') ? 'page' : null">Roles y permisos</x-dropdown-link>
                                     @endcan
                                     @can('estructura_organizacional.ver')
                                         <x-dropdown-link :href="route('admin.estructura.index')" :class="request()->routeIs('admin.estructura.*', 'admin.tipos-organizacionales.*') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''" :aria-current="request()->routeIs('admin.estructura.*', 'admin.tipos-organizacionales.*') ? 'page' : null">Estructura organizacional</x-dropdown-link>
@@ -138,11 +141,14 @@
                 @endcan
             </section>
         @endcanany
-        @canany(['admin.usuarios', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
+        @canany(['admin.usuarios', 'admin.roles_permisos', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
             <section class="mt-3 border-t border-gray-100 pt-3">
                 <h2 class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Administración</h2>
                 @can('admin.usuarios')
-                    <x-responsive-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">Usuarios y permisos</x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('admin.usuarios.index')" :active="request()->routeIs('admin.usuarios.*')">Usuarios</x-responsive-nav-link>
+                @endcan
+                @can('admin.roles_permisos')
+                    <x-responsive-nav-link :href="route('admin.roles-permisos.index')" :active="request()->routeIs('admin.roles-permisos.*')">Roles y permisos</x-responsive-nav-link>
                 @endcan
                 @can('estructura_organizacional.ver')
                     <x-responsive-nav-link :href="route('admin.estructura.index')" :active="request()->routeIs('admin.estructura.*', 'admin.tipos-organizacionales.*')">Estructura organizacional</x-responsive-nav-link>

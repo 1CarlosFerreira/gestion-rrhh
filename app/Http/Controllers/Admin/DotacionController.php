@@ -53,8 +53,17 @@ class DotacionController extends Controller
         };
         $vinculos = $query->orderByDesc('vigente_desde')->get();
         $unidades = UnidadOrganizacional::query()->whereIn('id', $permitidas)->orderBy('nombre')->get();
-        $unidadesAgrupadas = UnidadOrganizacional::query()->whereIn('id', $ids)->orderBy('nombre')->get()
-            ->each(fn (UnidadOrganizacional $unidad) => $unidad->setAttribute('ruta_jerarquica', $estructura->ancestros($unidad)->pluck('nombre')->implode(' › ')));
+        $unidadesAgrupadas = UnidadOrganizacional::query()->with('tipo')->whereIn('id', $ids)->get()
+            ->each(function (UnidadOrganizacional $unidad) use ($estructura): void {
+                $ancestros = $estructura->ancestros($unidad);
+                $unidad->setAttribute('ruta_jerarquica', $ancestros->pluck('nombre')->implode(' › '));
+                $unidad->setAttribute('es_encabezado_jerarquico', $unidad->parent_id === null || $unidad->tipo?->codigo === 'SUBDIRECCION');
+                $unidad->setAttribute('orden_jerarquico', $ancestros->push($unidad)->map(
+                    fn (UnidadOrganizacional $nodo): string => sprintf('%05d:%s', $nodo->orden, mb_strtolower($nodo->nombre)),
+                )->implode('/'));
+            })
+            ->sortBy('orden_jerarquico', SORT_NATURAL)
+            ->values();
 
         return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estado' => $estado, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => $unidades, 'unidadesAgrupadas' => $unidadesAgrupadas, 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get()]);
     }

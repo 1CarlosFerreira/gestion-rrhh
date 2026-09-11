@@ -33,6 +33,19 @@ class EstructuraOrganizacionalController extends Controller
         return view('admin.estructura.index', compact('raices', 'resultados', 'buscar', 'incluirInactivos'));
     }
 
+    public function organigrama(): View
+    {
+        Gate::authorize('viewAny', UnidadOrganizacional::class);
+
+        $raices = UnidadOrganizacional::query()
+            ->where('activo', true)
+            ->raices()
+            ->with(['activeChildren'])
+            ->get();
+
+        return view('admin.estructura.organigrama', compact('raices'));
+    }
+
     public function create(Request $request): View
     {
         Gate::authorize('create', UnidadOrganizacional::class);

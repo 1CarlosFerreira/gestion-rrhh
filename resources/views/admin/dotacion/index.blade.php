@@ -78,14 +78,27 @@
                         $personasUnidad = $vinculosUnidad->pluck('persona_id')->unique()->count();
                         $etiquetaFuncionarios = $estado === 'VIGENTE' ? ($personasUnidad === 1 ? 'funcionario vigente' : 'funcionarios vigentes') : ($personasUnidad === 1 ? 'funcionario' : 'funcionarios');
                     @endphp
-                    <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                        <button type="button" class="flex w-full items-start justify-between gap-4 px-4 py-4 text-left transition hover:bg-gray-50 sm:px-5" @click="unidadAbierta = unidadAbierta === {{ $unidad->id }} ? null : {{ $unidad->id }}" :aria-expanded="(unidadAbierta === {{ $unidad->id }}).toString()">
+                    <section @class([
+                        'overflow-hidden rounded-xl border bg-white shadow-sm',
+                        'border-indigo-200 lg:col-span-2' => $unidad->es_encabezado_jerarquico,
+                        'border-gray-200' => ! $unidad->es_encabezado_jerarquico,
+                    ])>
+                        <button type="button" @class([
+                            'flex w-full items-start justify-between gap-4 px-4 py-4 text-left transition sm:px-5',
+                            'bg-indigo-50 hover:bg-indigo-100' => $unidad->es_encabezado_jerarquico,
+                            'hover:bg-gray-50' => ! $unidad->es_encabezado_jerarquico,
+                        ]) @click="unidadAbierta = unidadAbierta === {{ $unidad->id }} ? null : {{ $unidad->id }}" :aria-expanded="(unidadAbierta === {{ $unidad->id }}).toString()">
                             <span class="flex min-w-0 items-start gap-3">
                                 <svg class="mt-1 h-4 w-4 shrink-0 text-gray-500 transition-transform" :class="{ 'rotate-90': unidadAbierta === {{ $unidad->id }} }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L10.94 10 7.23 6.29a.75.75 0 1 1 1.06-1.06l4.24 4.24a.75.75 0 0 1 0 1.06l-4.24 4.24a.75.75 0 0 1-1.08 0Z" clip-rule="evenodd" />
                                 </svg>
                                 <span class="min-w-0">
-                                    <span class="block font-semibold text-gray-900">{{ $unidad->nombre }}</span>
+                                    <span class="flex flex-wrap items-center gap-2 font-semibold text-gray-900">
+                                        {{ $unidad->nombre }}
+                                        @if ($unidad->es_encabezado_jerarquico)
+                                            <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ $unidad->tipo->nombre }}</span>
+                                        @endif
+                                    </span>
                                     @if ($unidad->ruta_jerarquica)
                                         <span class="mt-1 block text-sm text-gray-500">{{ $unidad->ruta_jerarquica }}</span>
                                     @endif

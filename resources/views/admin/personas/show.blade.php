@@ -37,6 +37,40 @@
             </div>
         </section>
 
+        <section class="rounded-xl bg-white p-5 shadow-sm">
+            <h2 class="text-base font-semibold text-gray-800">Acceso al sistema</h2>
+
+            @if ($persona->user)
+                <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Usuario</dt>
+                        <dd class="mt-1 text-gray-800">{{ $persona->user->email }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Estado</dt>
+                        <dd class="mt-1 text-gray-800">{{ $persona->user->active ? 'Activo' : 'Inactivo' }}</dd>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Roles</dt>
+                        <dd class="mt-1 text-gray-800">{{ $persona->user->roles->pluck('name')->join(', ') ?: 'Sin roles asignados' }}</dd>
+                    </div>
+                </dl>
+                <div class="mt-4 flex flex-wrap gap-3 border-t border-gray-100 pt-4">
+                    @can('admin.usuarios')
+                        <a href="{{ route('admin.usuarios.index', ['user_id' => $persona->user->id]).'#usuario-'.$persona->user->id }}" class="text-sm text-indigo-700 hover:underline">Administrar roles</a>
+                    @endcan
+                    @can('accesos_operativos.ver')
+                        <a href="{{ route('admin.accesos.index', ['usuario' => $persona->user->email]) }}" class="text-sm text-indigo-700 hover:underline">Accesos operativos</a>
+                    @endcan
+                </div>
+            @else
+                <p class="mt-3 text-sm text-gray-600"><strong class="font-medium text-gray-700">Estado:</strong> Sin cuenta de usuario</p>
+                @can('admin.usuarios')
+                    <a href="{{ route('admin.usuarios.create-for-persona', $persona) }}" class="mt-4 inline-flex items-center justify-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition duration-150 ease-in-out hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Crear acceso al sistema</a>
+                @endcan
+            @endif
+        </section>
+
         @if ($verDotacion)
             <section class="rounded-xl bg-white p-5 shadow-sm">
                 @php
