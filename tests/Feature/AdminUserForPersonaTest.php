@@ -119,14 +119,14 @@ class AdminUserForPersonaTest extends TestCase
             'email' => 'persona@example.test',
             'active' => false,
         ]);
-        $user->assignRole('Jefatura');
+        $user->assignRole('Solicitante');
 
         $this->actingAs($this->admin)
             ->get(route('admin.personas.show', $this->persona))
             ->assertOk()
             ->assertSee('persona@example.test')
             ->assertSee('Inactivo')
-            ->assertSee('Jefatura')
+            ->assertSee('Solicitante')
             ->assertSee('Administrar roles')
             ->assertSee('Accesos operativos');
     }
@@ -140,7 +140,7 @@ class AdminUserForPersonaTest extends TestCase
             'email' => 'objetivo@example.test',
             'active' => false,
         ]);
-        $target->assignRole('Jefatura');
+        $target->assignRole('Solicitante');
 
         $this->actingAs($this->admin)
             ->get(route('admin.usuarios.index'))
@@ -157,7 +157,7 @@ class AdminUserForPersonaTest extends TestCase
         }
 
         $this->actingAs($this->admin)
-            ->get(route('admin.usuarios.index', ['estado' => 'inactivo', 'rol' => 'Jefatura']))
+            ->get(route('admin.usuarios.index', ['estado' => 'inactivo', 'rol' => 'Solicitante']))
             ->assertOk()
             ->assertSee('Usuario Objetivo')
             ->assertSee('Guardar roles')

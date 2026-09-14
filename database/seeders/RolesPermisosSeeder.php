@@ -45,13 +45,40 @@ class RolesPermisosSeeder extends Seeder
             Permission::findOrCreate($permission, 'web');
         }
 
-        Role::findOrCreate('Funcionario', 'web');
-        Role::findOrCreate('Jefatura', 'web');
-        Role::findOrCreate('Gestión de Personas', 'web');
+        $rolePermissions = [
+            'Administrador' => $permissions,
+            'Gestión de Personas' => [
+                'dotacion.gestionar',
+                'dotacion.ver',
+                'personas.gestionar',
+                'personas.ver',
+                'reemplazos.formalizar',
+                'reemplazos.generar_documento',
+                'reemplazos.revisar',
+                'responsabilidades.ver',
+                'tramites.adjuntos.anular',
+                'tramites.adjuntos.cargar',
+                'tramites.adjuntos.descargar',
+                'tramites.ver_todos',
+            ],
+            'Solicitante' => [
+                'dotacion.ver',
+                'estructura_organizacional.ver',
+                'personas.ver',
+                'reemplazos.crear',
+                'responsabilidades.ver',
+                'tramites.adjuntos.cargar',
+                'tramites.adjuntos.descargar',
+                'tramites.crear',
+                'tramites.ver_propios',
+            ],
+            'Funcionario' => [],
+        ];
 
-        $role = Role::findOrCreate('Administrador', 'web');
-        foreach ($permissions as $permission) {
-            $role->givePermissionTo($permission);
+        foreach ($rolePermissions as $roleName => $assignedPermissions) {
+            Role::findOrCreate($roleName, 'web')->syncPermissions($assignedPermissions);
         }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

@@ -5,14 +5,18 @@ namespace App\Policies;
 use App\Models\Tramite;
 use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
+use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
 
 class TramiteReemplazoPolicy
 {
-    public function __construct(private readonly AccesoOperativoService $accesos) {}
+    public function __construct(
+        private readonly AccesoOperativoService $accesos,
+        private readonly AlcanceSolicitudReemplazoService $alcance,
+    ) {}
 
     public function create(User $user): bool
     {
-        return $user->active && $user->can('reemplazos.crear') && $this->accesos->unidadesAccesibles($user, today())->isNotEmpty();
+        return $user->active && $user->can('reemplazos.crear') && $this->alcance->unidadesAutorizadas($user, today())->isNotEmpty();
     }
 
     public function view(User $user, Tramite $tramite): bool
@@ -46,6 +50,6 @@ class TramiteReemplazoPolicy
     private function puedeOperar(User $user, Tramite $tramite): bool
     {
         return $tramite->unidadOrganizacional !== null
-            && $this->accesos->tienePermisoYAcceso($user, 'reemplazos.crear', $tramite->unidadOrganizacional, today());
+            && $this->alcance->tienePermisoYAlcance($user, 'reemplazos.crear', $tramite->unidadOrganizacional, today());
     }
 }

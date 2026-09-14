@@ -10,7 +10,8 @@
 
             <div>
                 <x-input-label for="rut" value="RUT" />
-                <x-text-input type="text" name="rut" id="rut" :value="old('rut')" maxlength="12" class="mt-1 block w-full" required />
+                <x-rut-input name="rut" id="rut" :value="old('rut')" class="mt-1 block w-full" aria-describedby="rut-ayuda" required />
+                <p id="rut-ayuda" class="mt-1 text-xs text-gray-500">Puedes ingresarlo con o sin puntos.</p>
                 <x-input-error :messages="$errors->get('rut')" class="mt-2" />
             </div>
 

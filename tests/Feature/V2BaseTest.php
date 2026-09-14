@@ -29,7 +29,7 @@ class V2BaseTest extends TestCase
         $this->seed();
         $admin = User::query()->where('email', 'admin@example.test')->firstOrFail();
         $target = User::factory()->create();
-        $roles = Role::query()->whereIn('name', ['Funcionario', 'Jefatura'])->pluck('name')->all();
+        $roles = Role::query()->whereIn('name', ['Funcionario', 'Solicitante'])->pluck('name')->all();
 
         $this->actingAs($admin)
             ->put(route('admin.usuarios.roles.update', $target), ['roles' => $roles])

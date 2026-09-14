@@ -9,7 +9,7 @@ use App\Models\TipoDocumento;
 use App\Models\TipoReemplazo;
 use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
-use App\Services\Accesos\AccesoOperativoService;
+use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
 use App\Services\Reemplazos\BorradorReemplazoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,17 +20,17 @@ use Illuminate\View\View;
 
 class ReemplazoController extends Controller
 {
-    public function create(Request $request, AccesoOperativoService $accesos): View
+    public function create(Request $request, AlcanceSolicitudReemplazoService $alcance): View
     {
         Gate::authorize('crear-reemplazo');
 
-        return $this->form(null, $request, $accesos);
+        return $this->form(null, $request, $alcance);
     }
 
-    public function store(SaveBorradorReemplazoRequest $request, AccesoOperativoService $accesos, BorradorReemplazoService $service): RedirectResponse
+    public function store(SaveBorradorReemplazoRequest $request, AlcanceSolicitudReemplazoService $alcance, BorradorReemplazoService $service): RedirectResponse
     {
         $unidad = UnidadOrganizacional::query()->findOrFail($request->integer('unidad_organizacional_id'));
-        abort_unless($accesos->tienePermisoYAcceso($request->user(), 'reemplazos.crear', $unidad, today()), 403);
+        abort_unless($alcance->tienePermisoYAlcance($request->user(), 'reemplazos.crear', $unidad, today()), 403);
         $tramite = DB::transaction(function () use ($request, $service, $unidad): Tramite {
             $datos = $this->datos($request);
             $datos['reemplazante_id'] = $this->resolverReemplazante($request, $datos['reemplazante_id'] ?? null);
@@ -41,18 +41,18 @@ class ReemplazoController extends Controller
         return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Borrador guardado. Ya puede adjuntar documentos.');
     }
 
-    public function edit(Request $request, Tramite $tramite, AccesoOperativoService $accesos): View
+    public function edit(Request $request, Tramite $tramite, AlcanceSolicitudReemplazoService $alcance): View
     {
         $this->autorizarTramite($tramite, 'editar-reemplazo');
 
-        return $this->form($tramite->load(['reemplazo.funcionario', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']), $request, $accesos);
+        return $this->form($tramite->load(['reemplazo.funcionario', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']), $request, $alcance);
     }
 
-    public function update(SaveBorradorReemplazoRequest $request, Tramite $tramite, AccesoOperativoService $accesos, BorradorReemplazoService $service): RedirectResponse
+    public function update(SaveBorradorReemplazoRequest $request, Tramite $tramite, AlcanceSolicitudReemplazoService $alcance, BorradorReemplazoService $service): RedirectResponse
     {
         $this->autorizarTramite($tramite, 'editar-reemplazo');
         $unidad = UnidadOrganizacional::query()->findOrFail($request->integer('unidad_organizacional_id'));
-        abort_unless($accesos->tienePermisoYAcceso($request->user(), 'reemplazos.crear', $unidad, today()), 403);
+        abort_unless($alcance->tienePermisoYAlcance($request->user(), 'reemplazos.crear', $unidad, today()), 403);
         DB::transaction(function () use ($request, $service, $unidad, $tramite): void {
             $datos = $this->datos($request);
             $datos['reemplazante_id'] = $this->resolverReemplazante($request, $datos['reemplazante_id'] ?? null);
@@ -71,11 +71,11 @@ class ReemplazoController extends Controller
         return redirect()->route('dashboard')->with('status', 'Solicitud enviada a Gestión de Personas.');
     }
 
-    public function funcionarios(Request $request, AccesoOperativoService $accesos): JsonResponse
+    public function funcionarios(Request $request, AlcanceSolicitudReemplazoService $alcance): JsonResponse
     {
         Gate::authorize('crear-reemplazo');
         $unidad = UnidadOrganizacional::query()->findOrFail($request->integer('unidad_organizacional_id'));
-        abort_unless($accesos->tienePermisoYAcceso($request->user(), 'reemplazos.crear', $unidad, today()), 403);
+        abort_unless($alcance->tienePermisoYAlcance($request->user(), 'reemplazos.crear', $unidad, today()), 403);
         $fecha = $request->date('fecha')?->toDateString() ?? today()->toDateString();
         $personas = Persona::query()->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $unidad->id)->vigentesEn($fecha))->when($request->filled('buscar'), fn ($q) => $q->buscar($request->string('buscar')))->limit(30)->get()->map(fn ($p) => ['id' => $p->id, 'nombre' => $p->nombre_completo, 'rut' => $p->rut]);
 
@@ -103,9 +103,9 @@ class ReemplazoController extends Controller
         return $persona->id;
     }
 
-    private function form(?Tramite $tramite, Request $request, AccesoOperativoService $accesos): View
+    private function form(?Tramite $tramite, Request $request, AlcanceSolicitudReemplazoService $alcance): View
     {
-        $unidades = $accesos->unidadesAccesibles($request->user(), today());
+        $unidades = $alcance->unidadesAutorizadas($request->user(), today());
         $seleccionada = (int) old('unidad_organizacional_id', $tramite?->unidad_organizacional_id ?? ($unidades->count() === 1 ? $unidades->first()->id : 0));
         $funcionarios = $seleccionada ? Persona::query()->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $seleccionada)->vigentesEn(old('fecha_funcionario_desde', today())))->orderBy('apellido_paterno')->get() : collect();
 

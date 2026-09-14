@@ -39,4 +39,9 @@ class SavePersonaRequest extends FormRequest
             $this->merge(['rut' => Rut::normalize($this->input('rut'))]);
         }
     }
+
+    public function attributes(): array
+    {
+        return ['rut' => 'RUT'];
+    }
 }
