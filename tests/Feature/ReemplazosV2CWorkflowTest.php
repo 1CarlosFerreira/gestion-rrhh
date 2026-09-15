@@ -41,6 +41,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->seed();
         Permission::findOrCreate('reemplazos.crear');
         Permission::findOrCreate('reemplazos.revisar');
+        Permission::findOrCreate('tramites.ver_todos');
         $this->solicitante = User::factory()->create(['active' => true]);
         $this->solicitante->givePermissionTo('reemplazos.crear');
         $this->revisor = User::factory()->create(['active' => true]);
@@ -58,31 +59,127 @@ class ReemplazosV2CWorkflowTest extends TestCase
     public function test_complete_partial_draft_is_sent_and_history_is_recorded(): void
     {
         $tramite = $this->draft();
-        $this->actingAs($this->solicitante)->post(route('reemplazos.send', $tramite))->assertRedirect(route('dashboard'));
+        $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), $this->draftData($tramite))->assertRedirect(route('dashboard'));
         $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->fresh()->estadoTramite->codigo);
         $this->assertNotNull($tramite->fresh()->submitted_at);
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $this->solicitante->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
         $this->assertSame(9, $tramite->reemplazo->diasSinCobertura());
     }
 
+    public function test_sending_persists_current_justification_and_other_form_changes(): void
+    {
+        $tramite = $this->draft();
+        $otroTipo = TipoReemplazo::query()->whereKeyNot($tramite->reemplazo->tipo_reemplazo_id)->firstOrFail();
+        $datos = $this->draftData($tramite, [
+            'tipo_reemplazo_id' => $otroTipo->id,
+            'fecha_reemplazante_hasta' => '2026-09-24',
+            'justificacion' => 'Justificación escrita al enviar.',
+        ]);
+
+        $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), $datos)->assertRedirect(route('dashboard'));
+
+        $tramite->refresh();
+        $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->estadoTramite->codigo);
+        $this->assertDatabaseHas('tramite_reemplazos', [
+            'tramite_id' => $tramite->id,
+            'tipo_reemplazo_id' => $otroTipo->id,
+            'fecha_reemplazante_hasta' => '2026-09-24 00:00:00',
+            'justificacion' => 'Justificación escrita al enviar.',
+        ]);
+    }
+
+    public function test_incomplete_send_stays_draft_rolls_back_and_preserves_old_input(): void
+    {
+        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
+        $tramite = Tramite::query()->latest('id')->firstOrFail();
+        $datos = [
+            'unidad_organizacional_id' => $this->unidad->id,
+            'funcionario_id' => $this->funcionario->id,
+            'justificacion' => 'Texto todavía incompleto.',
+        ];
+
+        $response = $this->actingAs($this->solicitante)
+            ->from(route('reemplazos.edit', $tramite))
+            ->put(route('reemplazos.send', $tramite), $datos);
+        $response->assertRedirect(route('reemplazos.edit', $tramite))
+            ->assertSessionHasErrors(['tipo_reemplazo_id', 'reemplazante_id'])
+            ->assertSessionHasInput('justificacion', 'Texto todavía incompleto.');
+
+        $tramite->refresh();
+        $this->assertSame('BORRADOR', $tramite->estadoTramite->codigo);
+        $this->assertNull($tramite->reemplazo->funcionario_id);
+        $this->assertNull($tramite->reemplazo->justificacion);
+        $this->actingAs($this->solicitante)->get(route('reemplazos.edit', $tramite))
+            ->assertOk()
+            ->assertSee('Texto todavía incompleto.');
+    }
+
+    public function test_save_draft_still_accepts_partial_data_without_sending(): void
+    {
+        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
+        $tramite = Tramite::query()->latest('id')->firstOrFail();
+
+        $this->actingAs($this->solicitante)->put(route('reemplazos.update', $tramite), [
+            'unidad_organizacional_id' => $this->unidad->id,
+            'justificacion' => 'Borrador parcial.',
+        ])->assertRedirect();
+
+        $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseHas('tramite_reemplazos', ['tramite_id' => $tramite->id, 'justificacion' => 'Borrador parcial.', 'funcionario_id' => null]);
+    }
+
     public function test_incomplete_draft_and_unauthorized_or_out_of_scope_users_cannot_send(): void
     {
         $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
         $tramite = Tramite::query()->latest('id')->firstOrFail();
-        $this->actingAs($this->solicitante)->post(route('reemplazos.send', $tramite))->assertSessionHasErrors(['funcionario_id', 'reemplazante_id', 'justificacion']);
+        $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), ['unidad_organizacional_id' => $this->unidad->id])->assertSessionHasErrors(['funcionario_id', 'reemplazante_id', 'justificacion']);
         $withoutPermission = User::factory()->create(['active' => true]);
-        $this->actingAs($withoutPermission)->post(route('reemplazos.send', $tramite))->assertForbidden();
+        $this->actingAs($withoutPermission)->put(route('reemplazos.send', $tramite), ['unidad_organizacional_id' => $this->unidad->id])->assertForbidden();
         $withoutAccess = User::factory()->create(['active' => true]);
         $withoutAccess->givePermissionTo('reemplazos.crear');
-        $this->actingAs($withoutAccess)->post(route('reemplazos.send', $tramite))->assertForbidden();
+        $this->actingAs($withoutAccess)->put(route('reemplazos.send', $tramite), ['unidad_organizacional_id' => $this->unidad->id])->assertForbidden();
     }
 
     public function test_reviewer_scope_bandeja_start_and_double_transition_are_enforced(): void
     {
         $tramite = $this->sendDraft();
-        $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.index'))->assertOk()->assertSee($tramite->codigo);
+        $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.index'))
+            ->assertOk()
+            ->assertSee($tramite->codigo)
+            ->assertSee('Revisa y gestiona las solicitudes de reemplazo recibidas.')
+            ->assertSee('Pendientes de revisión')
+            ->assertSee('En revisión')
+            ->assertSee('Para generar documento')
+            ->assertSee('Período solicitado')
+            ->assertSee('Cobertura del reemplazante')
+            ->assertSee('Revisar')
+            ->assertDontSee('Ver/Revisar');
+        $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.show', $tramite))
+            ->assertOk()
+            ->assertSee('Volver a Reemplazos')
+            ->assertSee('Fecha de envío')
+            ->assertSee('Antecedentes de la solicitud')
+            ->assertSee('Períodos y cobertura')
+            ->assertSee('Días sin cobertura')
+            ->assertSee('Documentos')
+            ->assertSee('Iniciar revisión');
         $this->actingAs($this->revisor)->post(route('gestion-personas.reemplazos.start', $tramite))->assertRedirect();
         $this->assertSame('EN_REVISION', $tramite->fresh()->estadoTramite->codigo);
+        $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.show', $tramite))
+            ->assertOk()
+            ->assertSeeInOrder([
+                $tramite->codigo,
+                'Revisión Gestión de Personas',
+                'Devolver para corrección',
+                'Ver antecedentes de la solicitud',
+                'Antecedentes de la solicitud',
+            ])
+            ->assertSee('<details class="group', false)
+            ->assertDontSee('<details open', false)
+            ->assertSee('Áreas críticas')
+            ->assertSee('Áreas Semi-Críticas')
+            ->assertSee('Áreas de apoyo Asistencial')
+            ->assertSee('Área de Apoyo Administrativo y no crítico');
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $this->revisor->id, 'action_code' => 'INICIAR_REVISION']);
         $this->actingAs($this->revisor)->post(route('gestion-personas.reemplazos.start', $tramite))->assertSessionHasErrors('action_code');
         $outsider = User::factory()->create(['active' => true]);
@@ -90,8 +187,78 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->actingAs($outsider)->get(route('gestion-personas.reemplazos.show', $tramite))->assertForbidden();
         $withoutPermission = User::factory()->create(['active' => true]);
         UserUnidadAcceso::query()->create(['user_id' => $withoutPermission->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->revisor->id]);
+        $this->actingAs($withoutPermission)->get(route('gestion-personas.reemplazos.index'))->assertForbidden();
         $this->actingAs($withoutPermission)->get(route('gestion-personas.reemplazos.show', $tramite))->assertForbidden();
-        $this->actingAs($outsider)->get(route('gestion-personas.reemplazos.index'))->assertOk()->assertDontSee($tramite->codigo);
+        $this->actingAs($withoutPermission)->post(route('gestion-personas.reemplazos.start', $tramite))->assertForbidden();
+        $this->actingAs($outsider)->get(route('gestion-personas.reemplazos.index'))
+            ->assertOk()
+            ->assertDontSee($tramite->codigo)
+            ->assertSee('No hay solicitudes pendientes.');
+    }
+
+    public function test_global_reviewer_lists_opens_and_starts_without_operational_access(): void
+    {
+        $tramite = $this->sendDraft();
+        $global = User::factory()->create(['active' => true]);
+        $global->givePermissionTo(['reemplazos.revisar', 'tramites.ver_todos']);
+
+        $this->assertCount(0, $global->accesosOperativos);
+        $this->actingAs($global)->get(route('gestion-personas.reemplazos.index'))
+            ->assertOk()
+            ->assertSee($tramite->codigo);
+        $this->actingAs($global)->get(route('gestion-personas.reemplazos.show', $tramite))->assertOk();
+        $this->actingAs($global)->post(route('gestion-personas.reemplazos.start', $tramite))->assertRedirect(route('gestion-personas.reemplazos.show', $tramite));
+        $this->assertSame('EN_REVISION', $tramite->fresh()->estadoTramite->codigo);
+    }
+
+    public function test_reviewer_bandeja_filters_server_side_and_preserves_query_string(): void
+    {
+        $tramite = $this->sendDraft();
+
+        foreach ([$tramite->codigo, 'Funcionario', $this->funcionario->rut, 'Reemplazante', $this->reemplazante->rut] as $buscar) {
+            $this->actingAs($this->revisor)
+                ->get(route('gestion-personas.reemplazos.index', ['buscar' => $buscar]))
+                ->assertOk()
+                ->assertSee($tramite->codigo);
+        }
+
+        $this->actingAs($this->revisor)
+            ->get(route('gestion-personas.reemplazos.index', [
+                'buscar' => 'sin coincidencias',
+                'estado' => 'ENVIADA_GESTION_PERSONAS',
+                'unidad_id' => $this->unidad->id,
+            ]))
+            ->assertOk()
+            ->assertSee('No se encontraron resultados.')
+            ->assertSee('Limpiar filtros')
+            ->assertViewHas('tramites', function ($tramites): bool {
+                parse_str((string) parse_url($tramites->url(2), PHP_URL_QUERY), $query);
+
+                return $tramites->perPage() === 25
+                    && $query['buscar'] === 'sin coincidencias'
+                    && $query['estado'] === 'ENVIADA_GESTION_PERSONAS'
+                    && (int) $query['unidad_id'] === $this->unidad->id;
+            });
+
+        $this->actingAs($this->revisor)
+            ->get(route('gestion-personas.reemplazos.index', ['estado' => 'DOCUMENTO_GENERADO']))
+            ->assertOk()
+            ->assertDontSee($tramite->codigo)
+            ->assertSee('No se encontraron resultados.');
+    }
+
+    public function test_scoped_reviewer_cannot_list_open_or_start_an_unassigned_unit(): void
+    {
+        $tramite = $this->sendDraft();
+        $otraUnidad = UnidadOrganizacional::query()->whereKeyNot($this->unidad->id)->where('activo', true)->firstOrFail();
+        $tramite->update(['unidad_organizacional_id' => $otraUnidad->id]);
+
+        $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.index'))
+            ->assertOk()
+            ->assertDontSee($tramite->codigo);
+        $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.show', $tramite))->assertForbidden();
+        $this->actingAs($this->revisor)->post(route('gestion-personas.reemplazos.start', $tramite))->assertForbidden();
+        $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->fresh()->estadoTramite->codigo);
     }
 
     public function test_return_requires_observation_preserves_review_and_allows_edit_and_resend(): void
@@ -108,28 +275,69 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->actingAs($this->solicitante)->put(route('gestion-personas.reemplazos.save', $tramite), ['grado_eus' => 1])->assertForbidden();
         $this->assertDatabaseHas('reemplazo_revisiones', ['tramite_id' => $tramite->id, 'grado_eus' => 15]);
         $tramite->reemplazo()->update(['justificacion' => null]);
-        $this->actingAs($this->solicitante)->post(route('reemplazos.send', $tramite))->assertSessionHasErrors('justificacion');
+        $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), $this->draftData($tramite, ['justificacion' => null]))->assertSessionHasErrors('justificacion');
         $this->assertSame('DEVUELTA_PARA_CORRECCION', $tramite->fresh()->estadoTramite->codigo);
-        $tramite->reemplazo()->update(['justificacion' => 'Antecedentes corregidos.']);
-        $this->actingAs($this->solicitante)->post(route('reemplazos.send', $tramite))->assertRedirect();
+        $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), $this->draftData($tramite, ['justificacion' => 'Antecedentes corregidos.']))->assertRedirect();
         $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->fresh()->estadoTramite->codigo);
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'REENVIAR_A_GESTION_PERSONAS']);
     }
 
-    public function test_approval_requires_administrative_data_and_does_not_generate_pdf_or_dotacion(): void
+    public function test_approval_saves_current_administrative_data_and_transitions_directly(): void
     {
         $tramite = $this->startReview();
-        $this->actingAs($this->revisor)->post(route('gestion-personas.reemplazos.approve', $tramite))->assertSessionHasErrors(['grado_eus', 'clasificacion_area_id', 'cumple_normativa']);
-        $classification = ClasificacionArea::query()->create(['codigo' => 'TEST', 'nombre' => 'Prueba', 'activo' => true]);
-        $this->actingAs($this->revisor)->put(route('gestion-personas.reemplazos.save', $tramite), ['grado_eus' => 12, 'clasificacion_area_id' => $classification->id, 'cumple_normativa' => 0]);
-        $this->actingAs($this->revisor)->post(route('gestion-personas.reemplazos.approve', $tramite))->assertRedirect();
+        $classification = ClasificacionArea::query()->where('codigo', 'AREA-CRITICA')->firstOrFail();
+        $datos = [
+            'grado_eus' => 12,
+            'clasificacion_area_id' => $classification->id,
+            'cumple_normativa' => 0,
+            'observacion_administrativa' => 'Antecedentes ingresados al aprobar.',
+        ];
+
+        $this->actingAs($this->revisor)
+            ->put(route('gestion-personas.reemplazos.approve', $tramite), $datos)
+            ->assertRedirect(route('gestion-personas.reemplazos.index'));
+
         $this->assertSame('LISTA_GENERAR_DOCUMENTO', $tramite->fresh()->estadoTramite->codigo);
-        $this->assertDatabaseHas('reemplazo_revisiones', ['tramite_id' => $tramite->id, 'revisado_por' => $this->revisor->id]);
+        $this->assertDatabaseHas('reemplazo_revisiones', [
+            'tramite_id' => $tramite->id,
+            ...$datos,
+            'revisado_por' => $this->revisor->id,
+        ]);
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $this->revisor->id, 'action_code' => 'APROBAR_ANTECEDENTES']);
         $this->assertSame(0, $tramite->documentosGenerados()->count());
         $this->assertNull($tramite->vinculoDotacion);
         $this->actingAs($this->solicitante)->get(route('reemplazos.edit', $tramite))->assertForbidden();
         $this->actingAs($this->solicitante)->put(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $this->unidad->id])->assertForbidden();
+    }
+
+    public function test_failed_direct_approval_rolls_back_and_preserves_old_input(): void
+    {
+        $tramite = $this->startReview();
+        $classification = ClasificacionArea::query()->where('codigo', 'AREA-SEMI-CRITICA')->firstOrFail();
+        $datos = [
+            'grado_eus' => 18,
+            'clasificacion_area_id' => $classification->id,
+            'observacion_administrativa' => 'Texto que debe conservarse.',
+        ];
+
+        $this->actingAs($this->revisor)
+            ->from(route('gestion-personas.reemplazos.show', $tramite))
+            ->put(route('gestion-personas.reemplazos.approve', $tramite), $datos)
+            ->assertRedirect(route('gestion-personas.reemplazos.show', $tramite))
+            ->assertSessionHasErrors('cumple_normativa')
+            ->assertSessionHasInput('grado_eus', 18)
+            ->assertSessionHasInput('clasificacion_area_id', $classification->id)
+            ->assertSessionHasInput('observacion_administrativa', 'Texto que debe conservarse.');
+
+        $this->assertSame('EN_REVISION', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseMissing('reemplazo_revisiones', ['tramite_id' => $tramite->id]);
+
+        $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.show', $tramite))
+            ->assertOk()
+            ->assertSee('value="18"', false)
+            ->assertSee('value="'.$classification->id.'" selected', false)
+            ->assertSee('Texto que debe conservarse.')
+            ->assertSee('Debe informar el cumplimiento de normativa.');
     }
 
     public function test_overlap_filter_uses_every_active_workflow_state(): void
@@ -155,7 +363,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
     private function sendDraft(): Tramite
     {
         $tramite = $this->draft();
-        $this->actingAs($this->solicitante)->post(route('reemplazos.send', $tramite));
+        $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), $this->draftData($tramite));
 
         return $tramite->fresh();
     }
@@ -166,5 +374,22 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->actingAs($this->revisor)->post(route('gestion-personas.reemplazos.start', $tramite));
 
         return $tramite->fresh();
+    }
+
+    private function draftData(Tramite $tramite, array $overrides = []): array
+    {
+        $detalle = $tramite->reemplazo;
+
+        return [...[
+            'unidad_organizacional_id' => $tramite->unidad_organizacional_id,
+            'funcionario_id' => $detalle->funcionario_id,
+            'reemplazante_id' => $detalle->reemplazante_id,
+            'tipo_reemplazo_id' => $detalle->tipo_reemplazo_id,
+            'fecha_funcionario_desde' => $detalle->fecha_funcionario_desde?->toDateString(),
+            'fecha_funcionario_hasta' => $detalle->fecha_funcionario_hasta?->toDateString(),
+            'fecha_reemplazante_desde' => $detalle->fecha_reemplazante_desde?->toDateString(),
+            'fecha_reemplazante_hasta' => $detalle->fecha_reemplazante_hasta?->toDateString(),
+            'justificacion' => $detalle->justificacion,
+        ], ...$overrides];
     }
 }

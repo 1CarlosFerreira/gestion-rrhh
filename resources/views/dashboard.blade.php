@@ -21,15 +21,15 @@
             ];
         @endphp
 
-        <x-slot name="header">
-            <div>
-                <h2 class="text-xl font-semibold text-gray-900">Bienvenido/a, {{ auth()->user()->name }}</h2>
-                <p class="mt-1 text-sm text-gray-600">Panel general de administración y configuración del sistema.</p>
-            </div>
-        </x-slot>
-
         <div class="py-10">
             <div class="mx-auto max-w-7xl space-y-7 px-4 sm:px-6 lg:px-8">
+                <section>
+                    <h1 class="text-xl font-semibold text-gray-900">Bienvenido/a, {{ auth()->user()->name }}</h1>
+                    <p class="mt-1 text-sm text-gray-600">Panel general de administración y configuración del sistema.</p>
+                </section>
+
+                @include('dashboard.partials.mis-tramites')
+
                 <section aria-labelledby="resumen-title">
                     <h3 id="resumen-title" class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Resumen</h3>
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -98,13 +98,39 @@
             </div>
         </div>
     @else
-        <x-slot name="header"><h2 class="text-xl font-semibold text-gray-800">Inicio</h2></x-slot>
         <div class="py-10">
-            <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-                <section class="rounded-xl border border-indigo-100 bg-white p-8 shadow-sm">
-                    <h1 class="text-2xl font-semibold text-slate-900">Bienvenido/a, {{ auth()->user()->name }}</h1>
-                    <p class="mt-3 text-slate-600">La versión 2 del Sistema de Gestión de Solicitudes de RRHH se encuentra en construcción.</p>
+            <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+                <section class="rounded-xl border border-indigo-100 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6">
+                    <div>
+                        <h1 class="text-xl font-semibold text-slate-900">Hola, {{ auth()->user()->name }}</h1>
+                        <p class="mt-1 text-sm text-slate-600">Gestiona y realiza seguimiento a tus solicitudes.</p>
+                    </div>
+                    @can('reemplazos.crear')
+                        <a href="{{ route('reemplazos.create') }}" class="mt-4 inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0">+ Nueva solicitud</a>
+                    @endcan
                 </section>
+                @can('tramites.ver_propios')
+                    <section aria-label="Indicadores de trámites" class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"><p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Requieren atención</p><p class="mt-1 text-2xl font-semibold text-amber-950">{{ $resumenMisTramites['requieren_atencion'] }}</p></div>
+                        <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3"><p class="text-xs font-semibold uppercase tracking-wide text-blue-700">En tramitación</p><p class="mt-1 text-2xl font-semibold text-blue-950">{{ $resumenMisTramites['en_tramitacion'] }}</p></div>
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Abiertos</p><p class="mt-1 text-2xl font-semibold text-slate-900">{{ $resumenMisTramites['abiertos'] }}</p></div>
+                    </section>
+
+                    @if($tramitesRequierenAtencion->isNotEmpty())
+                        <section aria-labelledby="requieren-atencion-title">
+                            <div class="mb-3"><h3 id="requieren-atencion-title" class="text-lg font-semibold text-gray-900">Requieren mi atención</h3><p class="mt-0.5 text-sm text-gray-500">Borradores y solicitudes devueltas que puedes continuar.</p></div>
+                            <div class="grid gap-3 lg:grid-cols-2">
+                                @foreach($tramitesRequierenAtencion as $tramite)
+                                    <article class="flex flex-col gap-3 rounded-xl border border-amber-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                                        <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="whitespace-nowrap font-mono text-sm font-semibold text-gray-900">{{ $tramite->codigo }}</span><span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{{ $tramite->estadoTramite->nombre }}</span></div><p class="mt-2 text-sm font-medium text-gray-800">{{ $tramite->tipoTramite->nombre }}</p><p class="mt-0.5 truncate text-xs text-gray-500">{{ $tramite->unidadOrganizacional->nombre }}</p></div>
+                                        <a href="{{ route('reemplazos.edit', $tramite) }}" class="inline-flex shrink-0 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">Continuar <span class="ml-1" aria-hidden="true">→</span></a>
+                                    </article>
+                                @endforeach
+                            </div>
+                        </section>
+                    @endif
+                @endcan
+                @include('dashboard.partials.mis-tramites')
             </div>
         </div>
     @endif

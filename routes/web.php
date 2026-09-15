@@ -29,9 +29,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reemplazos/crear', [ReemplazoController::class, 'create'])->name('reemplazos.create');
     Route::post('/reemplazos', [ReemplazoController::class, 'store'])->name('reemplazos.store');
     Route::get('/reemplazos/funcionarios', [ReemplazoController::class, 'funcionarios'])->name('reemplazos.funcionarios');
+    Route::get('/reemplazos/{tramite}', [ReemplazoController::class, 'show'])->name('reemplazos.show');
     Route::get('/reemplazos/{tramite}/editar', [ReemplazoController::class, 'edit'])->name('reemplazos.edit');
     Route::put('/reemplazos/{tramite}', [ReemplazoController::class, 'update'])->name('reemplazos.update');
-    Route::post('/reemplazos/{tramite}/enviar', [ReemplazoController::class, 'send'])->name('reemplazos.send');
+    Route::put('/reemplazos/{tramite}/enviar', [ReemplazoController::class, 'send'])->name('reemplazos.send');
     Route::post('/reemplazos/{tramite}/documento', [ReemplazoDocumentoController::class, 'store'])->name('reemplazos.documentos.store');
     Route::get('/reemplazos/{tramite}/documentos/{documento}/descargar', [ReemplazoDocumentoController::class, 'download'])->name('reemplazos.documentos.download');
     Route::post('/reemplazos/{tramite}/formalizar', [ReemplazoFormalizacionController::class, 'store'])->name('reemplazos.formalizaciones.store');
@@ -47,7 +48,7 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/{tramite}/iniciar', [GestionPersonasReemplazoController::class, 'start'])->name('start');
         Route::put('/{tramite}/revision', [GestionPersonasReemplazoController::class, 'save'])->name('save');
         Route::post('/{tramite}/devolver', [GestionPersonasReemplazoController::class, 'return'])->name('return');
-        Route::post('/{tramite}/aprobar', [GestionPersonasReemplazoController::class, 'approve'])->name('approve');
+        Route::put('/{tramite}/aprobar', [GestionPersonasReemplazoController::class, 'approve'])->name('approve');
     });
 
     Route::middleware('can:admin.usuarios')->prefix('admin')->name('admin.')->group(function (): void {

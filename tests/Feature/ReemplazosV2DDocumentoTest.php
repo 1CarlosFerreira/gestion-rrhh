@@ -41,7 +41,7 @@ class ReemplazosV2DDocumentoTest extends TestCase
         Storage::fake('private');
         Permission::findOrCreate('reemplazos.generar_documento');
         $this->user = User::factory()->create(['active' => true]);
-        $this->user->givePermissionTo('reemplazos.generar_documento');
+        $this->user->givePermissionTo(['reemplazos.generar_documento', 'reemplazos.revisar']);
         $this->unidad = UnidadOrganizacional::query()->where('codigo', 'SDGADM-INF')->firstOrFail();
         UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
     }
@@ -72,7 +72,7 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $this->assertSame(1, $tramite->reemplazo()->count());
     }
 
-    public function test_permission_and_operational_access_are_both_required_for_generation(): void
+    public function test_scoped_generation_requires_permission_and_operational_access(): void
     {
         $tramite = $this->tramiteListo();
         $withoutPermission = User::factory()->create(['active' => true]);
@@ -81,7 +81,58 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $withoutAccess = User::factory()->create(['active' => true]);
         $withoutAccess->givePermissionTo('reemplazos.generar_documento');
         $this->actingAs($withoutAccess)->post(route('reemplazos.documentos.store', $tramite))->assertForbidden();
+        $inactiveGlobal = User::factory()->create(['active' => false]);
+        $inactiveGlobal->givePermissionTo(['reemplazos.generar_documento', 'tramites.ver_todos']);
+        $this->actingAs($inactiveGlobal)->post(route('reemplazos.documentos.store', $tramite))->assertForbidden();
         $this->assertSame(0, DocumentoGenerado::query()->count());
+    }
+
+    public function test_global_generator_can_generate_and_download_without_operational_access(): void
+    {
+        $tramite = $this->tramiteListo();
+        $global = User::factory()->create(['active' => true]);
+        $global->givePermissionTo(['reemplazos.generar_documento', 'tramites.ver_todos']);
+
+        $this->assertCount(0, $global->accesosOperativos);
+        $this->actingAs($global)->post(route('reemplazos.documentos.store', $tramite))
+            ->assertRedirect(route('gestion-personas.reemplazos.show', $tramite));
+
+        $documento = DocumentoGenerado::query()->sole();
+        $this->assertSame('DOCUMENTO_GENERADO', $tramite->fresh()->estadoTramite->codigo);
+        $this->actingAs($global)->get(route('reemplazos.documentos.download', [$tramite, $documento]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_document_screen_renders_summary_and_contextual_document_action(): void
+    {
+        $tramite = $this->tramiteListo();
+
+        $this->actingAs($this->user)->get(route('gestion-personas.reemplazos.show', $tramite))
+            ->assertOk()
+            ->assertSee('Volver a Reemplazos')
+            ->assertSee($tramite->codigo)
+            ->assertSee($this->unidad->nombre)
+            ->assertSee('Funcionario V2D')
+            ->assertSee('Cargo V2D')
+            ->assertSee(Estamento::query()->firstOrFail()->nombre)
+            ->assertSee('Reemplazante V2D')
+            ->assertSee('Días totales')
+            ->assertSee('Días cubiertos')
+            ->assertSee('Días sin cobertura')
+            ->assertSee('Área V2D')
+            ->assertSee('Generar documento')
+            ->assertDontSee('Descargar PDF');
+
+        $this->actingAs($this->user)->post(route('reemplazos.documentos.store', $tramite))->assertRedirect();
+        $documento = DocumentoGenerado::query()->sole();
+
+        $this->actingAs($this->user)->get(route('gestion-personas.reemplazos.show', $tramite))
+            ->assertOk()
+            ->assertSee($documento->adjunto->original_name)
+            ->assertSee('Versión 1')
+            ->assertSee($this->user->name)
+            ->assertSee('Descargar PDF');
     }
 
     public function test_generation_is_rejected_from_every_previous_state(): void

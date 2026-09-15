@@ -1,1 +1,105 @@
-<x-app-layout><x-slot name="header"><div class="flex justify-between"><div><h2 class="text-xl font-semibold">Revisión {{ $tramite->codigo }}</h2><p class="text-sm text-slate-500">{{ $tramite->unidadOrganizacional->nombre }} · {{ $tramite->estadoTramite->nombre }}</p></div>@if($tramite->estadoTramite->codigo==='ENVIADA_GESTION_PERSONAS')<form method="POST" action="{{ route('gestion-personas.reemplazos.start',$tramite) }}">@csrf<x-primary-button>Iniciar revisión</x-primary-button></form>@endif</div></x-slot><div class="py-10"><div class="mx-auto max-w-7xl space-y-5 px-4">@if(session('status'))<div class="rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</div>@endif @if($errors->any())<div class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</div>@endif<div class="grid gap-5 lg:grid-cols-2"><section class="rounded-xl bg-white p-6 shadow"><h3 class="font-semibold">Funcionario reemplazado</h3><p>{{ $tramite->reemplazo->funcionario->nombre_completo }} · {{ $tramite->reemplazo->funcionario->rut }}</p><p>{{ $tramite->reemplazo->fecha_funcionario_desde->format('d/m/Y') }} al {{ $tramite->reemplazo->fecha_funcionario_hasta->format('d/m/Y') }} · {{ $tramite->reemplazo->diasFuncionario() }} días</p></section><section class="rounded-xl bg-white p-6 shadow"><h3 class="font-semibold">Reemplazante</h3><p>{{ $tramite->reemplazo->reemplazante->nombre_completo }} · {{ $tramite->reemplazo->reemplazante->rut }}</p><p>{{ $tramite->reemplazo->fecha_reemplazante_desde->format('d/m/Y') }} al {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }} · {{ $tramite->reemplazo->diasReemplazante() }} días</p></section><section class="rounded-xl bg-white p-6 shadow"><h3 class="font-semibold">Antecedentes y cobertura</h3><p>{{ $tramite->reemplazo->tipoReemplazo->nombre }}</p><p class="mt-2">{{ $tramite->reemplazo->justificacion }}</p><p class="mt-2">{{ $tramite->reemplazo->diasFuncionario() }} días totales · {{ $tramite->reemplazo->diasReemplazante() }} cubiertos · {{ $tramite->reemplazo->diasSinCobertura() }} sin cobertura</p>@if($tramite->reemplazo->coberturaParcial())<p class="mt-2 rounded bg-amber-50 p-2 text-amber-800">El reemplazante cubrirá {{ $tramite->reemplazo->diasReemplazante() }} de los {{ $tramite->reemplazo->diasFuncionario() }} días del período solicitado. Quedarán {{ $tramite->reemplazo->diasSinCobertura() }} días sin cobertura.</p>@endif</section><section class="rounded-xl bg-white p-6 shadow"><h3 class="font-semibold">Documentos</h3>@forelse($tramite->adjuntos as $adjunto)<p>{{ $adjunto->original_name }}</p>@empty<p class="text-slate-500">Sin adjuntos.</p>@endforelse</section></div>@if($tramite->estadoTramite->codigo==='EN_REVISION')<section class="rounded-xl bg-white p-6 shadow"><h3 class="font-semibold">Revisión Gestión de Personas</h3><form method="POST" action="{{ route('gestion-personas.reemplazos.save',$tramite) }}" class="mt-4 grid gap-4 lg:grid-cols-2">@csrf @method('PUT')<label>Grado E.U.S.<input class="mt-1 w-full rounded border-gray-300" type="number" min="1" max="99" name="grado_eus" value="{{ old('grado_eus',$tramite->revisionReemplazo?->grado_eus) }}"></label><label>Clasificación de área<select class="mt-1 w-full rounded border-gray-300" name="clasificacion_area_id"><option value="">Seleccione</option>@foreach($clasificaciones as $item)<option value="{{ $item->id }}" @selected(old('clasificacion_area_id',$tramite->revisionReemplazo?->clasificacion_area_id)==$item->id)>{{ $item->nombre }}</option>@endforeach</select></label><label>Cumple normativa<select class="mt-1 w-full rounded border-gray-300" name="cumple_normativa"><option value="">Seleccione</option><option value="1" @selected(old('cumple_normativa',$tramite->revisionReemplazo?->cumple_normativa)==='1')>Sí</option><option value="0" @selected(old('cumple_normativa',$tramite->revisionReemplazo?->cumple_normativa)==='0')>No</option></select></label><label>Observación administrativa<textarea class="mt-1 w-full rounded border-gray-300" name="observacion_administrativa">{{ old('observacion_administrativa',$tramite->revisionReemplazo?->observacion_administrativa) }}</textarea></label><x-primary-button>Guardar antecedentes</x-primary-button></form><div class="mt-5 flex gap-3"><form method="POST" action="{{ route('gestion-personas.reemplazos.return',$tramite) }}" class="flex flex-1 gap-2">@csrf<input required maxlength="5000" name="observation" class="w-full rounded border-gray-300" placeholder="Observación obligatoria"><x-secondary-button>Devolver</x-secondary-button></form><form method="POST" action="{{ route('gestion-personas.reemplazos.approve',$tramite) }}">@csrf<x-primary-button>Aprobar antecedentes</x-primary-button></form></div></section>@endif</div></div></x-app-layout>
+<x-app-layout>
+    <div class="py-8 sm:py-10">
+        <div class="mx-auto max-w-6xl space-y-5 px-4 sm:px-6 lg:px-8">
+            @if(session('status'))
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('status') }}</div>
+            @endif
+            @if($errors->any())
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $errors->first() }}</div>
+            @endif
+
+            @if($tramite->estadoTramite->codigo === 'EN_REVISION')
+                @include('reemplazos.partials.ficha-base', [
+                    'volverHref' => route('gestion-personas.reemplazos.index'),
+                    'volverTexto' => 'Volver a Reemplazos',
+                    'fechaEtiqueta' => 'Fecha de envío',
+                    'fechaValor' => $tramite->submitted_at,
+                    'cabeceraCompacta' => true,
+                    'mostrarContenido' => false,
+                ])
+
+                <section class="rounded-xl border border-indigo-200 bg-white p-5 shadow-md ring-1 ring-indigo-100 sm:p-6">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Tarea actual</p>
+                        <h2 class="mt-1 text-lg font-semibold text-gray-950">Revisión Gestión de Personas</h2>
+                        <p class="mt-1 text-sm text-gray-600">Completa y valida los antecedentes administrativos para continuar la tramitación.</p>
+                    </div>
+                    <form id="revision-form" method="POST" action="{{ route('gestion-personas.reemplazos.save', $tramite) }}" class="mt-4 grid gap-4 lg:grid-cols-2">
+                        @csrf
+                        @method('PUT')
+
+                        <label class="text-sm font-medium text-gray-700">
+                            Grado E.U.S.
+                            <input class="mt-1 w-full rounded border-gray-300" type="number" min="1" max="99" name="grado_eus" value="{{ old('grado_eus', $tramite->revisionReemplazo?->grado_eus) }}">
+                            <x-input-error :messages="$errors->get('grado_eus')" class="mt-1" />
+                        </label>
+                        <label class="text-sm font-medium text-gray-700">
+                            Clasificación de área
+                            <select class="mt-1 w-full rounded border-gray-300" name="clasificacion_area_id">
+                                <option value="">Seleccione</option>
+                                @foreach($clasificaciones as $item)
+                                    <option value="{{ $item->id }}" @selected(old('clasificacion_area_id', $tramite->revisionReemplazo?->clasificacion_area_id) == $item->id)>{{ $item->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('clasificacion_area_id')" class="mt-1" />
+                        </label>
+                        <label class="text-sm font-medium text-gray-700">
+                            Cumple normativa
+                            <select class="mt-1 w-full rounded border-gray-300" name="cumple_normativa">
+                                <option value="">Seleccione</option>
+                                <option value="1" @selected((string) old('cumple_normativa', $tramite->revisionReemplazo?->cumple_normativa) === '1')>Sí</option>
+                                <option value="0" @selected((string) old('cumple_normativa', $tramite->revisionReemplazo?->cumple_normativa) === '0')>No</option>
+                            </select>
+                            <x-input-error :messages="$errors->get('cumple_normativa')" class="mt-1" />
+                        </label>
+                        <label class="text-sm font-medium text-gray-700">
+                            Observación administrativa
+                            <textarea class="mt-1 w-full rounded border-gray-300" name="observacion_administrativa">{{ old('observacion_administrativa', $tramite->revisionReemplazo?->observacion_administrativa) }}</textarea>
+                            <x-input-error :messages="$errors->get('observacion_administrativa')" class="mt-1" />
+                        </label>
+
+                        <div class="flex flex-wrap gap-3 lg:col-span-2">
+                            <x-primary-button>Guardar antecedentes</x-primary-button>
+                            <x-primary-button formaction="{{ route('gestion-personas.reemplazos.approve', $tramite) }}">Aprobar antecedentes</x-primary-button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="rounded-xl border border-amber-200 bg-amber-50/50 p-5 shadow-sm sm:p-6">
+                    <h2 class="text-base font-semibold text-gray-950">Devolver para corrección</h2>
+                    <p class="mt-1 text-sm text-gray-600">Indica al solicitante qué debe corregir antes de continuar.</p>
+                    <form method="POST" action="{{ route('gestion-personas.reemplazos.return', $tramite) }}" class="mt-5 flex flex-col gap-2 border-t border-gray-200 pt-5 sm:flex-row">
+                        @csrf
+                        <input required maxlength="5000" name="observation" class="w-full rounded border-gray-300" placeholder="Observación obligatoria para devolver">
+                        <x-secondary-button>Devolver</x-secondary-button>
+                    </form>
+                </section>
+
+                <details class="group rounded-xl border border-gray-200 bg-white shadow-sm">
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 sm:px-6">
+                        <span>Ver antecedentes de la solicitud</span>
+                        <svg class="h-5 w-5 shrink-0 text-gray-500 transition group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                        </svg>
+                    </summary>
+                    <div class="space-y-5 border-t border-gray-200 bg-gray-50/50 p-4 sm:p-5">
+                        @include('reemplazos.partials.ficha-base', [
+                            'mostrarCabecera' => false,
+                        ])
+                        @include('reemplazos.partials.adjuntos')
+                    </div>
+                </details>
+            @else
+                @include('reemplazos.partials.ficha-base', [
+                    'volverHref' => route('gestion-personas.reemplazos.index'),
+                    'volverTexto' => 'Volver a Reemplazos',
+                    'fechaEtiqueta' => 'Fecha de envío',
+                    'fechaValor' => $tramite->submitted_at,
+                    'mostrarIniciarRevision' => $tramite->estadoTramite->codigo === 'ENVIADA_GESTION_PERSONAS',
+                ])
+
+                @include('reemplazos.partials.adjuntos')
+            @endif
+        </div>
+    </div>
+</x-app-layout>

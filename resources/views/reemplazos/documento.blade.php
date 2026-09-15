@@ -1,54 +1,63 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="text-xl font-semibold">Documento institucional · {{ $tramite->codigo }}</h2>
-        <p class="text-sm text-slate-500">{{ $tramite->unidadOrganizacional->nombre }} · {{ $tramite->estadoTramite->nombre }}</p>
-    </x-slot>
+    @php($documento = $tramite->documentosGenerados->firstWhere('status', 'VIGENTE'))
 
-    <div class="py-10">
-        <div class="mx-auto max-w-5xl space-y-5 px-4">
+    <div class="py-8 sm:py-10">
+        <div class="mx-auto max-w-6xl space-y-5 px-4 sm:px-6 lg:px-8">
             @if(session('status'))
-                <div class="rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</div>
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('status') }}</div>
             @endif
             @if($errors->any())
-                <div class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</div>
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $errors->first() }}</div>
             @endif
 
-            <div class="grid gap-5 md:grid-cols-2">
-                <section class="rounded-xl bg-white p-6 shadow">
-                    <h3 class="font-semibold">Funcionario reemplazado</h3>
-                    <p class="mt-2">{{ $tramite->reemplazo->funcionario->nombre_completo }} · {{ $tramite->reemplazo->funcionario->rut }}</p>
-                    <p>{{ $tramite->reemplazo->fecha_funcionario_desde->format('d/m/Y') }} al {{ $tramite->reemplazo->fecha_funcionario_hasta->format('d/m/Y') }}</p>
-                </section>
-                <section class="rounded-xl bg-white p-6 shadow">
-                    <h3 class="font-semibold">Reemplazante</h3>
-                    <p class="mt-2">{{ $tramite->reemplazo->reemplazante->nombre_completo }} · {{ $tramite->reemplazo->reemplazante->rut }}</p>
-                    <p>{{ $tramite->reemplazo->fecha_reemplazante_desde->format('d/m/Y') }} al {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }}</p>
-                </section>
-            </div>
+            @include('reemplazos.partials.ficha-base', [
+                'volverHref' => route('gestion-personas.reemplazos.index'),
+                'volverTexto' => 'Volver a Reemplazos',
+                'fechaEtiqueta' => 'Última actualización',
+                'fechaValor' => $tramite->updated_at,
+            ])
 
-            <section class="rounded-xl bg-white p-6 shadow">
-                <h3 class="font-semibold">Documento generado</h3>
-                @if($documento = $tramite->documentosGenerados->firstWhere('status', 'VIGENTE'))
-                    <p class="mt-3">Solicitud de Reemplazo · Versión {{ $documento->version }}</p>
-                    <p class="text-sm text-slate-600">Generado: {{ $documento->generated_at->format('d/m/Y H:i') }} · Por: {{ $documento->generadoPor->name }}</p>
+            @include('reemplazos.partials.adjuntos')
+            @include('reemplazos.partials.revision-lectura')
+
+            <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-950">Documento institucional</h2>
+                        <p class="mt-1 text-sm text-gray-500">Solicitud de Reemplazo de Personal</p>
+                    </div>
+                    @if($tramite->estadoTramite->codigo === 'LISTA_GENERAR_DOCUMENTO')
+                        @can('generar-documento-reemplazo', $tramite)
+                            <form method="POST" action="{{ route('reemplazos.documentos.store', $tramite) }}">
+                                @csrf
+                                <x-primary-button>Generar documento</x-primary-button>
+                            </form>
+                        @endcan
+                    @endif
+                </div>
+
+                @if($documento)
+                    <div class="mt-4 flex flex-col gap-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-semibold text-gray-900">{{ $documento->adjunto->original_name }}</p>
+                            <p class="mt-1 text-xs text-gray-500">PDF · Versión {{ $documento->version }}</p>
+                            <p class="mt-1 text-xs text-gray-600">Generado el {{ $documento->generated_at->format('d/m/Y H:i') }} por {{ $documento->generadoPor->name }}</p>
+                        </div>
+                        @can('generar-documento-reemplazo', $tramite)
+                            <a href="{{ route('reemplazos.documentos.download', [$tramite, $documento]) }}" class="inline-flex shrink-0 items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600">Descargar PDF</a>
+                        @endcan
+                    </div>
+                @elseif($tramite->estadoTramite->codigo === 'LISTA_GENERAR_DOCUMENTO')
                     @can('generar-documento-reemplazo', $tramite)
-                        <a href="{{ route('reemplazos.documentos.download', [$tramite, $documento]) }}" class="mt-4 inline-block rounded bg-indigo-700 px-4 py-2 text-sm font-semibold text-white">Descargar PDF</a>
-                    @endcan
-                @else
-                    @can('generar-documento-reemplazo', $tramite)
-                        <p class="mt-2 text-sm text-slate-600">Se generará el documento institucional con los antecedentes actualmente aprobados.</p>
-                        <form method="POST" action="{{ route('reemplazos.documentos.store', $tramite) }}" class="mt-4">
-                            @csrf
-                            <x-primary-button>Generar documento</x-primary-button>
-                        </form>
+                        <p class="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">El documento se generará con los antecedentes aprobados que aparecen en esta ficha.</p>
                     @endcan
                 @endif
             </section>
 
             @if($tramite->formalizacionReemplazo)
                 @php($formalizacion = $tramite->formalizacionReemplazo)
-                <section class="rounded-xl bg-white p-6 shadow">
-                    <h3 class="font-semibold">Formalización registrada</h3>
+                <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h2 class="text-base font-semibold text-gray-950">Formalización registrada</h2>
                     <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2">
                         <div><dt class="text-slate-500">Estamento</dt><dd>{{ $formalizacion->estamento->nombre }}</dd></div>
                         <div><dt class="text-slate-500">Profesión</dt><dd>{{ $formalizacion->profesion?->nombre ?? 'No informada' }}</dd></div>
@@ -64,8 +73,8 @@
                 </section>
             @elseif($tramite->estadoTramite->codigo === 'DOCUMENTO_GENERADO')
                 @can('formalizar-reemplazo', $tramite)
-                    <section class="rounded-xl bg-white p-6 shadow">
-                        <h3 class="text-lg font-semibold">Registrar formalización</h3>
+                    <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                        <h2 class="text-lg font-semibold">Registrar formalización</h2>
                         <div class="mt-4 rounded bg-slate-50 p-4 text-sm">
                             <p><span class="font-medium">Reemplazante:</span> {{ $tramite->reemplazo->reemplazante->nombre_completo }}</p>
                             <p><span class="font-medium">Unidad:</span> {{ $tramite->unidadOrganizacional->nombre }}</p>

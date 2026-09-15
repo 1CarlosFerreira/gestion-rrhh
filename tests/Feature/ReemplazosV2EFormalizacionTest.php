@@ -156,7 +156,7 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         }
     }
 
-    public function test_permission_and_operational_access_are_both_required(): void
+    public function test_scoped_formalization_requires_permission_and_operational_access(): void
     {
         $tramite = $this->tramiteConDocumento();
         $sinPermiso = User::factory()->create(['active' => true]);
@@ -166,6 +166,24 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $sinAcceso->givePermissionTo('reemplazos.formalizar');
         $this->actingAs($sinAcceso)->post(route('reemplazos.formalizaciones.store', $tramite), $this->datosValidos())->assertForbidden();
         $this->assertDatabaseCount('reemplazo_formalizaciones', 0);
+    }
+
+    public function test_global_formalizer_can_formalize_without_operational_access(): void
+    {
+        $tramite = $this->tramiteConDocumento();
+        $global = User::factory()->create(['active' => true]);
+        $global->givePermissionTo(['reemplazos.formalizar', 'tramites.ver_todos']);
+
+        $this->assertCount(0, $global->accesosOperativos);
+        $this->actingAs($global)
+            ->post(route('reemplazos.formalizaciones.store', $tramite), $this->datosValidos())
+            ->assertRedirect(route('gestion-personas.reemplazos.show', $tramite));
+
+        $this->assertSame('FORMALIZADA', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseHas('reemplazo_formalizaciones', [
+            'tramite_id' => $tramite->id,
+            'formalizado_por' => $global->id,
+        ]);
     }
 
     public function test_formalization_is_idempotent_per_tramite(): void

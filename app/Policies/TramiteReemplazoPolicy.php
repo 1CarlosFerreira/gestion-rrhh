@@ -31,20 +31,26 @@ class TramiteReemplazoPolicy
 
     public function review(User $user, Tramite $tramite): bool
     {
-        return $tramite->unidadOrganizacional !== null
-            && $this->accesos->tienePermisoYAcceso($user, 'reemplazos.revisar', $tramite->unidadOrganizacional, today());
+        return $user->active
+            && $user->can('reemplazos.revisar')
+            && $tramite->unidadOrganizacional !== null
+            && ($user->can('tramites.ver_todos') || $this->accesos->tieneAcceso($user, $tramite->unidadOrganizacional, today()));
     }
 
     public function generateDocument(User $user, Tramite $tramite): bool
     {
-        return $tramite->unidadOrganizacional !== null
-            && $this->accesos->tienePermisoYAcceso($user, 'reemplazos.generar_documento', $tramite->unidadOrganizacional, today());
+        return $user->active
+            && $user->can('reemplazos.generar_documento')
+            && $tramite->unidadOrganizacional !== null
+            && ($user->can('tramites.ver_todos') || $this->accesos->tieneAcceso($user, $tramite->unidadOrganizacional, today()));
     }
 
     public function formalize(User $user, Tramite $tramite): bool
     {
-        return $tramite->unidadOrganizacional !== null
-            && $this->accesos->tienePermisoYAcceso($user, 'reemplazos.formalizar', $tramite->unidadOrganizacional, today());
+        return $user->active
+            && $user->can('reemplazos.formalizar')
+            && $tramite->unidadOrganizacional !== null
+            && ($user->can('tramites.ver_todos') || $this->accesos->tieneAcceso($user, $tramite->unidadOrganizacional, today()));
     }
 
     private function puedeOperar(User $user, Tramite $tramite): bool

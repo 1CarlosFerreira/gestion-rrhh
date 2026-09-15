@@ -132,10 +132,124 @@ class ReemplazosV2BBorradorTest extends TestCase
     public function test_existing_private_attachments_are_available_after_first_save(): void
     {
         Storage::fake('private');
+        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id]);
+        $tramite = Tramite::query()->firstOrFail();
+        $this->actingAs($this->user)->get(route('reemplazos.edit', $tramite))
+            ->assertOk()
+            ->assertSee('form="adjunto-form" type="file" name="archivo" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png"', false)
+            ->assertSeeInOrder(['<button type="submit"', 'form="adjunto-form"', 'Adjuntar'], false)
+            ->assertSee("funcionarioId: '".$this->funcionario->id."'", false);
+
+        $this->actingAs($this->user)->post(route('reemplazos.adjuntos.store', $tramite), ['archivo' => UploadedFile::fake()->create('respaldo.pdf', 20, 'application/pdf')])
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Adjunto cargado.');
+        $this->assertDatabaseHas('tramite_adjuntos', ['tramite_id' => $tramite->id, 'original_name' => 'respaldo.pdf', 'version' => 1]);
+        $this->actingAs($this->user)->get(route('reemplazos.edit', $tramite))
+            ->assertOk()
+            ->assertSee('respaldo.pdf')
+            ->assertSee("funcionarioId: '".$this->funcionario->id."'", false);
+    }
+
+    public function test_saved_employee_is_loaded_using_the_draft_start_date(): void
+    {
+        $fechaFutura = today()->addMonth()->toDateString();
+        $vinculo = $this->funcionario->vinculosDotacion()->firstOrFail();
+        $vinculo->update(['vigente_desde' => $fechaFutura]);
+        $this->actingAs($this->user)->post(route('reemplazos.store'), [
+            'unidad_organizacional_id' => $this->unidad->id,
+            'funcionario_id' => $this->funcionario->id,
+            'fecha_funcionario_desde' => $fechaFutura,
+            'fecha_funcionario_hasta' => $fechaFutura,
+        ])->assertRedirect();
+        $tramite = Tramite::query()->firstOrFail();
+
+        $this->actingAs($this->user)->get(route('reemplazos.edit', $tramite))
+            ->assertOk()
+            ->assertSee("fechaFuncionario: '".$fechaFutura."'", false)
+            ->assertSee("funcionarioId: '".$this->funcionario->id."'", false)
+            ->assertSee($this->funcionario->rut);
+    }
+
+    public function test_dynamic_staff_reload_preserves_only_a_still_valid_selection(): void
+    {
+        $tramite = $this->actingAs($this->user)->post(route('reemplazos.store'), [
+            'unidad_organizacional_id' => $this->unidad->id,
+            'funcionario_id' => $this->funcionario->id,
+        ]);
+        $tramite->assertRedirect();
+        $solicitud = Tramite::query()->firstOrFail();
+
+        $this->actingAs($this->user)->get(route('reemplazos.edit', $solicitud))
+            ->assertOk()
+            ->assertSee('const funcionarioSeleccionado = this.funcionarioId', false)
+            ->assertSee('persona.id === String(funcionarioSeleccionado)', false)
+            ->assertSee("? String(funcionarioSeleccionado)\n                    : ''", false);
+
+        $this->actingAs($this->user)->getJson(route('reemplazos.funcionarios', [
+            'unidad_organizacional_id' => $this->unidad->id,
+            'fecha' => today()->toDateString(),
+        ]))->assertOk()->assertJsonFragment(['id' => $this->funcionario->id]);
+
+        $this->funcionario->vinculosDotacion()->firstOrFail()->update(['vigente_hasta' => today()->subDay()]);
+        $this->actingAs($this->user)->getJson(route('reemplazos.funcionarios', [
+            'unidad_organizacional_id' => $this->unidad->id,
+            'fecha' => today()->toDateString(),
+        ]))->assertOk()->assertJsonMissing(['id' => $this->funcionario->id]);
+    }
+
+    public function test_missing_justification_error_is_shown_below_its_field_when_sending(): void
+    {
+        $reemplazante = $this->persona('70000106-6', 'Reemplazante Envío');
+        $fecha = today()->toDateString();
+        $this->actingAs($this->user)->post(route('reemplazos.store'), [
+            'unidad_organizacional_id' => $this->unidad->id,
+            'funcionario_id' => $this->funcionario->id,
+            'reemplazante_id' => $reemplazante->id,
+            'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id,
+            'fecha_funcionario_desde' => $fecha,
+            'fecha_funcionario_hasta' => $fecha,
+            'fecha_reemplazante_desde' => $fecha,
+            'fecha_reemplazante_hasta' => $fecha,
+        ])->assertRedirect();
+        $tramite = Tramite::query()->firstOrFail();
+
+        $response = $this->actingAs($this->user)
+            ->from(route('reemplazos.edit', $tramite))
+            ->put(route('reemplazos.send', $tramite), [
+                'unidad_organizacional_id' => $this->unidad->id,
+                'funcionario_id' => $this->funcionario->id,
+                'reemplazante_id' => $reemplazante->id,
+                'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id,
+                'fecha_funcionario_desde' => $fecha,
+                'fecha_funcionario_hasta' => $fecha,
+                'fecha_reemplazante_desde' => $fecha,
+                'fecha_reemplazante_hasta' => $fecha,
+            ]);
+        $response->assertRedirect(route('reemplazos.edit', $tramite))->assertSessionHasErrors('justificacion');
+        $error = $response->getSession()->get('errors')->first('justificacion');
+
+        $this->actingAs($this->user)->get(route('reemplazos.edit', $tramite))
+            ->assertOk()
+            ->assertSeeInOrder(['name="justificacion"', $error], false)
+            ->assertSee('Al enviar se guardan los cambios actuales y luego se validan los antecedentes.');
+    }
+
+    public function test_disallowed_attachment_is_rejected_and_error_is_shown_in_documents_section(): void
+    {
+        Storage::fake('private');
         $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
         $tramite = Tramite::query()->firstOrFail();
-        $this->actingAs($this->user)->post(route('reemplazos.adjuntos.store', $tramite), ['archivo' => UploadedFile::fake()->create('respaldo.pdf', 20, 'application/pdf')])->assertRedirect();
-        $this->assertDatabaseHas('tramite_adjuntos', ['tramite_id' => $tramite->id, 'original_name' => 'respaldo.pdf', 'version' => 1]);
+
+        $response = $this->actingAs($this->user)
+            ->from(route('reemplazos.edit', $tramite))
+            ->post(route('reemplazos.adjuntos.store', $tramite), ['archivo' => UploadedFile::fake()->create('respaldo.html', 20, 'text/html')]);
+        $response->assertRedirect(route('reemplazos.edit', $tramite))->assertSessionHasErrors('archivo');
+        $error = $response->getSession()->get('errors')->first('archivo');
+
+        $this->assertDatabaseCount('tramite_adjuntos', 0);
+        $this->actingAs($this->user)->get(route('reemplazos.edit', $tramite))
+            ->assertOk()
+            ->assertSeeInOrder(['Documentos', $error]);
     }
 
     public function test_replacement_catalog_seeder_is_idempotent(): void

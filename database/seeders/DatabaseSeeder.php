@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             TiposUnidadOrganizacionalSeeder::class,
             EstructuraOrganizacionalOficialSeeder::class,
             ReemplazosV2Seeder::class,
+            ClasificacionesAreaOficialesSeeder::class,
             TiposDocumentoSeeder::class,
             DocumentoPlantillaReemplazoV2Seeder::class,
             AdminUserSeeder::class,

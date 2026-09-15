@@ -48,6 +48,25 @@ class ReemplazoController extends Controller
         return $this->form($tramite->load(['reemplazo.funcionario', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']), $request, $alcance);
     }
 
+    public function show(Tramite $tramite): View
+    {
+        abort_unless($tramite->tipoTramite()->where('codigo', 'REEMPLAZO')->exists() && $tramite->reemplazo()->exists(), 404);
+        Gate::authorize('view', $tramite);
+
+        return view('reemplazos.show', [
+            'tramite' => $tramite->load([
+                'tipoTramite',
+                'estadoTramite',
+                'unidadOrganizacional',
+                'creador',
+                'reemplazo.funcionario',
+                'reemplazo.reemplazante',
+                'reemplazo.tipoReemplazo',
+                'adjuntos.tipoDocumento',
+            ]),
+        ]);
+    }
+
     public function update(SaveBorradorReemplazoRequest $request, Tramite $tramite, AlcanceSolicitudReemplazoService $alcance, BorradorReemplazoService $service): RedirectResponse
     {
         $this->autorizarTramite($tramite, 'editar-reemplazo');
@@ -62,11 +81,19 @@ class ReemplazoController extends Controller
         return back()->with('status', 'Borrador actualizado.');
     }
 
-    public function send(Request $request, Tramite $tramite, TransicionarTramite $transition): RedirectResponse
+    public function send(SaveBorradorReemplazoRequest $request, Tramite $tramite, AlcanceSolicitudReemplazoService $alcance, BorradorReemplazoService $service, TransicionarTramite $transition): RedirectResponse
     {
         $this->autorizarTramite($tramite, 'editar-reemplazo');
-        $action = $tramite->estadoTramite?->codigo === 'DEVUELTA_PARA_CORRECCION' ? 'REENVIAR_A_GESTION_PERSONAS' : 'ENVIAR_A_GESTION_PERSONAS';
-        $transition->execute($tramite, $action, $request->user());
+        $unidad = UnidadOrganizacional::query()->findOrFail($request->integer('unidad_organizacional_id'));
+        abort_unless($alcance->tienePermisoYAlcance($request->user(), 'reemplazos.crear', $unidad, today()), 403);
+        DB::transaction(function () use ($request, $tramite, $unidad, $service, $transition): void {
+            $datos = $this->datos($request);
+            $datos['reemplazante_id'] = $this->resolverReemplazante($request, $datos['reemplazante_id'] ?? null);
+            $service->actualizar($tramite, $unidad, $datos, $request->user());
+            $tramite = $tramite->refresh()->load('estadoTramite');
+            $action = $tramite->estadoTramite?->codigo === 'DEVUELTA_PARA_CORRECCION' ? 'REENVIAR_A_GESTION_PERSONAS' : 'ENVIAR_A_GESTION_PERSONAS';
+            $transition->execute($tramite, $action, $request->user());
+        });
 
         return redirect()->route('dashboard')->with('status', 'Solicitud enviada a Gestión de Personas.');
     }
@@ -107,7 +134,8 @@ class ReemplazoController extends Controller
     {
         $unidades = $alcance->unidadesAutorizadas($request->user(), today());
         $seleccionada = (int) old('unidad_organizacional_id', $tramite?->unidad_organizacional_id ?? ($unidades->count() === 1 ? $unidades->first()->id : 0));
-        $funcionarios = $seleccionada ? Persona::query()->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $seleccionada)->vigentesEn(old('fecha_funcionario_desde', today())))->orderBy('apellido_paterno')->get() : collect();
+        $fechaFuncionario = old('fecha_funcionario_desde', $tramite?->reemplazo?->fecha_funcionario_desde?->toDateString() ?? today()->toDateString());
+        $funcionarios = $seleccionada ? Persona::query()->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $seleccionada)->vigentesEn($fechaFuncionario))->orderBy('apellido_paterno')->get() : collect();
 
         return view('reemplazos.form', ['tramite' => $tramite, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->limit(200)->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
     }
