@@ -39,14 +39,14 @@
                         <svg class="h-4 w-4 transition-transform" x-bind:class="{ 'rotate-180': filtrosAbiertos }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
                     </button>
 
-                    @can('dotacion.gestionar')
+                    @if ($puedeRegistrarVinculo)
                         <div class="flex flex-wrap items-center gap-3">
                             <a class="inline-flex flex-1 items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:flex-none" href="{{ route('admin.dotacion.create') }}">Registrar vínculo</a>
                             @can('calidades_contractuales.ver')
                                 <a class="text-sm font-medium text-indigo-700 underline" href="{{ route('admin.calidades.index') }}">Calidades</a>
                             @endcan
                         </div>
-                    @endcan
+                    @endif
                 </div>
 
                 <div id="filtros-dotacion" x-cloak x-show="filtrosAbiertos" class="mt-5 border-t border-gray-200 pt-5">
@@ -212,6 +212,16 @@
                                                 <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold {{ $estadoVinculo === 'VIGENTE' ? 'bg-green-100 text-green-800' : ($estadoVinculo === 'FUTURO' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700') }}">{{ $estadoVinculo }}</span>
                                             </div>
                                             <p class="mt-0.5 text-xs text-gray-500">RUT {{ $vinculo->persona->rut }}</p>
+                                            @if ($vinculo->esGeneradoPorTramite())
+                                                <p class="mt-1 text-xs font-medium text-indigo-700">
+                                                    Generado por trámite
+                                                    @can('view', $vinculo->tramiteOrigen)
+                                                        <a class="underline" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
+                                                    @else
+                                                        {{ $vinculo->tramiteOrigen->codigo }}
+                                                    @endcan
+                                                </p>
+                                            @endif
                                         </div>
 
                                         <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm">

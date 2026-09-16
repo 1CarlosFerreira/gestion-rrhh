@@ -145,6 +145,120 @@ class ReemplazosV2EFormalizacionTest extends TestCase
             ->assertSee('value="'.$this->calidad->id.'" selected', false);
     }
 
+    public function test_document_generated_screen_prioritizes_formalization_and_does_not_duplicate_institutional_pdf(): void
+    {
+        $tramite = $this->tramiteConDocumento();
+        $this->actor->givePermissionTo('reemplazos.generar_documento');
+        $tipoDocumento = TipoDocumento::query()->where('codigo', 'OTRO')->firstOrFail();
+        $tramite->adjuntos()->create([
+            'tipo_documento_id' => $tipoDocumento->id,
+            'uploaded_by' => $this->actor->id,
+            'original_name' => 'respaldo-real.pdf',
+            'stored_name' => 'respaldo-real.pdf',
+            'storage_path' => 'tramites/'.$tramite->public_id.'/respaldo-real.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 12,
+            'sha256' => hash('sha256', 'respaldo-real'),
+            'version' => 1,
+            'status' => 'ACTIVO',
+        ]);
+
+        $response = $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.show', $tramite));
+
+        $response->assertOk()
+            ->assertSeeInOrder(['Descargar PDF', 'Formalizar reemplazo', 'Confirmar formalización', 'Ver antecedentes del trámite y cobertura', 'Ver revisión de Gestión de Personas', 'Documentos'])
+            ->assertSee('Documento generado')
+            ->assertSee('solicitud.pdf')
+            ->assertSee('respaldo-real.pdf')
+            ->assertSee('Al formalizar, el reemplazante será incorporado a la dotación');
+        $this->assertSame(1, substr_count($response->getContent(), 'solicitud.pdf'));
+    }
+
+    public function test_formalized_screen_renders_compact_final_record_and_classifies_documents(): void
+    {
+        $tramite = $this->tramiteConDocumento();
+        $tipoOtro = TipoDocumento::query()->where('codigo', 'OTRO')->firstOrFail();
+        $tramite->adjuntos()->create([
+            'tipo_documento_id' => $tipoOtro->id,
+            'uploaded_by' => $this->actor->id,
+            'original_name' => 'antecedente-adicional.pdf',
+            'stored_name' => 'antecedente-adicional.pdf',
+            'storage_path' => 'tramites/'.$tramite->public_id.'/antecedente-adicional.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 12,
+            'sha256' => hash('sha256', 'antecedente'),
+            'version' => 1,
+            'status' => 'ACTIVO',
+        ]);
+        $this->actingAs($this->actor)->post(route('reemplazos.formalizaciones.store', $tramite), [
+            ...$this->datosValidos(),
+            'identificador_externo' => 'DOC-2026-99',
+            'documento_final' => UploadedFile::fake()->create('documento-firmado.pdf', 80, 'application/pdf'),
+        ])->assertRedirect();
+
+        $response = $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.show', $tramite));
+
+        $response->assertOk()
+            ->assertSeeInOrder(['Fecha de formalización', 'Resumen del reemplazo', 'Documentos', 'Formalización registrada', 'Ver antecedentes y revisión'])
+            ->assertSee('Solicitud PDF generada por el sistema')
+            ->assertSee('solicitud.pdf')
+            ->assertSee('Documento final firmado / DocDigital')
+            ->assertSee('documento-firmado.pdf')
+            ->assertSee('Otro')
+            ->assertSee('antecedente-adicional.pdf')
+            ->assertSee('DOC-2026-99')
+            ->assertSee('21 de 30 días')
+            ->assertDontSee('Formalizar reemplazo')
+            ->assertDontSee('Confirmar formalización');
+        $this->assertSame(1, substr_count($response->getContent(), 'Solicitud PDF generada por el sistema'));
+    }
+
+    public function test_management_inbox_separates_active_and_finalized_replacements_with_independent_pagination(): void
+    {
+        $finalizado = $this->tramiteConDocumento();
+        $this->actingAs($this->actor)->post(route('reemplazos.formalizaciones.store', $finalizado), $this->datosValidos())->assertRedirect();
+        $activo = $this->tramiteConDocumento();
+        $this->actor->givePermissionTo('reemplazos.revisar');
+
+        $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.index'))
+            ->assertOk()
+            ->assertSee('Activos')
+            ->assertSee('Finalizados')
+            ->assertSee($activo->codigo)
+            ->assertDontSee($finalizado->codigo)
+            ->assertViewHas('tramites', fn ($tramites): bool => $tramites->getPageName() === 'activos_page');
+
+        $finalizado->refresh();
+        $response = $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.index', [
+            'pestana' => 'finalizados',
+            'buscar' => $finalizado->reemplazo->funcionario->rut,
+            'estado' => 'FORMALIZADA',
+            'unidad_id' => $this->unidad->id,
+        ]));
+
+        $response->assertOk()
+            ->assertSee('Reemplazos formalizados')
+            ->assertSee($finalizado->codigo)
+            ->assertDontSee($activo->codigo)
+            ->assertSee($finalizado->reemplazo->funcionario->nombre_completo)
+            ->assertSee($finalizado->reemplazo->reemplazante->nombre_completo)
+            ->assertSee($finalizado->reemplazo->fecha_reemplazante_desde->format('d/m/Y'))
+            ->assertSee($finalizado->finalized_at->format('d/m/Y'))
+            ->assertViewHas('tramites', function ($tramites): bool {
+                parse_str((string) parse_url($tramites->url(2), PHP_URL_QUERY), $query);
+
+                return $tramites->getPageName() === 'finalizados_page'
+                    && $query['pestana'] === 'finalizados'
+                    && $query['estado'] === 'FORMALIZADA'
+                    && isset($query['buscar'], $query['unidad_id']);
+            });
+
+        $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.show', $finalizado))
+            ->assertOk()
+            ->assertSee('Resumen del reemplazo')
+            ->assertSee('Formalización registrada');
+    }
+
     public function test_v2e_can_formalize_with_each_active_official_contractual_quality(): void
     {
         foreach (CalidadContractual::query()->where('activo', true)->orderBy('orden')->get() as $calidad) {

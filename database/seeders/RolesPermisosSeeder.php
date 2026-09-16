@@ -34,6 +34,7 @@ class RolesPermisosSeeder extends Seeder
             'accesos_operativos.ver',
             'accesos_operativos.gestionar',
             'dotacion.ver',
+            'dotacion.ver_todas',
             'dotacion.gestionar',
             'calidades_contractuales.ver',
             'calidades_contractuales.gestionar',
@@ -50,6 +51,7 @@ class RolesPermisosSeeder extends Seeder
             'Gestión de Personas' => [
                 'dotacion.gestionar',
                 'dotacion.ver',
+                'dotacion.ver_todas',
                 'personas.gestionar',
                 'personas.ver',
                 'reemplazos.formalizar',

@@ -28,7 +28,9 @@ class DotacionController extends Controller
     {
         Gate::authorize('viewAny', PersonaUnidadVinculo::class);
         $fecha = $request->date('fecha')?->toDateString() ?? today()->toDateString();
-        $permitidas = $request->user()->hasRole('Administrador') ? UnidadOrganizacional::query()->pluck('id') : $accesos->unidadesAccesibles($request->user(), $fecha)->pluck('id');
+        $permitidas = $request->user()->can('dotacion.ver_todas')
+            ? UnidadOrganizacional::query()->pluck('id')
+            : $accesos->unidadesAccesibles($request->user(), $fecha)->pluck('id');
         $unidadId = $request->integer('unidad_id');
         $ids = $permitidas;
         if ($unidadId) {
@@ -40,7 +42,7 @@ class DotacionController extends Controller
             }
         }
         $estado = $request->has('estado') ? $request->string('estado')->toString() : EstadoVinculoDotacion::VIGENTE->value;
-        $query = PersonaUnidadVinculo::query()->with(['persona.user', 'unidad', 'estamento', 'profesion', 'calidadContractual', 'creadoPor'])->whereIn('unidad_organizacional_id', $ids)
+        $query = PersonaUnidadVinculo::query()->with(['persona.user', 'unidad', 'estamento', 'profesion', 'calidadContractual', 'creadoPor', 'tramiteOrigen'])->whereIn('unidad_organizacional_id', $ids)
             ->when($request->filled('persona'), fn (Builder $q) => $q->whereHas('persona', fn (Builder $p) => $p->buscar($request->string('persona'))))
             ->when($request->integer('estamento_id'), fn (Builder $q, int $id) => $q->where('estamento_id', $id))
             ->when($request->integer('profesion_id'), fn (Builder $q, int $id) => $q->where('profesion_id', $id))
@@ -52,6 +54,8 @@ class DotacionController extends Controller
             default => null,
         };
         $vinculos = $query->orderByDesc('vigente_desde')->get();
+        $puedeRegistrarVinculo = $request->user()->can('dotacion.gestionar')
+            && ($request->user()->hasRole('Administrador') || $accesos->unidadesAccesibles($request->user(), today())->isNotEmpty());
         $unidades = UnidadOrganizacional::query()->whereIn('id', $permitidas)->orderBy('nombre')->get();
         $unidadesAgrupadas = UnidadOrganizacional::query()->with('tipo')->whereIn('id', $ids)->get()
             ->each(function (UnidadOrganizacional $unidad) use ($estructura): void {
@@ -65,7 +69,7 @@ class DotacionController extends Controller
             ->sortBy('orden_jerarquico', SORT_NATURAL)
             ->values();
 
-        return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estado' => $estado, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => $unidades, 'unidadesAgrupadas' => $unidadesAgrupadas, 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get()]);
+        return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estado' => $estado, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => $unidades, 'unidadesAgrupadas' => $unidadesAgrupadas, 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get(), 'puedeRegistrarVinculo' => $puedeRegistrarVinculo]);
     }
 
     public function create(Request $request, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
@@ -114,9 +118,11 @@ class DotacionController extends Controller
 
     public function persona(Request $request, Persona $persona, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
     {
-        $permitidas = $request->user()->hasRole('Administrador') ? UnidadOrganizacional::query()->pluck('id') : $accesos->unidadesAccesibles($request->user(), today())->pluck('id');
+        $permitidas = $request->user()->can('dotacion.ver_todas')
+            ? UnidadOrganizacional::query()->pluck('id')
+            : $accesos->unidadesAccesibles($request->user(), today())->pluck('id');
         abort_unless($request->user()->can('dotacion.ver') && $persona->vinculosDotacion()->whereIn('unidad_organizacional_id', $permitidas)->exists(), 403);
-        $persona->load(['user.accesosOperativos.unidad', 'responsabilidades' => fn ($q) => $q->with('unidad')->whereIn('unidad_organizacional_id', $permitidas), 'vinculosDotacion' => fn ($q) => $q->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->whereIn('unidad_organizacional_id', $permitidas)->orderByDesc('vigente_desde')]);
+        $persona->load(['user.accesosOperativos.unidad', 'responsabilidades' => fn ($q) => $q->with('unidad')->whereIn('unidad_organizacional_id', $permitidas), 'vinculosDotacion' => fn ($q) => $q->with(['unidad', 'estamento', 'profesion', 'calidadContractual', 'tramiteOrigen'])->whereIn('unidad_organizacional_id', $permitidas)->orderByDesc('vigente_desde')]);
 
         return view('admin.dotacion.persona', compact('persona', 'estructura'));
     }
@@ -125,6 +131,6 @@ class DotacionController extends Controller
     {
         $unidades = $request->user()->hasRole('Administrador') ? UnidadOrganizacional::query()->activas()->get() : $accesos->unidadesAccesibles($request->user(), today());
 
-        return view('admin.dotacion.form', ['vinculo' => $vinculo, 'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->get(), 'unidades' => $unidades->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)]), 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->get(), 'origenes' => OrigenVinculoDotacion::cases()]);
+        return view('admin.dotacion.form', ['vinculo' => $vinculo, 'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->get(), 'unidades' => $unidades->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)]), 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->get(), 'origenes' => [OrigenVinculoDotacion::MANUAL, OrigenVinculoDotacion::IMPORTACION]]);
     }
 }

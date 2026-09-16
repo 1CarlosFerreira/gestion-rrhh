@@ -13,12 +13,16 @@ class PersonaUnidadVinculoPolicy
 
     public function viewAny(User $user): bool
     {
-        return $this->global($user) || ($user->can('dotacion.ver') && $this->accesos->unidadesAccesibles($user, today())->isNotEmpty());
+        return $user->active
+            && $user->can('dotacion.ver')
+            && ($user->can('dotacion.ver_todas') || $this->accesos->unidadesAccesibles($user, today())->isNotEmpty());
     }
 
     public function view(User $user, PersonaUnidadVinculo $vinculo): bool
     {
-        return $this->puede($user, 'dotacion.ver', $vinculo->unidad);
+        return $user->active
+            && $user->can('dotacion.ver')
+            && ($user->can('dotacion.ver_todas') || $this->accesos->tieneAcceso($user, $vinculo->unidad, today()));
     }
 
     public function create(User $user, UnidadOrganizacional $unidad): bool
@@ -28,7 +32,8 @@ class PersonaUnidadVinculoPolicy
 
     public function update(User $user, PersonaUnidadVinculo $vinculo): bool
     {
-        return $this->puede($user, 'dotacion.gestionar', $vinculo->unidad);
+        return ! $vinculo->esGeneradoPorTramite()
+            && $this->puede($user, 'dotacion.gestionar', $vinculo->unidad);
     }
 
     private function puede(User $user, string $permiso, UnidadOrganizacional $unidad): bool

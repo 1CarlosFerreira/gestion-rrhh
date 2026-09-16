@@ -126,7 +126,19 @@
                                     </div>
                                     <div class="sm:col-span-2">
                                         <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Origen</dt>
-                                        <dd class="mt-1 text-gray-800">{{ $vinculo->origen->name ?? '-' }}</dd>
+                                        <dd class="mt-1 text-gray-800">
+                                            {{ $vinculo->origen->name ?? '-' }}
+                                            @if ($vinculo->esGeneradoPorTramite())
+                                                <span class="block text-xs font-medium text-indigo-700">
+                                                    Generado por trámite
+                                                    @can('view', $vinculo->tramiteOrigen)
+                                                        <a class="underline" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
+                                                    @else
+                                                        {{ $vinculo->tramiteOrigen->codigo }}
+                                                    @endcan
+                                                </span>
+                                            @endif
+                                        </dd>
                                     </div>
                                 </dl>
 
@@ -189,7 +201,19 @@
                                     </div>
                                     <div class="sm:col-span-2">
                                         <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Origen</dt>
-                                        <dd class="mt-1 text-gray-700">{{ $vinculo->origen->name ?? '-' }}</dd>
+                                        <dd class="mt-1 text-gray-700">
+                                            {{ $vinculo->origen->name ?? '-' }}
+                                            @if ($vinculo->esGeneradoPorTramite())
+                                                <span class="block text-xs font-medium text-indigo-700">
+                                                    Generado por trámite
+                                                    @can('view', $vinculo->tramiteOrigen)
+                                                        <a class="underline" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
+                                                    @else
+                                                        {{ $vinculo->tramiteOrigen->codigo }}
+                                                    @endcan
+                                                </span>
+                                            @endif
+                                        </dd>
                                     </div>
                                 </dl>
 

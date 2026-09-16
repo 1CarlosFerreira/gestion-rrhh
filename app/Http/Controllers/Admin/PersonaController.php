@@ -62,12 +62,12 @@ class PersonaController extends Controller
         $puedeAgregarVinculo = false;
 
         if ($verDotacion) {
-            $unidades = $request->user()->hasRole('Administrador')
+            $unidades = $request->user()->can('dotacion.ver_todas')
                 ? UnidadOrganizacional::query()->get()
                 : $accesos->unidadesAccesibles($request->user(), today());
 
             $vinculos = $persona->vinculosDotacion()
-                ->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])
+                ->with(['unidad', 'estamento', 'profesion', 'calidadContractual', 'tramiteOrigen'])
                 ->whereIn('unidad_organizacional_id', $unidades->pluck('id'))
                 ->orderByDesc('vigente_desde')
                 ->get();

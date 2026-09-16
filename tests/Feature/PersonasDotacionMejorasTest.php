@@ -245,6 +245,30 @@ class PersonasDotacionMejorasTest extends TestCase
         $this->assertNull($vinculo->fresh()->vigente_hasta);
     }
 
+    public function test_endpoints_manuales_rechazan_origen_documento_firmado_y_tramite_de_origen(): void
+    {
+        $datos = [
+            'persona_id' => $this->persona->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'estamento_id' => $this->estamento->id,
+            'profesion_id' => null,
+            'calidad_contractual_id' => $this->calidad->id,
+            'cargo_funcion' => 'Cargo reservado',
+            'grado_eus' => null,
+            'vigente_desde' => today()->toDateString(),
+            'vigente_hasta' => null,
+            'origen' => OrigenVinculoDotacion::DOCUMENTO_FIRMADO->value,
+            'origen_tramite_id' => 1,
+            'observacion' => null,
+        ];
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.dotacion.store'), $datos)
+            ->assertSessionHasErrors(['origen', 'origen_tramite_id']);
+
+        $this->assertDatabaseMissing('persona_unidad_vinculos', ['cargo_funcion' => 'Cargo reservado']);
+    }
+
     private function crearPersona(string $rut, string $nombres, string $apellidoPaterno): Persona
     {
         return Persona::query()->create([

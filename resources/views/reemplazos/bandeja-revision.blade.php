@@ -12,6 +12,15 @@
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('status') }}</div>
             @endif
 
+            @php
+                $filtrosPestana = request()->except(['pestana', 'estado', 'activos_page', 'finalizados_page']);
+            @endphp
+            <nav class="flex gap-1 border-b border-gray-200" aria-label="Vista de reemplazos">
+                <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'activos']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'activos' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Activos</a>
+                <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'finalizados']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'finalizados' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Finalizados</a>
+            </nav>
+
+            @if($pestana === 'activos')
             <section aria-label="Indicadores de la bandeja" class="grid gap-3 sm:grid-cols-3">
                 <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Pendientes de revisión</p>
@@ -26,8 +35,10 @@
                     <p class="mt-1 text-2xl font-semibold text-violet-950">{{ $indicadores['para_documento'] }}</p>
                 </div>
             </section>
+            @endif
 
             <form method="GET" action="{{ route('gestion-personas.reemplazos.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <input type="hidden" name="pestana" value="{{ $pestana }}">
                 <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(18rem,2fr)_minmax(12rem,1fr)_minmax(14rem,1fr)_auto] xl:items-end">
                     <label class="block">
                         <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Buscar</span>
@@ -54,7 +65,7 @@
                     <div class="flex gap-2">
                         <x-primary-button>Buscar</x-primary-button>
                         @if(request()->filled('buscar') || request()->filled('estado') || request()->filled('unidad_id'))
-                            <a href="{{ route('gestion-personas.reemplazos.index') }}" class="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50">Limpiar filtros</a>
+                            <a href="{{ route('gestion-personas.reemplazos.index', ['pestana' => $pestana]) }}" class="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50">Limpiar filtros</a>
                         @endif
                     </div>
                 </div>
@@ -62,9 +73,39 @@
 
             <section aria-labelledby="solicitudes-title" class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                 <div class="border-b border-gray-200 px-4 py-3 sm:px-5">
-                    <h2 id="solicitudes-title" class="text-sm font-semibold text-gray-900">Solicitudes recibidas</h2>
+                    <h2 id="solicitudes-title" class="text-sm font-semibold text-gray-900">{{ $pestana === 'finalizados' ? 'Reemplazos formalizados' : 'Solicitudes recibidas' }}</h2>
                 </div>
                 <div class="overflow-x-auto">
+                    @if($pestana === 'finalizados')
+                    <table class="min-w-[960px] w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            <tr>
+                                <th class="px-4 py-3 sm:pl-5">Código</th>
+                                <th class="px-4 py-3">Unidad</th>
+                                <th class="px-4 py-3">Funcionario reemplazado</th>
+                                <th class="px-4 py-3">Reemplazante</th>
+                                <th class="px-4 py-3">Período efectivo</th>
+                                <th class="px-4 py-3">Fecha de formalización</th>
+                                <th class="px-4 py-3 text-right sm:pr-5"><span class="sr-only">Acción</span></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @forelse($tramites as $tramite)
+                                <tr class="bg-white transition hover:bg-gray-50">
+                                    <td class="whitespace-nowrap px-4 py-3 font-mono font-semibold text-gray-950 sm:pl-5">{{ $tramite->codigo }}</td>
+                                    <td class="max-w-56 px-4 py-3 font-medium text-gray-800">{{ $tramite->unidadOrganizacional->nombre }}</td>
+                                    <td class="px-4 py-3 text-gray-800">{{ $tramite->reemplazo->funcionario->nombre_completo }}</td>
+                                    <td class="px-4 py-3 text-gray-800">{{ $tramite->reemplazo->reemplazante->nombre_completo }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-gray-800">{{ $tramite->reemplazo->fecha_reemplazante_desde->format('d/m/Y') }} <span class="text-gray-400">al</span> {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-gray-800">{{ $tramite->formalizacionReemplazo?->formalizado_at?->format('d/m/Y H:i') ?? $tramite->finalized_at?->format('d/m/Y H:i') ?? 'Sin fecha' }}</td>
+                                    <td class="px-4 py-3 text-right sm:pr-5"><a class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" href="{{ route('gestion-personas.reemplazos.show', $tramite) }}">Ver</a></td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">{{ $haySolicitudes ? 'No se encontraron resultados.' : 'No hay reemplazos formalizados.' }}</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                    @else
                     <table class="min-w-[1120px] w-full text-left text-sm">
                         <thead class="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
                             <tr>
@@ -133,6 +174,7 @@
                             @endforelse
                         </tbody>
                     </table>
+                    @endif
                 </div>
             </section>
 

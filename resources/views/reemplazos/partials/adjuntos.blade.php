@@ -1,10 +1,11 @@
+@php($adjuntosVisibles = $tramite->adjuntos->whereNotIn('id', $excluirAdjuntoIds ?? []))
 <section aria-labelledby="adjuntos-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
     <div class="flex items-center justify-between gap-3">
         <h2 id="adjuntos-title" class="text-base font-semibold text-gray-950">Documentos</h2>
-        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{{ $tramite->adjuntos->count() }}</span>
+        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{{ $adjuntosVisibles->count() }}</span>
     </div>
     <div class="mt-4 divide-y divide-gray-200 rounded-lg border border-gray-200">
-        @forelse($tramite->adjuntos as $adjunto)
+        @forelse($adjuntosVisibles as $adjunto)
             <div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
                     <p class="truncate text-sm font-medium text-gray-900">{{ $adjunto->original_name }}</p>

@@ -121,6 +121,10 @@ class ReemplazosV2DDocumentoTest extends TestCase
             ->assertSee('Días cubiertos')
             ->assertSee('Días sin cobertura')
             ->assertSee('Área V2D')
+            ->assertSee('Resumen para generación')
+            ->assertSee('Ver antecedentes completos')
+            ->assertSee('Ver revisión de Gestión de Personas')
+            ->assertSee('El documento se generará con los antecedentes aprobados')
             ->assertSee('Generar documento')
             ->assertDontSee('Descargar PDF');
 
@@ -132,7 +136,11 @@ class ReemplazosV2DDocumentoTest extends TestCase
             ->assertSee($documento->adjunto->original_name)
             ->assertSee('Versión 1')
             ->assertSee($this->user->name)
-            ->assertSee('Descargar PDF');
+            ->assertSee('Descargar PDF')
+            ->assertDontSee('Resumen para generación')
+            ->assertDontSee('Ver antecedentes completos')
+            ->assertSee('Ver antecedentes del trámite y cobertura')
+            ->assertSee('Ver revisión de Gestión de Personas');
     }
 
     public function test_generation_is_rejected_from_every_previous_state(): void

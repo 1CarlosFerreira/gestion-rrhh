@@ -37,6 +37,7 @@ class RoleConsolidationTest extends TestCase
         $this->assertEqualsCanonicalizing([
             'dotacion.gestionar',
             'dotacion.ver',
+            'dotacion.ver_todas',
             'personas.gestionar',
             'personas.ver',
             'reemplazos.formalizar',
@@ -48,6 +49,8 @@ class RoleConsolidationTest extends TestCase
             'tramites.adjuntos.descargar',
             'tramites.ver_todos',
         ], Role::findByName('Gestión de Personas')->permissions()->pluck('name')->all());
+        $this->assertFalse(Role::findByName('Solicitante')->hasPermissionTo('dotacion.ver_todas'));
+        $this->assertFalse(Role::findByName('Funcionario')->hasPermissionTo('dotacion.ver_todas'));
         $this->assertCount(Permission::query()->count(), Role::findByName('Administrador')->permissions);
     }
 

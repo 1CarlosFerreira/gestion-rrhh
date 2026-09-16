@@ -28,6 +28,19 @@
                 <p class="mt-2 text-sm text-gray-600">{{ $tramite->unidadOrganizacional->nombre }}</p>
             </div>
             <div class="flex shrink-0 flex-col items-start gap-3 sm:items-end">
+                @if($mostrarGenerarDocumento ?? false)
+                    @can('generar-documento-reemplazo', $tramite)
+                        <form method="POST" action="{{ route('reemplazos.documentos.store', $tramite) }}">
+                            @csrf
+                            <x-primary-button>Generar documento</x-primary-button>
+                        </form>
+                    @endcan
+                @endif
+                @if(($documentoDescarga ?? null) && ($mostrarDescargarDocumento ?? false))
+                    @can('generar-documento-reemplazo', $tramite)
+                        <a href="{{ route('reemplazos.documentos.download', [$tramite, $documentoDescarga]) }}" class="inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600">Descargar PDF</a>
+                    @endcan
+                @endif
                 @if($mostrarIniciarRevision ?? false)
                     <form method="POST" action="{{ route('gestion-personas.reemplazos.start', $tramite) }}">
                         @csrf

@@ -115,6 +115,42 @@ class DotacionHistoricaTest extends TestCase
         $this->assertSame(1, PersonaUnidadVinculo::count());
     }
 
+    public function test_document_origin_is_reserved_for_internal_formalization_flow(): void
+    {
+        $tramite = $this->tramite();
+        $service = app(DotacionService::class);
+
+        try {
+            $service->crear($this->datos([
+                'origen' => OrigenVinculoDotacion::DOCUMENTO_FIRMADO->value,
+                'origen_tramite_id' => $tramite->id,
+            ]), $this->actor);
+            $this->fail('La creación manual no debe admitir el origen documento firmado.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('origen', $exception->errors());
+        }
+
+        $this->assertDatabaseCount('persona_unidad_vinculos', 0);
+        $this->assertTrue($service->crearDesdeDocumentoFirmado($tramite, $this->datos(), $this->actor)->esGeneradoPorTramite());
+    }
+
+    public function test_formalization_link_cannot_be_edited_closed_or_reopened_manually(): void
+    {
+        $this->seed(RolesPermisosSeeder::class);
+        $admin = User::factory()->create(['active' => true]);
+        $admin->assignRole('Administrador');
+        $tramite = $this->tramite();
+        $vinculo = app(DotacionService::class)->crearDesdeDocumentoFirmado($tramite, $this->datos(), $this->actor);
+
+        $this->assertFalse($admin->can('update', $vinculo));
+        $this->actingAs($admin)->get(route('admin.dotacion.edit', $vinculo))->assertForbidden();
+        $this->actingAs($admin)->put(route('admin.dotacion.update', $vinculo), $this->datos(['observacion' => 'Alterada']))->assertForbidden();
+        $this->actingAs($admin)->patch(route('admin.dotacion.close', $vinculo), ['vigente_hasta' => today()->toDateString()])->assertForbidden();
+
+        $this->assertNull($vinculo->fresh()->vigente_hasta);
+        $this->assertNull($vinculo->fresh()->observacion);
+    }
+
     public function test_queries_current_descendants_history_upcoming_membership_and_units(): void
     {
         $hija = $this->otraUnidad($this->unidad);
@@ -160,6 +196,74 @@ class DotacionHistoricaTest extends TestCase
         $this->actingAs($user)->get(route('admin.dotacion.index'))->assertForbidden();
     }
 
+    public function test_gestion_personas_without_operational_access_can_view_all_staffing(): void
+    {
+        $this->seed(RolesPermisosSeeder::class);
+        $otraUnidad = $this->otraUnidad();
+        app(DotacionService::class)->crear($this->datos(['cargo_funcion' => 'Cargo unidad uno']), $this->actor);
+        app(DotacionService::class)->crear($this->datos([
+            'unidad_organizacional_id' => $otraUnidad->id,
+            'cargo_funcion' => 'Cargo unidad dos',
+        ]), $this->actor);
+        $user = User::factory()->create(['active' => true]);
+        $user->assignRole('Gestión de Personas');
+
+        $this->actingAs($user)
+            ->get(route('admin.dotacion.index'))
+            ->assertOk()
+            ->assertSee('Cargo unidad uno')
+            ->assertSee('Cargo unidad dos');
+
+        $this->actingAs($user)
+            ->get(route('admin.dotacion.index'))
+            ->assertDontSee('Registrar vínculo');
+
+        $this->actingAs($user)
+            ->get(route('admin.dotacion.persona', $this->persona))
+            ->assertOk()
+            ->assertSee('Cargo unidad uno')
+            ->assertSee('Cargo unidad dos');
+    }
+
+    public function test_requester_with_view_permission_only_sees_operationally_accessible_units(): void
+    {
+        $this->seed(RolesPermisosSeeder::class);
+        $otraUnidad = $this->otraUnidad();
+        app(DotacionService::class)->crear($this->datos(['cargo_funcion' => 'Cargo permitido']), $this->actor);
+        app(DotacionService::class)->crear($this->datos([
+            'unidad_organizacional_id' => $otraUnidad->id,
+            'cargo_funcion' => 'Cargo restringido',
+        ]), $this->actor);
+        $user = User::factory()->create(['active' => true]);
+        $user->assignRole('Solicitante');
+        UserUnidadAcceso::query()->create([
+            'user_id' => $user->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD,
+            'vigente_desde' => today(),
+            'created_by' => $this->actor->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('admin.dotacion.index'))
+            ->assertOk()
+            ->assertSee('Cargo permitido')
+            ->assertDontSee('Cargo restringido');
+    }
+
+    public function test_view_all_permission_does_not_grant_staffing_write_capabilities(): void
+    {
+        Permission::findOrCreate('dotacion.ver');
+        Permission::findOrCreate('dotacion.ver_todas');
+        Permission::findOrCreate('dotacion.gestionar');
+        $user = User::factory()->create(['active' => true]);
+        $user->givePermissionTo(['dotacion.ver', 'dotacion.ver_todas']);
+
+        $this->actingAs($user)->get(route('admin.dotacion.index'))->assertOk();
+        $this->actingAs($user)->get(route('admin.dotacion.create'))->assertForbidden();
+        $this->assertFalse($user->can('create', [PersonaUnidadVinculo::class, $this->unidad]));
+    }
+
     public function test_index_defaults_to_current_staff_and_includes_accessible_units_without_links(): void
     {
         $this->seed(RolesPermisosSeeder::class);
@@ -176,6 +280,7 @@ class DotacionHistoricaTest extends TestCase
             ->assertViewHas('unidadesAgrupadas', fn ($unidades) => $unidades->contains('id', $unidadVacia->id))
             ->assertSee('Cargo base')
             ->assertDontSee('Cargo futuro')
+            ->assertSee('Registrar vínculo')
             ->assertSee($unidadVacia->nombre)
             ->assertSee('No existen personas vinculadas en la fecha seleccionada.');
     }

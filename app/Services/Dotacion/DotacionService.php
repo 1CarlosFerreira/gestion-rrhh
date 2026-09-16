@@ -24,6 +24,13 @@ class DotacionService
 
     public function crear(array $datos, User $actor): PersonaUnidadVinculo
     {
+        $this->validarOrigenManual($datos);
+
+        return $this->crearValidado($datos, $actor);
+    }
+
+    private function crearValidado(array $datos, User $actor): PersonaUnidadVinculo
+    {
         return DB::transaction(function () use ($datos, $actor): PersonaUnidadVinculo {
             $this->validarReferencias($datos);
             $datos = $this->normalizar($datos);
@@ -42,7 +49,7 @@ class DotacionService
                 return $existente;
             }
 
-            return $this->crear([...$datos, 'origen' => OrigenVinculoDotacion::DOCUMENTO_FIRMADO->value, 'origen_tramite_id' => $tramite->id], $actor);
+            return $this->crearValidado([...$datos, 'origen' => OrigenVinculoDotacion::DOCUMENTO_FIRMADO->value, 'origen_tramite_id' => $tramite->id], $actor);
         });
     }
 
@@ -50,11 +57,15 @@ class DotacionService
     {
         return DB::transaction(function () use ($vinculo, $datos, $actor): PersonaUnidadVinculo {
             $vinculo = PersonaUnidadVinculo::query()->lockForUpdate()->findOrFail($vinculo->id);
+            if ($vinculo->esGeneradoPorTramite()) {
+                throw ValidationException::withMessages(['vinculo' => 'Los vínculos generados por una formalización no pueden modificarse desde Dotación.']);
+            }
             $identidad = ['persona_id', 'unidad_organizacional_id', 'calidad_contractual_id', 'cargo_funcion', 'estamento_id', 'profesion_id', 'grado_eus', 'origen', 'origen_tramite_id', 'vigente_desde'];
             if ($vinculo->vigente_desde->lte(today()) && $this->cambia($vinculo, $datos, $identidad)) {
                 throw ValidationException::withMessages(['vinculo' => 'Un vínculo iniciado conserva sus datos laborales; ciérrelo y cree uno nuevo.']);
             }
             $combinados = [...$vinculo->getAttributes(), ...$datos];
+            $this->validarOrigenManual($combinados);
             $this->validarReferencias($combinados, $vinculo->vigente_desde->lte(today()));
             $combinados = $this->normalizar($combinados);
             $this->validarPeriodo($combinados);
@@ -134,6 +145,14 @@ class DotacionService
         }
         if ($origen !== OrigenVinculoDotacion::DOCUMENTO_FIRMADO && ! empty($datos['origen_tramite_id'])) {
             throw ValidationException::withMessages(['origen_tramite_id' => 'Solo el origen documento firmado admite trámite autorizante.']);
+        }
+    }
+
+    private function validarOrigenManual(array $datos): void
+    {
+        $origen = $datos['origen'] instanceof OrigenVinculoDotacion ? $datos['origen'] : OrigenVinculoDotacion::from($datos['origen']);
+        if ($origen === OrigenVinculoDotacion::DOCUMENTO_FIRMADO || ! empty($datos['origen_tramite_id'])) {
+            throw ValidationException::withMessages(['origen' => 'El origen documento firmado está reservado al flujo interno de formalización.']);
         }
     }
 

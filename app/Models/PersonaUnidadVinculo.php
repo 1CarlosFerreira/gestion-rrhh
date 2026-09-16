@@ -74,6 +74,12 @@ class PersonaUnidadVinculo extends Model
         return EstadoVinculoDotacion::VIGENTE;
     }
 
+    public function esGeneradoPorTramite(): bool
+    {
+        return $this->origen === OrigenVinculoDotacion::DOCUMENTO_FIRMADO
+            && $this->origen_tramite_id !== null;
+    }
+
     protected static function booted(): void
     {
         static::deleting(fn () => throw new LogicException('Los vínculos de dotación no se eliminan físicamente.'));
