@@ -23,27 +23,25 @@
 
         <div class="py-10">
             <div class="mx-auto max-w-7xl space-y-7 px-4 sm:px-6 lg:px-8">
-                <section>
+                <section class="rounded-xl border border-blue-100 bg-blue-50/70 px-5 py-4 sm:px-6 sm:py-5">
                     <h1 class="text-xl font-semibold text-gray-900">Bienvenido/a, {{ auth()->user()->name }}</h1>
                     <p class="mt-1 text-sm text-gray-600">Panel general de administración y configuración del sistema.</p>
                 </section>
-
-                @include('dashboard.partials.mis-tramites')
 
                 <section aria-labelledby="resumen-title">
                     <h3 id="resumen-title" class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Resumen</h3>
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         @can('personas.ver')
-                            <a href="{{ route('admin.personas.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-indigo-200 hover:shadow"><p class="text-sm font-medium text-gray-600">Personas</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-2xl font-semibold text-gray-900">{{ $resumen['personas']['total'] }}</strong><span class="text-xs text-gray-500">{{ $resumen['personas']['activas'] }} activas</span></div></a>
+                            <a href="{{ route('admin.personas.index') }}" class="rounded-xl border border-blue-100 bg-blue-50/60 p-4 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"><p class="text-sm font-medium text-blue-800">Personas</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-blue-950">{{ $resumen['personas']['total'] }}</strong><span class="text-xs text-blue-700">{{ $resumen['personas']['activas'] }} activas</span></div></a>
                         @endcan
                         @can('admin.usuarios')
-                            <a href="{{ route('admin.usuarios.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-indigo-200 hover:shadow"><p class="text-sm font-medium text-gray-600">Usuarios</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-2xl font-semibold text-gray-900">{{ $resumen['usuarios']['total'] }}</strong><span class="text-xs text-gray-500">{{ $resumen['usuarios']['activos'] }} activos</span></div></a>
+                            <a href="{{ route('admin.usuarios.index') }}" class="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"><p class="text-sm font-medium text-emerald-800">Usuarios</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-emerald-950">{{ $resumen['usuarios']['total'] }}</strong><span class="text-xs text-emerald-700">{{ $resumen['usuarios']['activos'] }} activos</span></div></a>
                         @endcan
                         @can('estructura_organizacional.ver')
-                            <a href="{{ route('admin.estructura.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-indigo-200 hover:shadow"><p class="text-sm font-medium text-gray-600">Unidades organizacionales</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-2xl font-semibold text-gray-900">{{ $resumen['unidades']['total'] }}</strong><span class="text-xs text-gray-500">{{ $resumen['unidades']['activas'] }} activas</span></div></a>
+                            <a href="{{ route('admin.estructura.index') }}" class="rounded-xl border border-violet-100 bg-violet-50/60 p-4 shadow-sm transition hover:border-violet-200 hover:bg-violet-50"><p class="text-sm font-medium text-violet-800">Unidades organizacionales</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-violet-950">{{ $resumen['unidades']['total'] }}</strong><span class="text-xs text-violet-700">{{ $resumen['unidades']['activas'] }} activas</span></div></a>
                         @endcan
                         @can('admin.roles_permisos')
-                            <a href="{{ route('admin.roles-permisos.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-indigo-200 hover:shadow"><p class="text-sm font-medium text-gray-600">Roles</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-2xl font-semibold text-gray-900">{{ $resumen['roles']['total'] }}</strong><span class="text-xs text-gray-500">configurados</span></div></a>
+                            <a href="{{ route('admin.roles-permisos.index') }}" class="rounded-xl border border-amber-100 bg-amber-50/60 p-4 shadow-sm transition hover:border-amber-200 hover:bg-amber-50"><p class="text-sm font-medium text-amber-800">Roles</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-amber-950">{{ $resumen['roles']['total'] }}</strong><span class="text-xs text-amber-700">configurados</span></div></a>
                         @endcan
                     </div>
                 </section>
@@ -61,7 +59,7 @@
                                 <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $tituloGrupo }}</h4>
                                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                     @foreach ($modulosVisibles as $modulo)
-                                        <a href="{{ route($modulo['ruta']) }}" class="group flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/30">
+                                        <a href="{{ route($modulo['ruta']) }}" class="group flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40 hover:shadow-md">
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold text-gray-900 group-hover:text-indigo-800">{{ $modulo['nombre'] }}</span>
                                                 <span class="mt-0.5 block text-xs text-gray-500">{{ $modulo['descripcion'] }}</span>
@@ -75,26 +73,6 @@
                     @endforeach
                 </section>
 
-                @can('admin.usuarios')
-                    <section aria-labelledby="atencion-title">
-                        <div class="mb-3">
-                            <h3 id="atencion-title" class="text-lg font-semibold text-gray-900">Requiere atención</h3>
-                            <p class="mt-0.5 text-sm text-gray-500">Situaciones objetivas que conviene revisar.</p>
-                        </div>
-
-                        @if ($usuariosActivosSinRoles > 0)
-                            <a href="{{ route('admin.usuarios.index') }}" class="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:bg-amber-100/70 sm:px-5">
-                                <span>
-                                    <span class="block text-sm font-semibold text-amber-900">Usuarios activos sin roles</span>
-                                    <span class="mt-0.5 block text-xs text-amber-800">Estas cuentas están activas, pero no tienen un rol asignado.</span>
-                                </span>
-                                <span class="inline-flex shrink-0 items-center gap-2"><strong class="rounded-full bg-white px-2.5 py-1 text-sm text-amber-900">{{ $usuariosActivosSinRoles }}</strong><span class="text-amber-800" aria-hidden="true">→</span></span>
-                            </a>
-                        @else
-                            <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">No hay usuarios activos sin roles.</div>
-                        @endif
-                    </section>
-                @endcan
             </div>
         </div>
     @else
