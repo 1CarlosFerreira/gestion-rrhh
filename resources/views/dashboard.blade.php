@@ -100,6 +100,9 @@
     @else
         <div class="py-10">
             <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+                @if ($esGestionPersonas)
+                    @include('dashboard.partials.gestion-personas')
+                @else
                 <section class="rounded-xl border border-indigo-100 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6">
                     <div>
                         <h1 class="text-xl font-semibold text-slate-900">Hola, {{ auth()->user()->name }}</h1>
@@ -131,6 +134,7 @@
                     @endif
                 @endcan
                 @include('dashboard.partials.mis-tramites')
+                @endif
             </div>
         </div>
     @endif

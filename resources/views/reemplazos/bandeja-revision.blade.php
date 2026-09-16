@@ -7,7 +7,7 @@
     </x-slot>
 
     <div class="py-8 sm:py-10">
-        <div class="mx-auto max-w-7xl space-y-5 px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
             @if(session('status'))
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('status') }}</div>
             @endif
@@ -19,23 +19,6 @@
                 <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'activos']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'activos' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Activos</a>
                 <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'finalizados']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'finalizados' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Finalizados</a>
             </nav>
-
-            @if($pestana === 'activos')
-            <section aria-label="Indicadores de la bandeja" class="grid gap-3 sm:grid-cols-3">
-                <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Pendientes de revisión</p>
-                    <p class="mt-1 text-2xl font-semibold text-amber-950">{{ $indicadores['pendientes'] }}</p>
-                </div>
-                <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-blue-700">En revisión</p>
-                    <p class="mt-1 text-2xl font-semibold text-blue-950">{{ $indicadores['en_revision'] }}</p>
-                </div>
-                <div class="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Para generar documento</p>
-                    <p class="mt-1 text-2xl font-semibold text-violet-950">{{ $indicadores['para_documento'] }}</p>
-                </div>
-            </section>
-            @endif
 
             <form method="GET" action="{{ route('gestion-personas.reemplazos.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <input type="hidden" name="pestana" value="{{ $pestana }}">

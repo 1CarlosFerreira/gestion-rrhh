@@ -6,15 +6,18 @@ use App\Models\Persona;
 use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
+use App\Services\Accesos\AccesoOperativoService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, AccesoOperativoService $accesos): View
     {
         $user = $request->user();
+        $esAdministrador = $user->hasRole('Administrador');
+        $panelGestionPersonas = null;
         $misTramites = collect();
         $tramitesRequierenAtencion = collect();
         $resumenMisTramites = ['requieren_atencion' => 0, 'en_tramitacion' => 0, 'abiertos' => 0];
@@ -39,12 +42,45 @@ class DashboardController extends Controller
                 ->get();
         }
 
-        if (! $user->hasRole('Administrador')) {
-            return view('dashboard', compact('misTramites', 'tramitesRequierenAtencion', 'resumenMisTramites') + ['esAdministrador' => false]);
+        if (! $esAdministrador && $user->can('reemplazos.revisar')) {
+            $unidadesAccesibles = $accesos->unidadesAccesibles($user, today())->pluck('id');
+            $consultaReemplazos = Tramite::query()
+                ->whereHas('tipoTramite', fn ($query) => $query->where('codigo', 'REEMPLAZO'))
+                ->when(! $user->can('tramites.ver_todos'), fn ($query) => $query->whereIn('unidad_organizacional_id', $unidadesAccesibles));
+            $estadosIndicadores = [
+                'pendientes' => 'ENVIADA_GESTION_PERSONAS',
+                'en_revision' => 'EN_REVISION',
+                'para_documento' => 'LISTA_GENERAR_DOCUMENTO',
+            ];
+            $estadosAtencion = ['ENVIADA_GESTION_PERSONAS', 'EN_REVISION'];
+            if ($user->can('reemplazos.generar_documento')) {
+                $estadosAtencion[] = 'LISTA_GENERAR_DOCUMENTO';
+            }
+
+            $panelGestionPersonas = [
+                'reemplazos' => [
+                    'indicadores' => collect($estadosIndicadores)->map(fn (string $estado, string $clave): int => $clave === 'para_documento' && ! $user->can('reemplazos.generar_documento')
+                        ? 0
+                        : (clone $consultaReemplazos)->whereHas('estadoTramite', fn ($query) => $query->where('codigo', $estado))->count()),
+                    'requieren_atencion' => (clone $consultaReemplazos)
+                        ->whereHas('estadoTramite', fn ($query) => $query->whereIn('codigo', $estadosAtencion))
+                        ->with(['estadoTramite', 'unidadOrganizacional', 'reemplazo.funcionario', 'reemplazo.reemplazante'])
+                        ->orderBy('submitted_at')
+                        ->orderBy('created_at')
+                        ->limit(5)
+                        ->get(),
+                ],
+            ];
+        }
+
+        if (! $esAdministrador) {
+            return view('dashboard', compact('misTramites', 'tramitesRequierenAtencion', 'resumenMisTramites', 'panelGestionPersonas') + ['esAdministrador' => false, 'esGestionPersonas' => $panelGestionPersonas !== null]);
         }
 
         return view('dashboard', [
             'esAdministrador' => true,
+            'esGestionPersonas' => false,
+            'panelGestionPersonas' => null,
             'misTramites' => $misTramites,
             'tramitesRequierenAtencion' => $tramitesRequierenAtencion,
             'resumenMisTramites' => $resumenMisTramites,

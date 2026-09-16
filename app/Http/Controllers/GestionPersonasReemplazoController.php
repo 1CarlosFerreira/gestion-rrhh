@@ -32,15 +32,6 @@ class GestionPersonasReemplazoController extends Controller
             ->when(! $request->user()->can('tramites.ver_todos'), fn ($q) => $q->whereIn('unidad_organizacional_id', $ids));
         $consultaAlcance = (clone $consultaBase)
             ->whereHas('estadoTramite', fn ($q) => $q->whereIn('codigo', $estadosBandeja));
-        $consultaActivos = (clone $consultaBase)
-            ->whereHas('estadoTramite', fn ($q) => $q->whereIn('codigo', $estadosActivos));
-
-        $indicadores = collect([
-            'pendientes' => 'ENVIADA_GESTION_PERSONAS',
-            'en_revision' => 'EN_REVISION',
-            'para_documento' => 'LISTA_GENERAR_DOCUMENTO',
-        ])->map(fn ($estado) => (clone $consultaActivos)->whereHas('estadoTramite', fn ($q) => $q->where('codigo', $estado))->count());
-
         $estados = EstadoTramite::query()
             ->whereHas('tipoTramite', fn ($q) => $q->where('codigo', 'REEMPLAZO'))
             ->whereIn('codigo', $estadosBandeja)
@@ -87,7 +78,7 @@ class GestionPersonasReemplazoController extends Controller
             ->paginate(25, ['*'], $pestana === 'finalizados' ? 'finalizados_page' : 'activos_page')
             ->withQueryString();
 
-        return view('reemplazos.bandeja-revision', compact('tramites', 'indicadores', 'estados', 'unidades', 'haySolicitudes', 'pestana'));
+        return view('reemplazos.bandeja-revision', compact('tramites', 'estados', 'unidades', 'haySolicitudes', 'pestana'));
     }
 
     public function show(Tramite $tramite): View

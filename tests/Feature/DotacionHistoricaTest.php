@@ -270,6 +270,13 @@ class DotacionHistoricaTest extends TestCase
         $admin = User::factory()->create(['active' => true]);
         $admin->assignRole('Administrador');
         $unidadVacia = $this->otraUnidad();
+        UserUnidadAcceso::query()->create([
+            'user_id' => $admin->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD,
+            'vigente_desde' => today(),
+            'created_by' => $this->actor->id,
+        ]);
         app(DotacionService::class)->crear($this->datos(['vigente_desde' => today()->subDay()->toDateString()]), $this->actor);
         app(DotacionService::class)->crear($this->datos(['cargo_funcion' => 'Cargo futuro', 'vigente_desde' => today()->addDay()->toDateString()]), $this->actor);
 

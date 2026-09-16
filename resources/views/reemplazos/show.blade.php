@@ -105,6 +105,10 @@
                         <dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->unidadOrganizacional->nombre }}</dd>
                     </div>
                 </dl>
+                <div class="mt-5 border-t border-gray-200 pt-5">
+                    <h3 id="justificacion-title" class="text-base font-semibold text-gray-950">Justificación</h3>
+                    <p class="mt-2 whitespace-pre-line text-sm leading-6 text-gray-700">{{ $detalle->justificacion ?: 'No informada.' }}</p>
+                </div>
             </section>
 
             <section aria-labelledby="periodos-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
@@ -195,11 +199,6 @@
                         </details>
                     </div>
                 @endif
-            </section>
-
-            <section aria-labelledby="justificacion-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                <h2 id="justificacion-title" class="text-base font-semibold text-gray-950">Justificación</h2>
-                <p class="mt-2 whitespace-pre-line text-sm leading-6 text-gray-700">{{ $detalle->justificacion ?: 'No informada.' }}</p>
             </section>
 
             <section aria-labelledby="adjuntos-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">

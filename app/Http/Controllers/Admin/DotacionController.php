@@ -13,6 +13,7 @@ use App\Models\PersonaUnidadVinculo;
 use App\Models\Profesion;
 use App\Models\UnidadOrganizacional;
 use App\Services\Accesos\AccesoOperativoService;
+use App\Services\Alcances\AlcanceFuncionalUnidadResolver;
 use App\Services\Dotacion\DotacionService;
 use App\Services\EstructuraOrganizacionalService;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,13 +25,13 @@ use Illuminate\View\View;
 
 class DotacionController extends Controller
 {
-    public function index(Request $request, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
+    public function index(Request $request, AccesoOperativoService $accesos, AlcanceFuncionalUnidadResolver $alcance, EstructuraOrganizacionalService $estructura): View
     {
         Gate::authorize('viewAny', PersonaUnidadVinculo::class);
         $fecha = $request->date('fecha')?->toDateString() ?? today()->toDateString();
         $permitidas = $request->user()->can('dotacion.ver_todas')
             ? UnidadOrganizacional::query()->pluck('id')
-            : $accesos->unidadesAccesibles($request->user(), $fecha)->pluck('id');
+            : $alcance->unidadesAutorizadas($request->user(), $fecha)->pluck('id');
         $unidadId = $request->integer('unidad_id');
         $ids = $permitidas;
         if ($unidadId) {
@@ -55,7 +56,7 @@ class DotacionController extends Controller
         };
         $vinculos = $query->orderByDesc('vigente_desde')->get();
         $puedeRegistrarVinculo = $request->user()->can('dotacion.gestionar')
-            && ($request->user()->hasRole('Administrador') || $accesos->unidadesAccesibles($request->user(), today())->isNotEmpty());
+            && $accesos->unidadesAccesibles($request->user(), today())->isNotEmpty();
         $unidades = UnidadOrganizacional::query()->whereIn('id', $permitidas)->orderBy('nombre')->get();
         $unidadesAgrupadas = UnidadOrganizacional::query()->with('tipo')->whereIn('id', $ids)->get()
             ->each(function (UnidadOrganizacional $unidad) use ($estructura): void {
@@ -75,7 +76,7 @@ class DotacionController extends Controller
     public function create(Request $request, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
     {
         abort_unless($request->user()->can('dotacion.gestionar'), 403);
-        abort_unless($request->user()->hasRole('Administrador') || $accesos->unidadesAccesibles($request->user(), today())->isNotEmpty(), 403);
+        abort_unless($accesos->unidadesAccesibles($request->user(), today())->isNotEmpty(), 403);
 
         $request->validate(['persona_id' => ['nullable', 'integer', Rule::exists('personas', 'id')->where('active', true)]]);
 
@@ -116,11 +117,11 @@ class DotacionController extends Controller
         return back()->with('status', 'Vínculo cerrado.');
     }
 
-    public function persona(Request $request, Persona $persona, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
+    public function persona(Request $request, Persona $persona, AlcanceFuncionalUnidadResolver $alcance, EstructuraOrganizacionalService $estructura): View
     {
         $permitidas = $request->user()->can('dotacion.ver_todas')
             ? UnidadOrganizacional::query()->pluck('id')
-            : $accesos->unidadesAccesibles($request->user(), today())->pluck('id');
+            : $alcance->unidadesAutorizadas($request->user(), today())->pluck('id');
         abort_unless($request->user()->can('dotacion.ver') && $persona->vinculosDotacion()->whereIn('unidad_organizacional_id', $permitidas)->exists(), 403);
         $persona->load(['user.accesosOperativos.unidad', 'responsabilidades' => fn ($q) => $q->with('unidad')->whereIn('unidad_organizacional_id', $permitidas), 'vinculosDotacion' => fn ($q) => $q->with(['unidad', 'estamento', 'profesion', 'calidadContractual', 'tramiteOrigen'])->whereIn('unidad_organizacional_id', $permitidas)->orderByDesc('vigente_desde')]);
 
@@ -129,7 +130,7 @@ class DotacionController extends Controller
 
     private function form(?PersonaUnidadVinculo $vinculo, Request $request, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
     {
-        $unidades = $request->user()->hasRole('Administrador') ? UnidadOrganizacional::query()->activas()->get() : $accesos->unidadesAccesibles($request->user(), today());
+        $unidades = $accesos->unidadesAccesibles($request->user(), today());
 
         return view('admin.dotacion.form', ['vinculo' => $vinculo, 'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->get(), 'unidades' => $unidades->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)]), 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->get(), 'origenes' => [OrigenVinculoDotacion::MANUAL, OrigenVinculoDotacion::IMPORTACION]]);
     }
