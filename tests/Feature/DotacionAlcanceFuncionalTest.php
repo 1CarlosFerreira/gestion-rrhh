@@ -32,13 +32,13 @@ class DotacionAlcanceFuncionalTest extends TestCase
         parent::setUp();
         $this->seed();
 
-        foreach (['dotacion.ver', 'dotacion.ver_todas', 'dotacion.gestionar'] as $permiso) {
+        foreach (['personas.ver', 'dotacion.ver', 'dotacion.ver_todas', 'dotacion.gestionar'] as $permiso) {
             Permission::findOrCreate($permiso);
         }
 
         $persona = Persona::query()->create(['rut' => '72000001-1', 'nombres' => 'Lector', 'active' => true]);
         $this->user = User::factory()->create(['active' => true, 'persona_id' => $persona->id]);
-        $this->user->givePermissionTo('dotacion.ver');
+        $this->user->givePermissionTo(['personas.ver', 'dotacion.ver']);
         [$this->unidadAcceso, $this->unidadResponsabilidad] = UnidadOrganizacional::query()
             ->where('activo', true)
             ->orderBy('id')
@@ -53,7 +53,19 @@ class DotacionAlcanceFuncionalTest extends TestCase
         $vinculo = $this->vinculo($this->unidadAcceso, 'Visible por acceso');
 
         $this->assertTrue($this->user->can('view', $vinculo));
-        $this->actingAs($this->user)->get(route('admin.dotacion.index'))->assertOk()->assertSee('Visible por acceso');
+        $this->actingAs($this->user)
+            ->get(route('admin.dotacion.index'))
+            ->assertOk()
+            ->assertSee('Visible por acceso')
+            ->assertSee(route('admin.dotacion.index'), false)
+            ->assertDontSee(route('admin.personas.index'), false)
+            ->assertDontSee('Personas<span aria-hidden="true">▾</span>', false)
+            ->assertSee(route('admin.dotacion.persona', $vinculo->persona), false);
+
+        $this->actingAs($this->user)
+            ->get(route('admin.dotacion.persona', $vinculo->persona))
+            ->assertOk()
+            ->assertSee('Visible por acceso');
     }
 
     public function test_solo_responsabilidad_vigente_con_aprobacion_habilita_lectura(): void
@@ -117,7 +129,9 @@ class DotacionAlcanceFuncionalTest extends TestCase
             ->get(route('admin.dotacion.index'))
             ->assertOk()
             ->assertSee('Visible institucional uno')
-            ->assertSee('Visible institucional dos');
+            ->assertSee('Visible institucional dos')
+            ->assertSee(route('admin.personas.index'), false)
+            ->assertSee('Personas<span aria-hidden="true">▾</span>', false);
     }
 
     public function test_responsabilidad_no_amplia_escritura(): void

@@ -28,7 +28,7 @@
                             </x-slot>
                         </x-dropdown>
                     @endcanany
-                    @canany(['personas.ver', 'dotacion.ver'])
+                    @if(auth()->user()->can('personas.ver') && auth()->user()->can('dotacion.ver_todas'))
                         <x-dropdown align="left" width="w-64">
                             <x-slot name="trigger">
                             <button type="button" :aria-expanded="open" @keydown.escape.stop="open = false" @class([
@@ -41,16 +41,18 @@
                             </x-slot>
                             <x-slot name="content">
                                 <div @keydown.escape.stop="open = false">
-                                    @can('personas.ver')
-                                        <x-dropdown-link :href="route('admin.personas.index')" :class="request()->routeIs('admin.personas.*') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''" :aria-current="request()->routeIs('admin.personas.*') ? 'page' : null">Personas</x-dropdown-link>
-                                    @endcan
+                                    <x-dropdown-link :href="route('admin.personas.index')" :class="request()->routeIs('admin.personas.*') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''" :aria-current="request()->routeIs('admin.personas.*') ? 'page' : null">Personas</x-dropdown-link>
                                     @can('dotacion.ver')
                                         <x-dropdown-link :href="route('admin.dotacion.index')" :class="request()->routeIs('admin.dotacion.*') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''" :aria-current="request()->routeIs('admin.dotacion.*') ? 'page' : null">Dotación</x-dropdown-link>
                                     @endcan
                                 </div>
                             </x-slot>
                         </x-dropdown>
-                    @endcanany
+                    @else
+                        @can('dotacion.ver')
+                            <x-nav-link :href="route('admin.dotacion.index')" :active="request()->routeIs('admin.dotacion.*')">Dotación</x-nav-link>
+                        @endcan
+                    @endif
                     @canany(['admin.usuarios', 'admin.roles_permisos', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
                         <x-dropdown align="left" width="w-64">
                             <x-slot name="trigger">
@@ -130,17 +132,19 @@
                 @endcan
             </section>
         @endcanany
-        @canany(['personas.ver', 'dotacion.ver'])
+        @if(auth()->user()->can('personas.ver') && auth()->user()->can('dotacion.ver_todas'))
             <section class="mt-3 border-t border-gray-100 pt-3">
                 <h2 class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Personas</h2>
-                @can('personas.ver')
-                    <x-responsive-nav-link :href="route('admin.personas.index')" :active="request()->routeIs('admin.personas.*')">Personas</x-responsive-nav-link>
-                @endcan
+                <x-responsive-nav-link :href="route('admin.personas.index')" :active="request()->routeIs('admin.personas.*')">Personas</x-responsive-nav-link>
                 @can('dotacion.ver')
                     <x-responsive-nav-link :href="route('admin.dotacion.index')" :active="request()->routeIs('admin.dotacion.*')">Dotación</x-responsive-nav-link>
                 @endcan
             </section>
-        @endcanany
+        @else
+            @can('dotacion.ver')
+                <x-responsive-nav-link :href="route('admin.dotacion.index')" :active="request()->routeIs('admin.dotacion.*')">Dotación</x-responsive-nav-link>
+            @endcan
+        @endif
         @canany(['admin.usuarios', 'admin.roles_permisos', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
             <section class="mt-3 border-t border-gray-100 pt-3">
                 <h2 class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Administración</h2>
