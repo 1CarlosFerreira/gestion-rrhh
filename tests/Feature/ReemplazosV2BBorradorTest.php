@@ -79,7 +79,14 @@ class ReemplazosV2BBorradorTest extends TestCase
     public function test_only_current_unit_staff_is_listed_and_manual_outside_staff_is_rejected(): void
     {
         $fuera = $this->persona('70000102-2', 'Persona Fuera');
-        $this->actingAs($this->user)->getJson(route('reemplazos.funcionarios', ['unidad_organizacional_id' => $this->unidad->id]))->assertOk()->assertJsonFragment(['id' => $this->funcionario->id])->assertJsonMissing(['id' => $fuera->id]);
+        $this->actingAs($this->user)->getJson(route('reemplazos.funcionarios', ['unidad_organizacional_id' => $this->unidad->id]))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $this->funcionario->id])
+            ->assertJsonPath('0.antecedente_laboral.estamento', Estamento::query()->firstOrFail()->nombre)
+            ->assertJsonPath('0.antecedente_laboral.calidad_contractual', CalidadContractual::query()->where('codigo', 'PLANTA_TEST')->firstOrFail()->nombre)
+            ->assertJsonPath('0.antecedente_laboral.cargo_funcion', 'Cargo prueba')
+            ->assertJsonPath('0.antecedente_laboral.unidad', $this->unidad->nombre)
+            ->assertJsonMissing(['id' => $fuera->id]);
         $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $fuera->id])->assertSessionHasErrors('funcionario_id');
     }
 
@@ -93,6 +100,61 @@ class ReemplazosV2BBorradorTest extends TestCase
         $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'nuevo_reemplazante_rut' => '12.345.678-5', 'nuevo_reemplazante_nombres' => 'Nueva Persona'])->assertRedirect();
         $this->assertDatabaseHas('personas', ['rut' => '12345678-5']);
         $this->assertSame(1, PersonaUnidadVinculo::count());
+    }
+
+    public function test_existing_replacement_shows_multiple_known_labor_records_as_copyable_bases(): void
+    {
+        $reemplazante = $this->funcionario;
+        $otraUnidad = UnidadOrganizacional::query()->whereKeyNot($this->unidad->id)->where('activo', true)->firstOrFail();
+        $estamento = Estamento::query()->firstOrFail();
+        $calidad = CalidadContractual::query()->firstOrFail();
+        foreach ([[$otraUnidad, 'Cargo histórico dos']] as [$unidad, $cargo]) {
+            PersonaUnidadVinculo::query()->create(['persona_id' => $reemplazante->id, 'unidad_organizacional_id' => $unidad->id, 'estamento_id' => $estamento->id, 'calidad_contractual_id' => $calidad->id, 'cargo_funcion' => $cargo, 'cargo_funcion_normalizado' => mb_strtolower($cargo), 'vigente_desde' => today()->subYears(2), 'vigente_hasta' => today()->subYear(), 'origen' => 'MANUAL', 'created_by' => $this->user->id]);
+        }
+
+        $response = $this->actingAs($this->user)->get(route('reemplazos.create'));
+
+        $response->assertOk()
+            ->assertSee('Antecedentes laborales conocidos')
+            ->assertSee('registros encontrados')
+            ->assertSee('Usar como base')
+            ->assertSee('Antecedentes para este reemplazo')
+            ->assertSee('copiarAntecedentes()', false)
+            ->assertSee('Estos datos son una propuesta de esta solicitud. Guardar el borrador no crea ni modifica Dotación.');
+        $this->assertCount(2, $reemplazante->fresh()->vinculosDotacion);
+        $this->assertGreaterThanOrEqual(2, substr_count($response->getContent(), 'cargo_funcion'));
+    }
+
+    public function test_new_replacement_action_is_compact_in_header_and_keeps_identity_fields(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('reemplazos.create'));
+
+        $response->assertOk()
+            ->assertSeeInOrder(['Reemplazante', 'Nuevo reemplazante', 'Persona existente'])
+            ->assertDontSee('+ Registrar nuevo reemplazante')
+            ->assertSee('name="nuevo_reemplazante_rut"', false)
+            ->assertSee('name="nuevo_reemplazante_nombres"', false)
+            ->assertSee('Sin antecedentes laborales registrados.');
+    }
+
+    public function test_draft_accepts_incomplete_proposal_but_send_requires_labor_fields_without_creating_dotacion(): void
+    {
+        $reemplazante = $this->persona('70000107-7', 'Reemplazante propuesta');
+        $fecha = today()->toDateString();
+        $base = ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $reemplazante->id, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => $fecha, 'fecha_funcionario_hasta' => $fecha, 'fecha_reemplazante_desde' => $fecha, 'fecha_reemplazante_hasta' => $fecha, 'justificacion' => 'Continuidad.'];
+        $this->actingAs($this->user)->post(route('reemplazos.store'), $base)->assertRedirect();
+        $tramite = Tramite::query()->latest('id')->firstOrFail();
+        $this->assertNull($tramite->reemplazo->reemplazante_estamento_id);
+
+        $this->actingAs($this->user)->put(route('reemplazos.send', $tramite), $base)
+            ->assertSessionHasErrors(['reemplazante_estamento_id', 'reemplazante_calidad_contractual_id', 'reemplazante_cargo_funcion']);
+        $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertSame(0, PersonaUnidadVinculo::query()->where('persona_id', $reemplazante->id)->count());
+
+        $completa = [...$base, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => CalidadContractual::query()->firstOrFail()->id, 'reemplazante_cargo_funcion' => '  Función   propuesta  '];
+        $this->actingAs($this->user)->put(route('reemplazos.send', $tramite), $completa)->assertRedirect(route('dashboard'));
+        $this->assertSame('Función propuesta', $tramite->fresh()->reemplazo->reemplazante_cargo_funcion);
+        $this->assertSame(0, PersonaUnidadVinculo::query()->where('persona_id', $reemplazante->id)->count());
     }
 
     public function test_complete_partial_invalid_and_same_person_rules_apply_to_draft(): void

@@ -54,6 +54,7 @@ class ReemplazosV2DDocumentoTest extends TestCase
         Storage::disk('private')->assertExists($documento->adjunto->storage_path);
         $bytes = Storage::disk('private')->get($documento->adjunto->storage_path);
         $this->assertStringStartsWith('%PDF', $bytes);
+        $this->assertSame(1, preg_match_all('/\/Type\s*\/Page\b/', $bytes));
         $this->assertSame(hash('sha256', $bytes), $documento->adjunto->sha256);
         $this->assertStringNotContainsString('public', $documento->adjunto->storage_path);
         $this->assertSame(1, $documento->version);
@@ -61,6 +62,9 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $this->user->id, 'action_code' => 'GENERAR_DOCUMENTO']);
         $this->assertSame('Funcionario V2D', $documento->metadata['funcionario']['nombre']);
         $this->assertSame('Reemplazante V2D', $documento->metadata['reemplazante']['nombre']);
+        $this->assertSame(2, $documento->metadata['schema_version']);
+        $this->assertSame('Cargo propuesto V2D', $documento->metadata['reemplazante']['cargo_funcion']);
+        $this->assertSame(CalidadContractual::query()->where('codigo', 'V2D_TEST')->value('nombre'), $documento->metadata['reemplazante']['calidad_contractual']);
         $this->assertSame(['desde' => '2026-09-01', 'hasta' => '2026-09-30'], collect($documento->metadata['funcionario'])->only(['desde', 'hasta'])->all());
         $this->assertSame(['desde' => '2026-09-05', 'hasta' => '2026-09-25'], collect($documento->metadata['reemplazante'])->only(['desde', 'hasta'])->all());
         $this->assertSame(9, $documento->metadata['solicitud']['dias_sin_cobertura']);
@@ -70,6 +74,7 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $this->assertFalse(Schema::hasTable('docdigital_registros'));
         $this->assertNull($tramite->vinculoDotacion);
         $this->assertSame(1, $tramite->reemplazo()->count());
+        $this->assertSame(0, PersonaUnidadVinculo::query()->where('persona_id', $tramite->reemplazo->reemplazante_id)->count());
     }
 
     public function test_scoped_generation_requires_permission_and_operational_access(): void
@@ -85,6 +90,19 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $inactiveGlobal->givePermissionTo(['reemplazos.generar_documento', 'tramites.ver_todos']);
         $this->actingAs($inactiveGlobal)->post(route('reemplazos.documentos.store', $tramite))->assertForbidden();
         $this->assertSame(0, DocumentoGenerado::query()->count());
+    }
+
+    public function test_legacy_advanced_request_without_proposal_can_generate_its_historical_pdf(): void
+    {
+        $tramite = $this->tramiteListo();
+        $tramite->reemplazo()->update(['reemplazante_estamento_id' => null, 'reemplazante_profesion_id' => null, 'reemplazante_calidad_contractual_id' => null, 'reemplazante_cargo_funcion' => null]);
+
+        $this->actingAs($this->user)->post(route('reemplazos.documentos.store', $tramite))->assertRedirect();
+
+        $documento = DocumentoGenerado::query()->sole();
+        $this->assertSame(1, $documento->metadata['schema_version']);
+        $this->assertArrayNotHasKey('estamento', $documento->metadata['reemplazante']);
+        $this->assertSame('DOCUMENTO_GENERADO', $tramite->fresh()->estadoTramite->codigo);
     }
 
     public function test_global_generator_can_generate_and_download_without_operational_access(): void
@@ -187,7 +205,7 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $tipo = TipoTramite::query()->where('codigo', 'REEMPLAZO')->firstOrFail();
         $estadoModel = EstadoTramite::query()->where('tipo_tramite_id', $tipo->id)->where('codigo', $estado)->firstOrFail();
         $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => 'TR-V2D-'.Str::random(6), 'tipo_tramite_id' => $tipo->id, 'estado_tramite_id' => $estadoModel->id, 'unidad_organizacional_id' => $this->unidad->id, 'created_by' => $this->user->id]);
-        $tramite->reemplazo()->create(['funcionario_id' => $funcionario->id, 'reemplazante_id' => $reemplazante->id, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad del servicio V2D.']);
+        $tramite->reemplazo()->create(['funcionario_id' => $funcionario->id, 'reemplazante_id' => $reemplazante->id, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => $calidad->id, 'reemplazante_cargo_funcion' => 'Cargo propuesto V2D', 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad del servicio V2D.']);
         $clasificacion = ClasificacionArea::query()->firstOrCreate(['codigo' => 'AREA_V2D'], ['nombre' => 'Área V2D', 'activo' => true]);
         $tramite->revisionReemplazo()->create(['grado_eus' => 15, 'clasificacion_area_id' => $clasificacion->id, 'cumple_normativa' => true, 'revisado_por' => $this->user->id, 'revisado_at' => now()]);
 

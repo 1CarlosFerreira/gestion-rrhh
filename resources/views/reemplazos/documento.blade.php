@@ -7,6 +7,7 @@
         $detalle = $tramite->reemplazo;
         $revision = $tramite->revisionReemplazo;
         $formalizacion = $tramite->formalizacionReemplazo;
+        $formalizacionLegada = $documentoGenerado && !$detalle->tieneAntecedentesLaboralesPropuestos();
     @endphp
 
     <div class="py-8 sm:py-10">
@@ -111,7 +112,7 @@
                             <div><dt class="text-xs text-gray-500">Documento generado</dt><dd class="mt-1 truncate font-medium text-gray-900">{{ $documento?->adjunto?->original_name ?? 'No disponible' }}</dd>@if($documento)<dd class="mt-0.5 text-xs text-gray-500">PDF · Versión {{ $documento->version }}</dd>@endif</div>
                         </dl>
 
-                        @if($estamentos->isEmpty() || $calidades->isEmpty())
+                        @if($formalizacionLegada && ($estamentos->isEmpty() || $calidades->isEmpty()))
                             <div class="mt-4 rounded bg-amber-50 p-4 text-sm text-amber-900">
                                 @if($estamentos->isEmpty())<p>No existen estamentos activos configurados. Debe configurar el catálogo antes de formalizar este reemplazo.</p>@endif
                                 @if($calidades->isEmpty())<p>No existen calidades contractuales activas configuradas. Debe configurar el catálogo antes de formalizar este reemplazo.</p>@endif
@@ -119,8 +120,10 @@
                         @else
                             <form method="POST" action="{{ route('reemplazos.formalizaciones.store', $tramite) }}" enctype="multipart/form-data" class="mt-6 space-y-6">
                                 @csrf
-                                <fieldset class="grid gap-4 md:grid-cols-2">
-                                    <legend class="mb-3 font-semibold text-slate-700">Antecedentes laborales</legend>
+                                @if($formalizacionLegada)
+                                <fieldset class="grid gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4 md:grid-cols-2">
+                                    <legend class="px-1 font-semibold text-amber-900">Antecedentes laborales · trámite legado</legend>
+                                    <p class="text-sm text-amber-800 md:col-span-2">Este documento fue generado antes de incorporar la propuesta laboral a la solicitud. Complete los antecedentes para finalizarlo.</p>
                                     <label class="block text-sm">Estamento *
                                         <select name="estamento_id" required class="mt-1 block w-full rounded-md border-slate-300">
                                             <option value="">Seleccione</option>
@@ -144,6 +147,16 @@
                                     </label>
                                     <div class="block text-sm"><span>Grado EUS</span><p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">{{ $revision?->grado_eus ?? 'No informado' }}</p><p class="mt-1 text-xs text-slate-500">Valor registrado durante la revisión de Gestión de Personas.</p></div>
                                 </fieldset>
+                                @else
+                                <fieldset class="grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-2">
+                                    <legend class="px-1 font-semibold text-slate-700">Antecedentes propuestos del reemplazante</legend>
+                                    <div class="text-sm"><span class="text-gray-500">Estamento</span><p class="font-medium text-gray-900">{{ $detalle->reemplazanteEstamento->nombre }}</p></div>
+                                    <div class="text-sm"><span class="text-gray-500">Profesión</span><p class="font-medium text-gray-900">{{ $detalle->reemplazanteProfesion?->nombre ?? 'No corresponde / no informada' }}</p></div>
+                                    <div class="text-sm"><span class="text-gray-500">Calidad contractual</span><p class="font-medium text-gray-900">{{ $detalle->reemplazanteCalidadContractual->nombre }}</p></div>
+                                    <div class="text-sm"><span class="text-gray-500">Cargo / función</span><p class="font-medium text-gray-900">{{ $detalle->reemplazante_cargo_funcion }}</p></div>
+                                    <div class="text-sm"><span class="text-gray-500">Grado EUS</span><p class="font-medium text-gray-900">{{ $revision?->grado_eus ?? 'No informado' }}</p></div>
+                                </fieldset>
+                                @endif
 
                                 <fieldset class="grid gap-4 md:grid-cols-2">
                                     <legend class="mb-3 font-semibold text-slate-700">Formalización</legend>

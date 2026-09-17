@@ -53,12 +53,16 @@ class FormalizarReemplazoAction
                     throw ValidationException::withMessages(['tramite' => 'El reemplazo no posee los datos efectivos necesarios para formalizar.']);
                 }
 
-                $cargo = preg_replace('/\s+/u', ' ', trim($datos['cargo_funcion']));
+                $esLegado = ! $detalle->tieneAntecedentesLaboralesPropuestos();
+                $estamentoId = $esLegado ? $datos['estamento_id'] : $detalle->reemplazante_estamento_id;
+                $profesionId = $esLegado ? ($datos['profesion_id'] ?? null) : $detalle->reemplazante_profesion_id;
+                $calidadId = $esLegado ? $datos['calidad_contractual_id'] : $detalle->reemplazante_calidad_contractual_id;
+                $cargo = preg_replace('/\s+/u', ' ', trim($esLegado ? $datos['cargo_funcion'] : $detalle->reemplazante_cargo_funcion));
                 $formalizacion = $tramite->formalizacionReemplazo()->create([
                     'documento_generado_id' => $documento->id,
-                    'estamento_id' => $datos['estamento_id'],
-                    'profesion_id' => $datos['profesion_id'] ?? null,
-                    'calidad_contractual_id' => $datos['calidad_contractual_id'],
+                    'estamento_id' => $estamentoId,
+                    'profesion_id' => $profesionId,
+                    'calidad_contractual_id' => $calidadId,
                     'cargo_funcion' => $cargo,
                     'cargo_funcion_normalizado' => mb_strtolower($cargo),
                     'grado_eus' => $tramite->revisionReemplazo?->grado_eus,

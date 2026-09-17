@@ -5,7 +5,22 @@
     $unidadInicial = (string) old('unidad_organizacional_id', $tramite?->unidad_organizacional_id ?? '');
     $funcionarioInicial = (string) old('funcionario_id', $detalle?->funcionario_id ?? '');
     $fechaFuncionarioInicial = old('fecha_funcionario_desde', $detalle?->fecha_funcionario_desde?->toDateString() ?? '');
-    $funcionariosIniciales = $funcionarios->map(fn ($persona) => ['id' => (string) $persona->id, 'nombre' => $persona->nombre_completo, 'rut' => $persona->rut])->values();
+    $funcionariosIniciales = $funcionarios->map(function ($persona) {
+        $vinculo = $persona->vinculosDotacion->first();
+
+        return [
+            'id' => (string) $persona->id,
+            'nombre' => $persona->nombre_completo,
+            'rut' => $persona->rut,
+            'antecedente_laboral' => $vinculo ? [
+                'estamento' => $vinculo->estamento?->nombre,
+                'profesion' => $vinculo->profesion?->nombre,
+                'calidad_contractual' => $vinculo->calidadContractual?->nombre,
+                'cargo_funcion' => $vinculo->cargo_funcion,
+                'unidad' => $vinculo->unidad?->nombre,
+            ] : null,
+        ];
+    })->values();
 @endphp
 <section
     class="space-y-4 rounded-xl bg-white p-6 shadow"
@@ -22,6 +37,9 @@
             if (! this.unidadId) return 'Pendiente'
             if (this.mensaje) return this.mensaje
             return 'Seleccione'
+        },
+        funcionarioSeleccionado() {
+            return this.funcionarios.find((persona) => persona.id === String(this.funcionarioId)) || null
         },
         async cargarFuncionarios() {
             const solicitudActual = ++this.solicitud
@@ -74,6 +92,26 @@
         </select>
         <x-input-error :messages="$errors->get('unidad_organizacional_id')" class="mt-1" />
     </label>
+
+    <template x-if="funcionarioSeleccionado()?.antecedente_laboral">
+        <div class="rounded-lg border border-gray-200 bg-gray-50/70 px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Ficha laboral vigente</p>
+                    <p class="mt-0.5 text-sm font-semibold text-gray-900" x-text="funcionarioSeleccionado().nombre"></p>
+                    <p class="font-mono text-xs text-gray-500" x-text="funcionarioSeleccionado().rut"></p>
+                </div>
+                <span class="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600">Solo informativo</span>
+            </div>
+            <dl class="mt-3 grid gap-x-4 gap-y-2 border-t border-gray-200 pt-3 text-xs sm:grid-cols-2">
+                <div><dt class="text-gray-500">Estamento</dt><dd class="mt-0.5 font-medium text-gray-800" x-text="funcionarioSeleccionado().antecedente_laboral.estamento || 'No informado'"></dd></div>
+                <div><dt class="text-gray-500">Profesión</dt><dd class="mt-0.5 font-medium text-gray-800" x-text="funcionarioSeleccionado().antecedente_laboral.profesion || 'No informada'"></dd></div>
+                <div><dt class="text-gray-500">Calidad contractual</dt><dd class="mt-0.5 font-medium text-gray-800" x-text="funcionarioSeleccionado().antecedente_laboral.calidad_contractual || 'No informada'"></dd></div>
+                <div><dt class="text-gray-500">Cargo / función</dt><dd class="mt-0.5 font-medium text-gray-800" x-text="funcionarioSeleccionado().antecedente_laboral.cargo_funcion || 'No informado'"></dd></div>
+                <div class="sm:col-span-2"><dt class="text-gray-500">Unidad</dt><dd class="mt-0.5 font-medium text-gray-800" x-text="funcionarioSeleccionado().antecedente_laboral.unidad || 'No informada'"></dd></div>
+            </dl>
+        </div>
+    </template>
     <p class="text-xs text-gray-500">La dotación vigente se carga automáticamente según la unidad y la fecha inicial.</p>
 
     <label class="block">
@@ -89,7 +127,93 @@
 
     <label class="block">Tipo de reemplazo<select name="tipo_reemplazo_id" class="mt-1 w-full rounded border-gray-300"><option value="">Pendiente</option>@foreach($tipos as $tipo)<option value="{{ $tipo->id }}" @selected(old('tipo_reemplazo_id',$detalle?->tipo_reemplazo_id)==$tipo->id)>{{ $tipo->nombre }}</option>@endforeach</select><x-input-error :messages="$errors->get('tipo_reemplazo_id')" class="mt-1" /></label><h4 class="font-medium">Período del funcionario reemplazado</h4><div class="grid grid-cols-2 gap-3"><label>Desde<x-text-input type="date" class="mt-1 w-full" name="fecha_funcionario_desde" x-model="fechaFuncionario" x-on:change="if (unidadId) cargarFuncionarios()" value="{{ $fechaFuncionarioInicial }}"/><x-input-error :messages="$errors->get('fecha_funcionario_desde')" class="mt-1" /></label><label>Hasta<x-text-input type="date" class="mt-1 w-full" name="fecha_funcionario_hasta" value="{{ old('fecha_funcionario_hasta',$detalle?->fecha_funcionario_hasta?->toDateString()) }}"/><x-input-error :messages="$errors->get('fecha_funcionario_hasta')" class="mt-1" /></label></div>
 </section>
-<section class="space-y-4 rounded-xl bg-white p-6 shadow"><h3 class="font-semibold">Reemplazante único</h3><label class="block">Persona existente<select name="reemplazante_id" class="mt-1 w-full rounded border-gray-300"><option value="">Pendiente / registrar nueva</option>@foreach($personas as $persona)<option value="{{ $persona->id }}" @selected(old('reemplazante_id',$detalle?->reemplazante_id)==$persona->id)>{{ $persona->nombre_completo }} · {{ $persona->rut }}</option>@endforeach</select><x-input-error :messages="$errors->get('reemplazante_id')" class="mt-1" /></label><details class="rounded border p-3"><summary class="cursor-pointer text-sm text-indigo-700">+ Registrar nuevo reemplazante</summary><div class="mt-3 grid gap-3"><x-text-input name="nuevo_reemplazante_rut" value="{{ old('nuevo_reemplazante_rut') }}" placeholder="RUT"/><x-text-input name="nuevo_reemplazante_nombres" value="{{ old('nuevo_reemplazante_nombres') }}" placeholder="Nombres"/><div class="grid grid-cols-2 gap-2"><x-text-input name="nuevo_reemplazante_apellido_paterno" value="{{ old('nuevo_reemplazante_apellido_paterno') }}" placeholder="Apellido paterno"/><x-text-input name="nuevo_reemplazante_apellido_materno" value="{{ old('nuevo_reemplazante_apellido_materno') }}" placeholder="Apellido materno"/></div></div></details><h4 class="font-medium">Período efectivo del reemplazante</h4><div class="grid grid-cols-2 gap-3"><label>Desde<x-text-input type="date" class="mt-1 w-full" name="fecha_reemplazante_desde" value="{{ old('fecha_reemplazante_desde',$detalle?->fecha_reemplazante_desde?->toDateString()) }}"/><x-input-error :messages="$errors->get('fecha_reemplazante_desde')" class="mt-1" /></label><label>Hasta<x-text-input type="date" class="mt-1 w-full" name="fecha_reemplazante_hasta" value="{{ old('fecha_reemplazante_hasta',$detalle?->fecha_reemplazante_hasta?->toDateString()) }}"/><x-input-error :messages="$errors->get('fecha_reemplazante_hasta')" class="mt-1" /></label></div>@if($detalle && $detalle->diasFuncionario() > 0)<div class="rounded bg-slate-50 p-3 text-sm"><p>Período funcionario: {{ $detalle->diasFuncionario() }} días calendario</p><p>Período reemplazante: {{ $detalle->diasReemplazante() }} días calendario</p><p>Días sin cobertura: {{ $detalle->diasSinCobertura() }}</p>@if($detalle->coberturaParcial())<p class="mt-2 rounded bg-amber-50 p-2 text-amber-800">El reemplazante cubrirá {{ $detalle->diasReemplazante() }} de los {{ $detalle->diasFuncionario() }} días del período solicitado. Quedarán {{ $detalle->diasSinCobertura() }} días sin cobertura.</p>@endif</div>@endif</section>
+@php
+    $antecedentesPorPersona = $personas->mapWithKeys(fn ($persona) => [(string) $persona->id => $persona->vinculosDotacion->map(fn ($vinculo) => [
+        'id' => (string) $vinculo->id,
+        'estamento_id' => (string) $vinculo->estamento_id,
+        'profesion_id' => $vinculo->profesion_id ? (string) $vinculo->profesion_id : '',
+        'calidad_contractual_id' => (string) $vinculo->calidad_contractual_id,
+        'cargo_funcion' => $vinculo->cargo_funcion,
+        'estamento' => $vinculo->estamento?->nombre,
+        'profesion' => $vinculo->profesion?->nombre,
+        'calidad_contractual' => $vinculo->calidadContractual?->nombre,
+        'unidad' => $vinculo->unidad?->nombre,
+        'vigencia' => $vinculo->vigente_desde?->format('d/m/Y').' — '.($vinculo->vigente_hasta?->format('d/m/Y') ?? 'Actualidad'),
+    ])->values()]);
+@endphp
+<section class="space-y-4 rounded-xl bg-white p-6 shadow" x-data="{
+    personaId: @js((string) old('reemplazante_id', $detalle?->reemplazante_id ?? '')),
+    antecedentes: @js($antecedentesPorPersona),
+    vinculoBase: '',
+    estamentoId: @js((string) old('reemplazante_estamento_id', $detalle?->reemplazante_estamento_id ?? '')),
+    profesionId: @js((string) old('reemplazante_profesion_id', $detalle?->reemplazante_profesion_id ?? '')),
+    calidadId: @js((string) old('reemplazante_calidad_contractual_id', $detalle?->reemplazante_calidad_contractual_id ?? '')),
+    cargo: @js((string) old('reemplazante_cargo_funcion', $detalle?->reemplazante_cargo_funcion ?? '')),
+    nuevoAbierto: @js(old('nuevo_reemplazante_rut') !== null),
+    disponibles() { return this.antecedentes[this.personaId] || [] },
+    cambiarPersona() {
+        this.vinculoBase = ''
+        this.estamentoId = ''
+        this.profesionId = ''
+        this.calidadId = ''
+        this.cargo = ''
+    },
+    copiarAntecedentes() {
+        const base = this.disponibles().find((item) => item.id === this.vinculoBase)
+        if (! base) return
+        this.estamentoId = base.estamento_id
+        this.profesionId = base.profesion_id
+        this.calidadId = base.calidad_contractual_id
+        this.cargo = base.cargo_funcion
+    }
+}">
+    <div class="flex items-center justify-between gap-3">
+        <h3 class="font-semibold">Reemplazante</h3>
+        <button type="button" x-on:click="nuevoAbierto = ! nuevoAbierto" class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-indigo-300 hover:text-indigo-700" x-bind:aria-expanded="nuevoAbierto">
+            <span aria-hidden="true">+</span> Nuevo reemplazante
+        </button>
+    </div>
+    <label class="block">Persona existente
+        <select name="reemplazante_id" x-model="personaId" x-on:change="cambiarPersona()" class="mt-1 w-full rounded border-gray-300">
+            <option value="">Pendiente / registrar nueva</option>
+            @foreach($personas as $persona)<option value="{{ $persona->id }}">{{ $persona->nombre_completo }} · {{ $persona->rut }}</option>@endforeach
+        </select>
+        <x-input-error :messages="$errors->get('reemplazante_id')" class="mt-1" />
+    </label>
+    <div class="flex justify-center text-gray-300" aria-hidden="true">↓</div>
+    <div x-show="personaId && disponibles().length" class="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2.5">
+        <div class="flex items-baseline justify-between gap-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-600">Antecedentes laborales conocidos</p>
+            <p class="text-xs text-gray-500" x-text="`${disponibles().length} ${disponibles().length === 1 ? 'registro encontrado' : 'registros encontrados'}`"></p>
+        </div>
+        <div class="mt-2 divide-y divide-gray-200 border-t border-gray-200">
+            <template x-for="item in disponibles()" x-bind:key="item.id">
+                <article class="-mx-1 px-2 py-2.5 transition" x-bind:class="vinculoBase === item.id ? 'bg-indigo-50/70' : ''">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-semibold text-gray-900"><span x-text="item.profesion || 'Sin profesión informada'"></span><span class="font-normal text-gray-400"> · </span><span x-text="item.estamento || 'Sin estamento informado'"></span></p>
+                            <p class="mt-0.5 truncate text-xs text-gray-600"><span x-text="item.calidad_contractual || 'Calidad no informada'"></span><span class="text-gray-400"> · </span><span x-text="item.cargo_funcion || 'Cargo no informado'"></span></p>
+                            <p class="mt-0.5 truncate text-xs text-gray-500"><span x-text="item.unidad || 'Unidad no informada'"></span><span class="text-gray-400"> · </span><span x-text="item.vigencia"></span></p>
+                        </div>
+                        <button type="button" x-on:click="vinculoBase = item.id; copiarAntecedentes()" class="shrink-0 rounded-md border px-2.5 py-1 text-xs font-semibold" x-bind:class="vinculoBase === item.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-indigo-700 hover:border-indigo-300'" x-text="vinculoBase === item.id ? 'Base seleccionada' : 'Usar como base'"></button>
+                    </div>
+                </article>
+            </template>
+        </div>
+    </div>
+    <p x-show="personaId && ! disponibles().length" class="border-y border-gray-200 bg-gray-50/60 px-3 py-2.5 text-sm text-gray-600">Sin antecedentes laborales registrados.</p>
+    <div x-show="nuevoAbierto" class="border-y border-gray-200 bg-gray-50/60 px-3 py-3"><p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Registrar nuevo reemplazante</p><div class="grid gap-3"><x-text-input name="nuevo_reemplazante_rut" value="{{ old('nuevo_reemplazante_rut') }}" placeholder="RUT"/><x-text-input name="nuevo_reemplazante_nombres" value="{{ old('nuevo_reemplazante_nombres') }}" placeholder="Nombres"/><div class="grid grid-cols-2 gap-2"><x-text-input name="nuevo_reemplazante_apellido_paterno" value="{{ old('nuevo_reemplazante_apellido_paterno') }}" placeholder="Apellido paterno"/><x-text-input name="nuevo_reemplazante_apellido_materno" value="{{ old('nuevo_reemplazante_apellido_materno') }}" placeholder="Apellido materno"/></div></div></div>
+    <div class="flex justify-center text-gray-300" aria-hidden="true">↓</div>
+    <fieldset class="grid gap-3 sm:grid-cols-2">
+        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-700">Antecedentes para este reemplazo</legend>
+        <label class="text-sm">Estamento *<select name="reemplazante_estamento_id" x-model="estamentoId" class="mt-1 w-full rounded border-gray-300"><option value="">Pendiente</option>@foreach($estamentos as $estamento)<option value="{{ $estamento->id }}">{{ $estamento->nombre }}</option>@endforeach</select><x-input-error :messages="$errors->get('reemplazante_estamento_id')" class="mt-1" /></label>
+        <label class="text-sm">Profesión<select name="reemplazante_profesion_id" x-model="profesionId" class="mt-1 w-full rounded border-gray-300"><option value="">No corresponde / pendiente</option>@foreach($profesiones as $profesion)<option value="{{ $profesion->id }}">{{ $profesion->nombre }}</option>@endforeach</select><x-input-error :messages="$errors->get('reemplazante_profesion_id')" class="mt-1" /></label>
+        <label class="text-sm">Calidad contractual *<select name="reemplazante_calidad_contractual_id" x-model="calidadId" class="mt-1 w-full rounded border-gray-300"><option value="">Pendiente</option>@foreach($calidades as $calidad)<option value="{{ $calidad->id }}">{{ $calidad->nombre }}</option>@endforeach</select><x-input-error :messages="$errors->get('reemplazante_calidad_contractual_id')" class="mt-1" /></label>
+        <label class="text-sm">Cargo / función *<input name="reemplazante_cargo_funcion" x-model="cargo" maxlength="200" class="mt-1 w-full rounded border-gray-300"><x-input-error :messages="$errors->get('reemplazante_cargo_funcion')" class="mt-1" /></label>
+        <p class="text-xs text-gray-500 sm:col-span-2">Estos datos son una propuesta de esta solicitud. Guardar el borrador no crea ni modifica Dotación.</p>
+    </fieldset>
+    <h4 class="font-medium">Período efectivo del reemplazante</h4><div class="grid grid-cols-2 gap-3"><label>Desde<x-text-input type="date" class="mt-1 w-full" name="fecha_reemplazante_desde" value="{{ old('fecha_reemplazante_desde',$detalle?->fecha_reemplazante_desde?->toDateString()) }}"/><x-input-error :messages="$errors->get('fecha_reemplazante_desde')" class="mt-1" /></label><label>Hasta<x-text-input type="date" class="mt-1 w-full" name="fecha_reemplazante_hasta" value="{{ old('fecha_reemplazante_hasta',$detalle?->fecha_reemplazante_hasta?->toDateString()) }}"/><x-input-error :messages="$errors->get('fecha_reemplazante_hasta')" class="mt-1" /></label></div>@if($detalle && $detalle->diasFuncionario() > 0)<div class="rounded bg-slate-50 p-3 text-sm"><p>Período funcionario: {{ $detalle->diasFuncionario() }} días calendario</p><p>Período reemplazante: {{ $detalle->diasReemplazante() }} días calendario</p><p>Días sin cobertura: {{ $detalle->diasSinCobertura() }}</p>@if($detalle->coberturaParcial())<p class="mt-2 rounded bg-amber-50 p-2 text-amber-800">El reemplazante cubrirá {{ $detalle->diasReemplazante() }} de los {{ $detalle->diasFuncionario() }} días del período solicitado. Quedarán {{ $detalle->diasSinCobertura() }} días sin cobertura.</p>@endif</div>@endif
+</section>
 <section class="rounded-xl bg-white p-6 shadow"><h3 class="mb-3 font-semibold">Justificación</h3><textarea name="justificacion" rows="8" class="w-full rounded border-gray-300" placeholder="Puede completarse progresivamente">{{ old('justificacion',$detalle?->justificacion) }}</textarea><x-input-error :messages="$errors->get('justificacion')" class="mt-1" /></section>
 <section class="rounded-xl bg-white p-6 shadow"><h3 class="mb-3 font-semibold">Documentos</h3>@if(!$tramite)<p class="text-sm text-gray-500">Guarde primero el borrador para habilitar adjuntos.</p>@else @can('tramites.adjuntos.cargar')<div class="space-y-3"><input form="adjunto-form" type="file" name="archivo" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png" required>@error('archivo')<p class="text-sm text-red-600">{{ $message }}</p>@enderror<select form="adjunto-form" name="tipo_documento_id" class="w-full rounded border-gray-300"><option value="">Sin tipo documental</option>@foreach($tiposDocumento as $tipo)<option value="{{ $tipo->id }}">{{ $tipo->nombre }}</option>@endforeach</select><x-secondary-button type="submit" form="adjunto-form">Adjuntar</x-secondary-button></div>@endcan<div class="mt-4 space-y-2">@forelse($tramite->adjuntos as $adjunto)<p class="text-sm">{{ $adjunto->original_name }} · v{{ $adjunto->version }} · {{ $adjunto->status }}</p>@empty<p class="text-sm text-gray-500">Sin documentos adjuntos.</p>@endforelse</div>@endif</section>
 </form>@if($tramite?->estadoTramite?->codigo === 'DEVUELTA_PARA_CORRECCION')@php($devolucion=$tramite->historial()->where('action_code','DEVOLVER_PARA_CORRECCION')->latest('occurred_at')->first())@if($devolucion)<section class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900"><h3 class="font-semibold">Última observación de devolución</h3><p class="mt-2">{{ $devolucion->observation }}</p></section>@endif @endif</div></div></x-app-layout>

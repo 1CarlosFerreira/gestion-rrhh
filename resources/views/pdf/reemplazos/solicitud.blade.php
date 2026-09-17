@@ -63,7 +63,7 @@
 
 <p class="item"><strong>2.-</strong> El reemplazo se justifica por: {{ $snapshot['solicitud']['justificacion'] }}</p>
 
-<p class="item"><strong>3.-</strong> Se propone como reemplazante a: {{ $snapshot['reemplazante']['nombre'] }}, RUT N.º {{ \App\Support\Rut\Rut::format($snapshot['reemplazante']['rut']) }}, desde el {{ \Carbon\CarbonImmutable::parse($snapshot['reemplazante']['desde'])->format('d/m/Y') }} hasta el {{ \Carbon\CarbonImmutable::parse($snapshot['reemplazante']['hasta'])->format('d/m/Y') }}. Quien desempeñará funciones en la Unidad/Servicio: {{ $snapshot['tramite']['unidad'] }}.</p>
+<p class="item"><strong>3.-</strong> Se propone como reemplazante a: {{ $snapshot['reemplazante']['nombre'] }}, RUT N.º {{ \App\Support\Rut\Rut::format($snapshot['reemplazante']['rut']) }}, desde el {{ \Carbon\CarbonImmutable::parse($snapshot['reemplazante']['desde'])->format('d/m/Y') }} hasta el {{ \Carbon\CarbonImmutable::parse($snapshot['reemplazante']['hasta'])->format('d/m/Y') }}. Quien desempeñará funciones en la Unidad/Servicio: {{ $snapshot['tramite']['unidad'] }}.@if(($snapshot['schema_version'] ?? 1) >= 2) Estamento: {{ $snapshot['reemplazante']['estamento'] }}.@if($snapshot['reemplazante']['profesion']) Profesión: {{ $snapshot['reemplazante']['profesion'] }}.@endif Calidad contractual: {{ $snapshot['reemplazante']['calidad_contractual'] }}. Cargo o función: {{ $snapshot['reemplazante']['cargo_funcion'] }}.@endif</p>
 
 <div class="item">
     <p class="review-title">4.- Revisión de Gestión de Personas:</p>

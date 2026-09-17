@@ -105,6 +105,34 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'FORMALIZAR_REEMPLAZO', 'user_id' => $this->actor->id]);
     }
 
+    public function test_new_request_formalization_uses_request_snapshot_and_does_not_accept_labor_overrides(): void
+    {
+        $tramite = $this->tramiteConDocumento(conPropuesta: true);
+
+        $response = $this->actingAs($this->actor)->post(route('reemplazos.formalizaciones.store', $tramite), [
+            'identificador_externo' => 'REF-NUEVA',
+            'observacion' => 'Formalización desde propuesta.',
+        ]);
+
+        $response->assertRedirect(route('gestion-personas.reemplazos.show', $tramite));
+        $formalizacion = $tramite->formalizacionReemplazo()->sole();
+        $vinculo = $tramite->vinculoDotacion()->sole();
+        $this->assertSame($tramite->reemplazo->reemplazante_estamento_id, $formalizacion->estamento_id);
+        $this->assertSame($tramite->reemplazo->reemplazante_profesion_id, $formalizacion->profesion_id);
+        $this->assertSame($tramite->reemplazo->reemplazante_calidad_contractual_id, $formalizacion->calidad_contractual_id);
+        $this->assertSame($tramite->reemplazo->reemplazante_cargo_funcion, $formalizacion->cargo_funcion);
+        $this->assertSame(15, $formalizacion->grado_eus);
+        $this->assertSame($formalizacion->estamento_id, $vinculo->estamento_id);
+        $this->assertSame($formalizacion->calidad_contractual_id, $vinculo->calidad_contractual_id);
+        $this->assertSame($formalizacion->cargo_funcion, $vinculo->cargo_funcion);
+
+        $this->actingAs($this->actor)->get(route('gestion-personas.reemplazos.show', $tramite->fresh()))
+            ->assertOk()
+            ->assertSee('Antecedentes propuestos del reemplazante')
+            ->assertDontSee('name="estamento_id"', false)
+            ->assertDontSee('trámite legado');
+    }
+
     public function test_required_fields_are_validated_and_profession_and_final_document_are_optional(): void
     {
         $tramite = $this->tramiteConDocumento();
@@ -361,7 +389,7 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         return ['estamento_id' => $this->estamento->id, 'calidad_contractual_id' => $this->calidad->id, 'cargo_funcion' => 'Cargo V2E'];
     }
 
-    private function tramiteConDocumento(string $estado = 'DOCUMENTO_GENERADO', bool $conDocumento = true): Tramite
+    private function tramiteConDocumento(string $estado = 'DOCUMENTO_GENERADO', bool $conDocumento = true, bool $conPropuesta = false): Tramite
     {
         $this->sequence++;
         $funcionario = Persona::query()->create(['rut' => '73'.sprintf('%05d', $this->sequence).'1-1', 'nombres' => 'Funcionario V2E', 'active' => true]);
@@ -369,7 +397,7 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $tipo = TipoTramite::query()->where('codigo', 'REEMPLAZO')->firstOrFail();
         $estadoModel = EstadoTramite::query()->where('tipo_tramite_id', $tipo->id)->where('codigo', $estado)->firstOrFail();
         $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => 'TR-V2E-'.Str::random(6), 'tipo_tramite_id' => $tipo->id, 'estado_tramite_id' => $estadoModel->id, 'unidad_organizacional_id' => $this->unidad->id, 'created_by' => $this->actor->id]);
-        $tramite->reemplazo()->create(['funcionario_id' => $funcionario->id, 'reemplazante_id' => $reemplazante->id, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad V2E.']);
+        $tramite->reemplazo()->create(['funcionario_id' => $funcionario->id, 'reemplazante_id' => $reemplazante->id, 'reemplazante_estamento_id' => $conPropuesta ? $this->estamento->id : null, 'reemplazante_calidad_contractual_id' => $conPropuesta ? $this->calidad->id : null, 'reemplazante_cargo_funcion' => $conPropuesta ? 'Cargo propuesto V2E' : null, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad V2E.']);
         $tramite->revisionReemplazo()->create(['grado_eus' => 15, 'cumple_normativa' => true, 'revisado_por' => $this->actor->id, 'revisado_at' => now()]);
 
         if ($conDocumento) {

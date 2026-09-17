@@ -25,6 +25,28 @@ class TramiteReemplazo extends Model
         return $this->belongsTo(Persona::class, 'reemplazante_id');
     }
 
+    public function reemplazanteEstamento(): BelongsTo
+    {
+        return $this->belongsTo(Estamento::class, 'reemplazante_estamento_id');
+    }
+
+    public function reemplazanteProfesion(): BelongsTo
+    {
+        return $this->belongsTo(Profesion::class, 'reemplazante_profesion_id');
+    }
+
+    public function reemplazanteCalidadContractual(): BelongsTo
+    {
+        return $this->belongsTo(CalidadContractual::class, 'reemplazante_calidad_contractual_id');
+    }
+
+    public function tieneAntecedentesLaboralesPropuestos(): bool
+    {
+        return $this->reemplazante_estamento_id !== null
+            && $this->reemplazante_calidad_contractual_id !== null
+            && filled($this->reemplazante_cargo_funcion);
+    }
+
     public function tipoReemplazo(): BelongsTo
     {
         return $this->belongsTo(TipoReemplazo::class);

@@ -27,7 +27,7 @@ class GenerarSolicitudReemplazoPdfAction
         $storedPath = null;
         try {
             return DB::transaction(function () use ($tramite, $user, &$storedPath): DocumentoGenerado {
-                $locked = Tramite::query()->lockForUpdate()->with(['tipoTramite', 'estadoTramite', 'unidadOrganizacional', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea'])->findOrFail($tramite->id);
+                $locked = Tramite::query()->lockForUpdate()->with(['tipoTramite', 'estadoTramite', 'unidadOrganizacional', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.reemplazanteEstamento', 'reemplazo.reemplazanteProfesion', 'reemplazo.reemplazanteCalidadContractual', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea'])->findOrFail($tramite->id);
                 $this->validar($locked);
                 $tipo = TipoDocumento::query()->where('codigo', 'DOCUMENTO_GENERADO')->where('active', true)->firstOrFail();
                 if (DocumentoGenerado::query()->where('tramite_id', $locked->id)->where('tipo_documento_id', $tipo->id)->exists()) {
@@ -94,14 +94,19 @@ class GenerarSolicitudReemplazoPdfAction
     {
         $detalle = $tramite->reemplazo;
         $vinculo = PersonaUnidadVinculo::query()->with(['estamento', 'profesion'])->where('persona_id', $detalle->funcionario_id)->where('unidad_organizacional_id', $tramite->unidad_organizacional_id)->vigentesEn($detalle->fecha_funcionario_desde)->orderByDesc('vigente_desde')->first();
+        $conPropuesta = $detalle->tieneAntecedentesLaboralesPropuestos();
+        $reemplazante = ['nombre' => $detalle->reemplazante->nombre_completo, 'rut' => $detalle->reemplazante->rut, 'desde' => $detalle->fecha_reemplazante_desde->toDateString(), 'hasta' => $detalle->fecha_reemplazante_hasta->toDateString()];
+        if ($conPropuesta) {
+            $reemplazante = [...$reemplazante, 'estamento' => $detalle->reemplazanteEstamento->nombre, 'profesion' => $detalle->reemplazanteProfesion?->nombre, 'calidad_contractual' => $detalle->reemplazanteCalidadContractual->nombre, 'cargo_funcion' => $detalle->reemplazante_cargo_funcion];
+        }
 
         return [
-            'schema_version' => 1,
+            'schema_version' => $conPropuesta ? 2 : 1,
             'plantilla' => ['codigo' => $plantilla->codigo, 'version' => $plantilla->version, 'sha256' => $plantilla->sha256],
             'generado_at' => now()->toIso8601String(),
             'tramite' => ['codigo' => $tramite->codigo, 'unidad' => $tramite->unidadOrganizacional->nombre, 'creador' => $tramite->creador?->name],
             'funcionario' => ['nombre' => $detalle->funcionario->nombre_completo, 'rut' => $detalle->funcionario->rut, 'estamento' => $vinculo?->estamento?->nombre, 'profesion' => $vinculo?->profesion?->nombre, 'cargo' => $vinculo?->cargo_funcion, 'desde' => $detalle->fecha_funcionario_desde->toDateString(), 'hasta' => $detalle->fecha_funcionario_hasta->toDateString()],
-            'reemplazante' => ['nombre' => $detalle->reemplazante->nombre_completo, 'rut' => $detalle->reemplazante->rut, 'desde' => $detalle->fecha_reemplazante_desde->toDateString(), 'hasta' => $detalle->fecha_reemplazante_hasta->toDateString()],
+            'reemplazante' => $reemplazante,
             'solicitud' => ['tipo' => $detalle->tipoReemplazo->nombre, 'justificacion' => $detalle->justificacion, 'dias_totales' => $detalle->diasFuncionario(), 'dias_cubiertos' => $detalle->diasReemplazante(), 'dias_sin_cobertura' => $detalle->diasSinCobertura()],
             'revision' => ['grado_eus' => $tramite->revisionReemplazo->grado_eus, 'clasificacion_area' => $tramite->revisionReemplazo->clasificacionArea->nombre, 'cumple_normativa' => $tramite->revisionReemplazo->cumple_normativa, 'observacion' => $tramite->revisionReemplazo->observacion_administrativa],
             'destinatario' => 'SUBDIRECCIÓN DE GESTIÓN Y DESARROLLO DE LAS PERSONAS',

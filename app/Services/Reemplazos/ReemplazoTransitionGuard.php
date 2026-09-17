@@ -46,7 +46,7 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
     {
         $detalle = $tramite->reemplazo;
         $errors = [];
-        foreach (['funcionario_id', 'tipo_reemplazo_id', 'fecha_funcionario_desde', 'fecha_funcionario_hasta', 'reemplazante_id', 'fecha_reemplazante_desde', 'fecha_reemplazante_hasta', 'justificacion'] as $field) {
+        foreach (['funcionario_id', 'tipo_reemplazo_id', 'fecha_funcionario_desde', 'fecha_funcionario_hasta', 'reemplazante_id', 'reemplazante_estamento_id', 'reemplazante_calidad_contractual_id', 'reemplazante_cargo_funcion', 'fecha_reemplazante_desde', 'fecha_reemplazante_hasta', 'justificacion'] as $field) {
             if (blank($detalle?->{$field})) {
                 $errors[$field] = 'Este campo es obligatorio para enviar.';
             }

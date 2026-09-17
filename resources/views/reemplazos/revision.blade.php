@@ -18,6 +18,17 @@
                     'mostrarContenido' => false,
                 ])
 
+                <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h2 class="text-base font-semibold text-gray-950">Antecedentes propuestos del reemplazante</h2>
+                    <p class="mt-1 text-sm text-gray-600">Información ingresada por el Solicitante. Para corregirla, devuelva la solicitud.</p>
+                    <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                        <div><dt class="text-xs text-gray-500">Estamento</dt><dd class="mt-1 font-medium text-gray-900">{{ $tramite->reemplazo->reemplazanteEstamento?->nombre ?? 'No informado' }}</dd></div>
+                        <div><dt class="text-xs text-gray-500">Profesión</dt><dd class="mt-1 font-medium text-gray-900">{{ $tramite->reemplazo->reemplazanteProfesion?->nombre ?? 'No corresponde / no informada' }}</dd></div>
+                        <div><dt class="text-xs text-gray-500">Calidad contractual</dt><dd class="mt-1 font-medium text-gray-900">{{ $tramite->reemplazo->reemplazanteCalidadContractual?->nombre ?? 'No informada' }}</dd></div>
+                        <div><dt class="text-xs text-gray-500">Cargo / función</dt><dd class="mt-1 font-medium text-gray-900">{{ $tramite->reemplazo->reemplazante_cargo_funcion ?? 'No informado' }}</dd></div>
+                    </dl>
+                </section>
+
                 <section class="rounded-xl border border-indigo-200 bg-white p-5 shadow-md ring-1 ring-indigo-100 sm:p-6">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Tarea actual</p>

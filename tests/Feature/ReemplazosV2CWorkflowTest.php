@@ -169,6 +169,9 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->assertSame('EN_REVISION', $tramite->fresh()->estadoTramite->codigo);
         $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.show', $tramite))
             ->assertOk()
+            ->assertSee('Antecedentes propuestos del reemplazante')
+            ->assertSee('Información ingresada por el Solicitante. Para corregirla, devuelva la solicitud.')
+            ->assertSee('Cargo propuesto')
             ->assertSeeInOrder([
                 $tramite->codigo,
                 'Revisión Gestión de Personas',
@@ -357,7 +360,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
 
     private function draft(): Tramite
     {
-        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $this->reemplazante->id, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad del servicio.']);
+        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $this->reemplazante->id, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => CalidadContractual::query()->firstOrFail()->id, 'reemplazante_cargo_funcion' => 'Cargo propuesto', 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad del servicio.']);
 
         return Tramite::query()->latest('id')->firstOrFail();
     }
@@ -386,6 +389,10 @@ class ReemplazosV2CWorkflowTest extends TestCase
             'unidad_organizacional_id' => $tramite->unidad_organizacional_id,
             'funcionario_id' => $detalle->funcionario_id,
             'reemplazante_id' => $detalle->reemplazante_id,
+            'reemplazante_estamento_id' => $detalle->reemplazante_estamento_id,
+            'reemplazante_profesion_id' => $detalle->reemplazante_profesion_id,
+            'reemplazante_calidad_contractual_id' => $detalle->reemplazante_calidad_contractual_id,
+            'reemplazante_cargo_funcion' => $detalle->reemplazante_cargo_funcion,
             'tipo_reemplazo_id' => $detalle->tipo_reemplazo_id,
             'fecha_funcionario_desde' => $detalle->fecha_funcionario_desde?->toDateString(),
             'fecha_funcionario_hasta' => $detalle->fecha_funcionario_hasta?->toDateString(),

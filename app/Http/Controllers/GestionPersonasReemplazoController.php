@@ -84,7 +84,7 @@ class GestionPersonasReemplazoController extends Controller
     public function show(Tramite $tramite): View
     {
         $this->authorizeShow($tramite);
-        $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.revisadoPor', 'formalizacionReemplazo.estamento', 'formalizacionReemplazo.profesion', 'formalizacionReemplazo.calidadContractual', 'formalizacionReemplazo.adjunto', 'formalizacionReemplazo.formalizadoPor', 'vinculoDotacion', 'adjuntos.tipoDocumento', 'historial.usuario', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor']);
+        $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.reemplazanteEstamento', 'reemplazo.reemplazanteProfesion', 'reemplazo.reemplazanteCalidadContractual', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.revisadoPor', 'formalizacionReemplazo.estamento', 'formalizacionReemplazo.profesion', 'formalizacionReemplazo.calidadContractual', 'formalizacionReemplazo.adjunto', 'formalizacionReemplazo.formalizadoPor', 'vinculoDotacion', 'adjuntos.tipoDocumento', 'historial.usuario', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor']);
         $tramite->reemplazo->funcionario->load([
             'vinculosDotacion' => fn ($query) => $query
                 ->with(['estamento', 'profesion'])

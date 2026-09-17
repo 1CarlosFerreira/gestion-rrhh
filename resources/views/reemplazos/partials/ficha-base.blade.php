@@ -81,9 +81,15 @@
             @endif
         </div>
         <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Reemplazante</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Antecedentes propuestos del reemplazante</p>
             <p class="mt-2 text-base font-semibold text-gray-950">{{ $detalle->reemplazante->nombre_completo }}</p>
             <p class="mt-0.5 font-mono text-sm font-medium text-gray-600">{{ $detalle->reemplazante->rut }}</p>
+            <dl class="mt-4 grid gap-3 border-t border-gray-200 pt-3 text-xs sm:grid-cols-2">
+                <div><dt class="font-medium text-gray-400">Estamento</dt><dd class="mt-0.5 text-gray-700">{{ $detalle->reemplazanteEstamento?->nombre ?? 'No informado' }}</dd></div>
+                <div><dt class="font-medium text-gray-400">Profesión</dt><dd class="mt-0.5 text-gray-700">{{ $detalle->reemplazanteProfesion?->nombre ?? 'No corresponde / no informada' }}</dd></div>
+                <div><dt class="font-medium text-gray-400">Calidad contractual</dt><dd class="mt-0.5 text-gray-700">{{ $detalle->reemplazanteCalidadContractual?->nombre ?? 'No informada' }}</dd></div>
+                <div><dt class="font-medium text-gray-400">Cargo / función</dt><dd class="mt-0.5 text-gray-700">{{ $detalle->reemplazante_cargo_funcion ?? 'No informado' }}</dd></div>
+            </dl>
         </div>
     </div>
     <dl class="mt-3 grid gap-3 rounded-lg border border-indigo-100 bg-indigo-50/60 px-4 py-3 sm:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)]">

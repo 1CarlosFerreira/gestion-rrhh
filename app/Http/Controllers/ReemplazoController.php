@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\SaveBorradorReemplazoRequest;
+use App\Models\CalidadContractual;
+use App\Models\Estamento;
 use App\Models\Persona;
+use App\Models\Profesion;
 use App\Models\TipoDocumento;
 use App\Models\TipoReemplazo;
 use App\Models\Tramite;
@@ -104,7 +107,18 @@ class ReemplazoController extends Controller
         $unidad = UnidadOrganizacional::query()->findOrFail($request->integer('unidad_organizacional_id'));
         abort_unless($alcance->tienePermisoYAlcance($request->user(), 'reemplazos.crear', $unidad, today()), 403);
         $fecha = $request->date('fecha')?->toDateString() ?? today()->toDateString();
-        $personas = Persona::query()->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $unidad->id)->vigentesEn($fecha))->when($request->filled('buscar'), fn ($q) => $q->buscar($request->string('buscar')))->limit(30)->get()->map(fn ($p) => ['id' => $p->id, 'nombre' => $p->nombre_completo, 'rut' => $p->rut]);
+        $personas = Persona::query()
+            ->with(['vinculosDotacion' => fn ($query) => $query
+                ->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])
+                ->where('unidad_organizacional_id', $unidad->id)
+                ->vigentesEn($fecha)
+                ->orderByDesc('vigente_desde')])
+            ->where('active', true)
+            ->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $unidad->id)->vigentesEn($fecha))
+            ->when($request->filled('buscar'), fn ($q) => $q->buscar($request->string('buscar')))
+            ->limit(30)
+            ->get()
+            ->map(fn ($persona) => $this->funcionarioParaFormulario($persona));
 
         return response()->json($personas);
     }
@@ -117,7 +131,12 @@ class ReemplazoController extends Controller
 
     private function datos(SaveBorradorReemplazoRequest $request): array
     {
-        return collect($request->validated())->only(['funcionario_id', 'reemplazante_id', 'tipo_reemplazo_id', 'fecha_funcionario_desde', 'fecha_funcionario_hasta', 'fecha_reemplazante_desde', 'fecha_reemplazante_hasta', 'justificacion'])->all();
+        $datos = collect($request->validated())->only(['funcionario_id', 'reemplazante_id', 'reemplazante_estamento_id', 'reemplazante_profesion_id', 'reemplazante_calidad_contractual_id', 'reemplazante_cargo_funcion', 'tipo_reemplazo_id', 'fecha_funcionario_desde', 'fecha_funcionario_hasta', 'fecha_reemplazante_desde', 'fecha_reemplazante_hasta', 'justificacion'])->all();
+        if (array_key_exists('reemplazante_cargo_funcion', $datos)) {
+            $datos['reemplazante_cargo_funcion'] = filled($datos['reemplazante_cargo_funcion']) ? preg_replace('/\s+/u', ' ', trim($datos['reemplazante_cargo_funcion'])) : null;
+        }
+
+        return $datos;
     }
 
     private function resolverReemplazante(SaveBorradorReemplazoRequest $request, ?int $existente): ?int
@@ -135,8 +154,37 @@ class ReemplazoController extends Controller
         $unidades = $alcance->unidadesAutorizadas($request->user(), today());
         $seleccionada = (int) old('unidad_organizacional_id', $tramite?->unidad_organizacional_id ?? ($unidades->count() === 1 ? $unidades->first()->id : 0));
         $fechaFuncionario = old('fecha_funcionario_desde', $tramite?->reemplazo?->fecha_funcionario_desde?->toDateString() ?? today()->toDateString());
-        $funcionarios = $seleccionada ? Persona::query()->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $seleccionada)->vigentesEn($fechaFuncionario))->orderBy('apellido_paterno')->get() : collect();
+        $funcionarios = $seleccionada ? Persona::query()
+            ->with(['vinculosDotacion' => fn ($query) => $query
+                ->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])
+                ->where('unidad_organizacional_id', $seleccionada)
+                ->vigentesEn($fechaFuncionario)
+                ->orderByDesc('vigente_desde')])
+            ->where('active', true)
+            ->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $seleccionada)->vigentesEn($fechaFuncionario))
+            ->orderBy('apellido_paterno')
+            ->get() : collect();
 
-        return view('reemplazos.form', ['tramite' => $tramite, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->limit(200)->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
+        $personas = Persona::query()->with(['vinculosDotacion' => fn ($query) => $query->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->orderByDesc('vigente_desde')])->where('active', true)->orderBy('apellido_paterno')->limit(200)->get();
+
+        return view('reemplazos.form', ['tramite' => $tramite, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => $personas, 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
+    }
+
+    private function funcionarioParaFormulario(Persona $persona): array
+    {
+        $vinculo = $persona->vinculosDotacion->first();
+
+        return [
+            'id' => $persona->id,
+            'nombre' => $persona->nombre_completo,
+            'rut' => $persona->rut,
+            'antecedente_laboral' => $vinculo ? [
+                'estamento' => $vinculo->estamento?->nombre,
+                'profesion' => $vinculo->profesion?->nombre,
+                'calidad_contractual' => $vinculo->calidadContractual?->nombre,
+                'cargo_funcion' => $vinculo->cargo_funcion,
+                'unidad' => $vinculo->unidad?->nombre,
+            ] : null,
+        ];
     }
 }
