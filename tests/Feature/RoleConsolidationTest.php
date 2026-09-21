@@ -35,7 +35,6 @@ class RoleConsolidationTest extends TestCase
             'tramites.ver_propios',
         ], Role::findByName('Solicitante')->permissions()->pluck('name')->all());
         $this->assertEqualsCanonicalizing([
-            'dotacion.gestionar',
             'dotacion.ver',
             'dotacion.ver_todas',
             'personas.gestionar',

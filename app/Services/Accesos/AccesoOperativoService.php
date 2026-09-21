@@ -39,6 +39,11 @@ class AccesoOperativoService
     {
         return DB::transaction(function () use ($acceso, $datos, $actor): UserUnidadAcceso {
             $acceso = UserUnidadAcceso::query()->lockForUpdate()->findOrFail($acceso->id);
+            if ($acceso->vigente_hasta !== null
+                && array_key_exists('vigente_hasta', $datos)
+                && empty($datos['vigente_hasta'])) {
+                throw ValidationException::withMessages(['vigente_hasta' => 'Un acceso operativo finalizado no puede reabrirse desde la edición general.']);
+            }
             $cambioIdentidad = collect(['user_id', 'unidad_organizacional_id', 'alcance', 'vigente_desde'])->contains(function (string $campo) use ($datos, $acceso): bool {
                 if (! array_key_exists($campo, $datos)) {
                     return false;

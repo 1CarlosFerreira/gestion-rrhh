@@ -17,6 +17,9 @@
             @if ($esEdicion)
                 @method('PUT')
             @endif
+            @if (request('return_to') === 'persona')
+                <input type="hidden" name="return_to" value="persona">
+            @endif
 
             <div>
                 <x-input-label for="unidad_organizacional_id" value="Unidad" />
@@ -87,7 +90,7 @@
             <x-input-error :messages="$errors->get('responsabilidad')" />
 
             <div class="flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
-                <a href="{{ route('admin.responsabilidades.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Cancelar</a>
+                <a href="{{ request('return_to') === 'persona' && $responsabilidad ? route('admin.personas.show', $responsabilidad->persona_id) : route('admin.responsabilidades.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Cancelar</a>
                 <x-primary-button class="justify-center">{{ $esEdicion ? 'Guardar cambios' : 'Registrar responsabilidad' }}</x-primary-button>
             </div>
         </form>

@@ -49,7 +49,6 @@ class RolesPermisosSeeder extends Seeder
         $rolePermissions = [
             'Administrador' => $permissions,
             'Gestión de Personas' => [
-                'dotacion.gestionar',
                 'dotacion.ver',
                 'dotacion.ver_todas',
                 'personas.gestionar',

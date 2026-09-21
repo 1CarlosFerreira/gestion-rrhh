@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\SavePersonaRequest;
 use App\Models\Persona;
 use App\Models\PersonaUnidadVinculo;
 use App\Models\UnidadOrganizacional;
+use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,11 +36,13 @@ class PersonaController extends Controller
         return view('admin.personas.index', compact('personas'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         Gate::authorize('personas.gestionar');
 
-        return view('admin.personas.create');
+        return view('admin.personas.create', [
+            'puedeContinuarDotacion' => $this->puedeCrearVinculos($request->user()),
+        ]);
     }
 
     public function store(SavePersonaRequest $request): RedirectResponse
@@ -47,6 +50,12 @@ class PersonaController extends Controller
         Gate::authorize('personas.gestionar');
 
         $persona = Persona::create($request->validated());
+
+        if ($request->string('continuar')->toString() === 'dotacion'
+            && $persona->active
+            && $this->puedeCrearVinculos($request->user())) {
+            return redirect()->route('admin.dotacion.create', ['persona_id' => $persona->id]);
+        }
 
         return redirect()->route('admin.personas.show', $persona)->with('status', 'Persona creada correctamente.');
     }
@@ -56,6 +65,12 @@ class PersonaController extends Controller
         Gate::authorize('personas.ver');
 
         $persona->loadMissing('user.roles');
+        if ($request->user()->can('accesos_operativos.ver')) {
+            $persona->loadMissing('user.accesosOperativos.unidad');
+        }
+        if ($request->user()->can('responsabilidades.ver')) {
+            $persona->loadMissing('responsabilidades.unidad');
+        }
 
         $verDotacion = $request->user()->active && $request->user()->can('dotacion.ver');
         $vinculos = collect();
@@ -110,5 +125,15 @@ class PersonaController extends Controller
         $persona->update(['active' => ! $persona->active]);
 
         return back()->with('status', $persona->active ? 'Persona reactivada correctamente.' : 'Persona inactivada correctamente.');
+    }
+
+    private function puedeCrearVinculos(User $user): bool
+    {
+        if (! $user->active || ! $user->hasRole('Administrador') || ! $user->can('dotacion.gestionar')) {
+            return false;
+        }
+
+        return UnidadOrganizacional::query()->where('activo', true)->get()
+            ->contains(fn (UnidadOrganizacional $unidad): bool => Gate::forUser($user)->allows('create', [PersonaUnidadVinculo::class, $unidad]));
     }
 }

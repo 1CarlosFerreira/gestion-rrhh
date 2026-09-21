@@ -38,31 +38,49 @@ class UserUnidadAccesoController extends Controller
         return view('admin.accesos.index', ['accesos' => $q->orderByDesc('vigente_desde')->get(), 'unidades' => UnidadOrganizacional::orderBy('nombre')->get(), 'alcances' => AlcanceAccesoOperativo::cases(), 'fecha' => $fecha, 'estructura' => $estructura, 'service' => $service]);
     }
 
-    public function create(EstructuraOrganizacionalService $estructura): View
+    public function create(Request $request, EstructuraOrganizacionalService $estructura): View
     {
         Gate::authorize('create', UserUnidadAcceso::class);
 
-        return $this->form(null, $estructura);
+        $userSeleccionadoId = $request->validate(['user_id' => ['nullable', 'integer', 'exists:users,id']])['user_id'] ?? null;
+
+        return $this->form(null, $estructura, $userSeleccionadoId, $request->string('return_to')->toString() === 'persona');
     }
 
     public function store(SaveUserUnidadAccesoRequest $request, AccesoOperativoService $service): RedirectResponse
     {
         $service->crear($request->validated(), $request->user());
 
+        if ($request->integer('continuar_perfil_user_id') === $request->integer('user_id')) {
+            return redirect()->route('admin.usuarios.perfil-acceso.edit', $request->integer('user_id'))
+                ->with('status', 'Acceso operativo registrado.');
+        }
+
+        if ($request->string('return_to')->toString() === 'persona') {
+            $user = User::query()->findOrFail($request->integer('user_id'));
+            abort_if($user->persona_id === null, 404);
+
+            return redirect()->route('admin.personas.show', $user->persona_id)->with('status', 'Unidad autorizada agregada.');
+        }
+
         return redirect()->route('admin.accesos.index')->with('status', 'Acceso registrado.');
     }
 
-    public function edit(UserUnidadAcceso $acceso, EstructuraOrganizacionalService $estructura): View
+    public function edit(Request $request, UserUnidadAcceso $acceso, EstructuraOrganizacionalService $estructura): View
     {
         Gate::authorize('update', $acceso);
 
-        return $this->form($acceso, $estructura);
+        return $this->form($acceso, $estructura, null, $request->string('return_to')->toString() === 'persona');
     }
 
     public function update(SaveUserUnidadAccesoRequest $request, UserUnidadAcceso $acceso, AccesoOperativoService $service): RedirectResponse
     {
         Gate::authorize('update', $acceso);
         $service->actualizar($acceso, $request->validated(), $request->user());
+
+        if ($request->string('return_to')->toString() === 'persona') {
+            return redirect()->route('admin.personas.show', $acceso->user->persona_id)->with('status', 'Unidad autorizada actualizada.');
+        }
 
         return redirect()->route('admin.accesos.index')->with('status', 'Acceso actualizado.');
     }
@@ -73,11 +91,15 @@ class UserUnidadAccesoController extends Controller
         $data = $request->validate(['vigente_hasta' => ['required', 'date', 'after_or_equal:'.$acceso->vigente_desde->toDateString()]]);
         $service->cerrarAcceso($acceso, $data['vigente_hasta'], $request->user());
 
+        if ($request->string('return_to')->toString() === 'persona') {
+            return redirect()->route('admin.personas.show', $acceso->user->persona_id)->with('status', 'Unidad autorizada cerrada.');
+        }
+
         return back()->with('status', 'Acceso cerrado.');
     }
 
-    private function form(?UserUnidadAcceso $acceso, EstructuraOrganizacionalService $estructura): View
+    private function form(?UserUnidadAcceso $acceso, EstructuraOrganizacionalService $estructura, ?int $userSeleccionadoId = null, bool $volverPersona = false): View
     {
-        return view('admin.accesos.form', ['acceso' => $acceso, 'alcances' => AlcanceAccesoOperativo::cases(), 'users' => User::with('persona')->where('active', true)->whereNotNull('persona_id')->orderBy('name')->get(), 'unidades' => UnidadOrganizacional::where('activo', true)->orderBy('nombre')->get()->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)])]);
+        return view('admin.accesos.form', ['acceso' => $acceso, 'alcances' => AlcanceAccesoOperativo::cases(), 'users' => User::with('persona')->where('active', true)->whereNotNull('persona_id')->orderBy('name')->get(), 'unidades' => UnidadOrganizacional::where('activo', true)->orderBy('nombre')->get()->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)]), 'userSeleccionadoId' => $userSeleccionadoId, 'volverPersona' => $volverPersona]);
     }
 }

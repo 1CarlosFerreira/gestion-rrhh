@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserForPersonaRequest;
 use App\Http\Requests\Admin\UpdateUserRolesRequest;
 use App\Models\Persona;
+use App\Models\UnidadResponsable;
 use App\Models\User;
+use App\Services\Alcances\AlcanceFuncionalUnidadResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,15 +43,26 @@ class UserController extends Controller
         ]);
     }
 
-    public function createForPersona(Persona $persona): View
+    public function createForPersona(Request $request, Persona $persona): View
     {
+        if ($request->boolean('continuar_perfil')) {
+            abort_unless($request->user()->hasRole('Administrador'), 403);
+        }
+
         $this->ensurePersonaHasNoUser($persona);
 
-        return view('admin.users.create-for-persona', compact('persona'));
+        return view('admin.users.create-for-persona', [
+            'persona' => $persona,
+            'continuarPerfil' => $request->boolean('continuar_perfil'),
+        ]);
     }
 
     public function storeForPersona(StoreUserForPersonaRequest $request, Persona $persona): RedirectResponse
     {
+        if ($request->boolean('continuar_perfil')) {
+            abort_unless($request->user()->hasRole('Administrador'), 403);
+        }
+
         $user = DB::transaction(function () use ($request, $persona): User {
             $persona = Persona::query()->lockForUpdate()->findOrFail($persona->id);
             $this->ensurePersonaHasNoUser($persona);
@@ -64,13 +77,50 @@ class UserController extends Controller
             ]);
         });
 
+        if ($request->boolean('continuar_perfil')) {
+            return redirect()->route('admin.usuarios.perfil-acceso.edit', ['user' => $user, 'creado' => 1]);
+        }
+
         return redirect(route('admin.usuarios.index', ['user_id' => $user->id]).'#usuario-'.$user->id)
             ->with('status', 'Usuario creado. Ahora puede asignar roles o configurar accesos operativos.');
     }
 
+    public function editAccessProfile(Request $request, User $user, AlcanceFuncionalUnidadResolver $alcance): View
+    {
+        abort_unless($request->user()->hasRole('Administrador'), 403);
+        abort_if($user->persona_id === null, 404);
+
+        $user->load(['persona', 'roles', 'accesosOperativos' => fn ($query) => $query->with('unidad')->vigentesEn(today())]);
+        $unidadesConAlcance = $alcance->unidadesAutorizadas($user, today())->keyBy('id');
+        $responsabilidades = $user->persona->responsabilidades()
+            ->with('unidad')
+            ->vigentesEn(today())
+            ->where('puede_aprobar', true)
+            ->get()
+            ->filter(fn (UnidadResponsable $responsabilidad): bool => $unidadesConAlcance->has($responsabilidad->unidad_organizacional_id));
+
+        return view('admin.users.access-profile', [
+            'user' => $user,
+            'roles' => Role::query()->orderBy('name')->get(),
+            'responsabilidades' => $responsabilidades,
+            'accesosOperativos' => $user->accesosOperativos,
+            'usuarioCreado' => $request->boolean('creado'),
+        ]);
+    }
+
     public function updateRoles(UpdateUserRolesRequest $request, User $user): RedirectResponse
     {
+        if ($request->boolean('finalizar_perfil')) {
+            abort_unless($request->user()->hasRole('Administrador'), 403);
+            abort_if($user->persona_id === null, 404);
+        }
+
         $user->syncRoles($request->validated('roles', []));
+
+        if ($request->boolean('finalizar_perfil')) {
+            return redirect()->route('admin.personas.show', $user->persona)
+                ->with('status', 'Roles actualizados. Configuración de acceso finalizada.');
+        }
 
         return back()->with('status', 'Roles actualizados.');
     }

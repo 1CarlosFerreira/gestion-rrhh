@@ -60,6 +60,10 @@ class UnidadResponsableController extends Controller
         Gate::authorize('update', $responsabilidad);
         $service->actualizar($responsabilidad, $this->data($request), $request->user());
 
+        if ($request->string('return_to')->toString() === 'persona') {
+            return redirect()->route('admin.personas.show', $responsabilidad->persona_id)->with('status', 'Responsabilidad actualizada.');
+        }
+
         return redirect()->route('admin.responsabilidades.index')->with('status', 'Responsabilidad actualizada.');
     }
 
@@ -68,6 +72,10 @@ class UnidadResponsableController extends Controller
         Gate::authorize('update', $responsabilidad);
         $validated = $request->validate(['vigente_hasta' => ['required', 'date', 'after_or_equal:'.$responsabilidad->vigente_desde->toDateString()]]);
         $service->cerrar($responsabilidad, $validated['vigente_hasta'], $request->user());
+
+        if ($request->string('return_to')->toString() === 'persona') {
+            return redirect()->route('admin.personas.show', $responsabilidad->persona_id)->with('status', 'Responsabilidad cerrada.');
+        }
 
         return back()->with('status', 'Responsabilidad cerrada.');
     }

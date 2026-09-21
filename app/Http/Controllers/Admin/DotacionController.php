@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Dotacion\CrearVinculoManualDotacion;
+use App\Enums\AlcanceAccesoOperativo;
 use App\Enums\EstadoVinculoDotacion;
 use App\Enums\OrigenVinculoDotacion;
 use App\Http\Controllers\Controller;
@@ -12,20 +14,21 @@ use App\Models\Persona;
 use App\Models\PersonaUnidadVinculo;
 use App\Models\Profesion;
 use App\Models\UnidadOrganizacional;
-use App\Services\Accesos\AccesoOperativoService;
+use App\Models\UnidadResponsable;
 use App\Services\Alcances\AlcanceFuncionalUnidadResolver;
 use App\Services\Dotacion\DotacionService;
 use App\Services\EstructuraOrganizacionalService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DotacionController extends Controller
 {
-    public function index(Request $request, AccesoOperativoService $accesos, AlcanceFuncionalUnidadResolver $alcance, EstructuraOrganizacionalService $estructura): View
+    public function index(Request $request, AlcanceFuncionalUnidadResolver $alcance, EstructuraOrganizacionalService $estructura): View
     {
         Gate::authorize('viewAny', PersonaUnidadVinculo::class);
         $fecha = $request->date('fecha')?->toDateString() ?? today()->toDateString();
@@ -55,8 +58,8 @@ class DotacionController extends Controller
             default => null,
         };
         $vinculos = $query->orderByDesc('vigente_desde')->get();
-        $puedeRegistrarVinculo = $request->user()->can('dotacion.gestionar')
-            && $accesos->unidadesAccesibles($request->user(), today())->isNotEmpty();
+        $puedeRegistrarVinculo = UnidadOrganizacional::query()->where('activo', true)->get()
+            ->contains(fn (UnidadOrganizacional $unidad): bool => Gate::forUser($request->user())->allows('create', [PersonaUnidadVinculo::class, $unidad]));
         $unidades = UnidadOrganizacional::query()->whereIn('id', $permitidas)->orderBy('nombre')->get();
         $unidadesAgrupadas = UnidadOrganizacional::query()->with('tipo')->whereIn('id', $ids)->get()
             ->each(function (UnidadOrganizacional $unidad) use ($estructura): void {
@@ -73,37 +76,85 @@ class DotacionController extends Controller
         return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estado' => $estado, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => $unidades, 'unidadesAgrupadas' => $unidadesAgrupadas, 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get(), 'puedeRegistrarVinculo' => $puedeRegistrarVinculo]);
     }
 
-    public function create(Request $request, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
+    public function create(Request $request, EstructuraOrganizacionalService $estructura): View
     {
-        abort_unless($request->user()->can('dotacion.gestionar'), 403);
-        abort_unless($accesos->unidadesAccesibles($request->user(), today())->isNotEmpty(), 403);
+        $unidades = $this->unidadesGestionables($request);
+        abort_if($unidades->isEmpty(), 403);
+        Gate::authorize('create', [PersonaUnidadVinculo::class, $unidades->first()]);
 
         $request->validate(['persona_id' => ['nullable', 'integer', Rule::exists('personas', 'id')->where('active', true)]]);
 
-        return $this->form(null, $request, $accesos, $estructura)
+        return $this->form(null, $request, $estructura, $unidades)
             ->with('personaSeleccionadaId', $request->integer('persona_id') ?: null);
     }
 
-    public function store(SavePersonaUnidadVinculoRequest $request, DotacionService $service): RedirectResponse
+    public function store(SavePersonaUnidadVinculoRequest $request, CrearVinculoManualDotacion $crearVinculo): RedirectResponse
     {
         $unidad = UnidadOrganizacional::query()->findOrFail($request->integer('unidad_organizacional_id'));
         Gate::authorize('create', [PersonaUnidadVinculo::class, $unidad]);
-        $service->crear($request->validated(), $request->user());
+        $resultado = $crearVinculo->execute($request->validated(), $request->user());
 
-        return redirect()->route('admin.dotacion.index')->with('status', 'Vínculo laboral registrado.');
+        return redirect()->route('admin.dotacion.continue', [
+            'vinculo' => $resultado->vinculo,
+            'responsabilidad_id' => $resultado->responsabilidad?->id,
+        ]);
     }
 
-    public function edit(Request $request, PersonaUnidadVinculo $vinculo, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
+    public function continue(Request $request, PersonaUnidadVinculo $vinculo, EstructuraOrganizacionalService $estructura): View
+    {
+        Gate::authorize('update', $vinculo);
+        abort_unless($request->user()->can('admin.usuarios'), 403);
+
+        $vinculo->load(['persona.user.roles', 'unidad', 'estamento', 'profesion', 'calidadContractual']);
+        $responsabilidad = null;
+        if ($request->integer('responsabilidad_id')) {
+            $responsabilidad = UnidadResponsable::query()
+                ->whereKey($request->integer('responsabilidad_id'))
+                ->where('persona_id', $vinculo->persona_id)
+                ->where('unidad_organizacional_id', $vinculo->unidad_organizacional_id)
+                ->firstOrFail();
+        }
+
+        $user = $vinculo->persona->user;
+        $alcancesResponsabilidad = collect();
+        $accesosOperativos = collect();
+        if ($user !== null) {
+            $alcancesResponsabilidad = $vinculo->persona->responsabilidades()
+                ->with('unidad')
+                ->vigentesEn(today())
+                ->where('puede_aprobar', true)
+                ->get()
+                ->filter(fn (UnidadResponsable $item): bool => $item->unidad->activo);
+            $accesosOperativos = $user->accesosOperativos()
+                ->with('unidad')
+                ->vigentesEn(today())
+                ->get()
+                ->each(function ($acceso) use ($vinculo, $estructura): void {
+                    $cubreUnidad = $acceso->unidad_organizacional_id === $vinculo->unidad_organizacional_id
+                        || ($acceso->alcance === AlcanceAccesoOperativo::UNIDAD_Y_DESCENDIENTES
+                            && $estructura->contiene($acceso->unidad, $vinculo->unidad));
+                    $acceso->setAttribute('cubre_nueva_unidad', $cubreUnidad);
+                });
+        }
+
+        return view('admin.dotacion.continue', compact('vinculo', 'responsabilidad', 'user', 'alcancesResponsabilidad', 'accesosOperativos'));
+    }
+
+    public function edit(Request $request, PersonaUnidadVinculo $vinculo, EstructuraOrganizacionalService $estructura): View
     {
         Gate::authorize('update', $vinculo);
 
-        return $this->form($vinculo, $request, $accesos, $estructura);
+        return $this->form($vinculo, $request, $estructura);
     }
 
     public function update(SavePersonaUnidadVinculoRequest $request, PersonaUnidadVinculo $vinculo, DotacionService $service): RedirectResponse
     {
         Gate::authorize('update', $vinculo);
         $service->actualizar($vinculo, $request->validated(), $request->user());
+
+        if ($request->string('return_to')->toString() === 'persona') {
+            return redirect()->route('admin.personas.show', $vinculo->persona_id)->with('status', 'Vínculo actualizado.');
+        }
 
         return redirect()->route('admin.dotacion.index')->with('status', 'Vínculo actualizado.');
     }
@@ -113,6 +164,10 @@ class DotacionController extends Controller
         Gate::authorize('update', $vinculo);
         $data = $request->validate(['vigente_hasta' => ['required', 'date', 'after_or_equal:'.$vinculo->vigente_desde->toDateString()]]);
         $service->cerrar($vinculo, $data['vigente_hasta'], $request->user());
+
+        if ($request->string('return_to')->toString() === 'persona') {
+            return redirect()->route('admin.personas.show', $vinculo->persona_id)->with('status', 'Vínculo cerrado.');
+        }
 
         return back()->with('status', 'Vínculo cerrado.');
     }
@@ -128,10 +183,21 @@ class DotacionController extends Controller
         return view('admin.dotacion.persona', compact('persona', 'estructura'));
     }
 
-    private function form(?PersonaUnidadVinculo $vinculo, Request $request, AccesoOperativoService $accesos, EstructuraOrganizacionalService $estructura): View
+    private function form(?PersonaUnidadVinculo $vinculo, Request $request, EstructuraOrganizacionalService $estructura, ?Collection $unidades = null): View
     {
-        $unidades = $accesos->unidadesAccesibles($request->user(), today());
+        $unidades ??= $this->unidadesGestionables($request);
 
         return view('admin.dotacion.form', ['vinculo' => $vinculo, 'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->get(), 'unidades' => $unidades->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)]), 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->get(), 'origenes' => [OrigenVinculoDotacion::MANUAL, OrigenVinculoDotacion::IMPORTACION]]);
+    }
+
+    private function unidadesGestionables(Request $request): Collection
+    {
+        if (! $request->user()->active
+            || ! $request->user()->hasRole('Administrador')
+            || ! $request->user()->can('dotacion.gestionar')) {
+            return collect();
+        }
+
+        return UnidadOrganizacional::query()->where('activo', true)->orderBy('nombre')->get();
     }
 }

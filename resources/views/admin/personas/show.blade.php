@@ -1,236 +1,236 @@
+@php
+    $vinculosFuturos = $vinculos->filter(fn ($vinculo) => $vinculo->estadoEn(today())->value === 'FUTURO');
+    $vinculosVigentes = $vinculos->filter(fn ($vinculo) => $vinculo->estadoEn(today())->value === 'VIGENTE');
+    $vinculosHistoricos = $vinculos->filter(fn ($vinculo) => $vinculo->estadoEn(today())->value === 'FINALIZADO');
+
+    $responsabilidades = $persona->relationLoaded('responsabilidades') ? $persona->responsabilidades : collect();
+    $responsabilidadesFuturas = $responsabilidades->filter(fn ($item) => $item->vigente_desde->gt(today()));
+    $responsabilidadesVigentes = $responsabilidades->filter(fn ($item) => $item->estaVigenteEn(today()));
+    $responsabilidadesHistoricas = $responsabilidades->filter(fn ($item) => $item->vigente_hasta?->lt(today()) === true);
+
+    $accesos = $persona->user?->relationLoaded('accesosOperativos') ? $persona->user->accesosOperativos : collect();
+    $accesosFuturos = $accesos->filter(fn ($item) => $item->vigente_desde->gt(today()));
+    $accesosVigentes = $accesos->filter(fn ($item) => $item->estaVigenteEn(today()));
+    $accesosHistoricos = $accesos->filter(fn ($item) => $item->vigente_hasta?->lt(today()) === true);
+@endphp
+
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="text-xl font-semibold">Ficha de Persona</h2>
-    </x-slot>
+    <x-slot name="header"><h2 class="text-xl font-semibold">Ficha de Persona</h2></x-slot>
 
     <div class="py-10">
-        <div class="mx-auto max-w-7xl space-y-5 px-4 sm:px-6 lg:px-8">
-        @if (session('status'))
-            <p class="rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</p>
-        @endif
-        <x-input-error :messages="$errors->all()" />
+        <div class="mx-auto max-w-5xl space-y-5 px-4 sm:px-6 lg:px-8">
+            <x-admin-process-steps current="finalizar" />
 
-        <section class="rounded-xl bg-white p-4 shadow-sm">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div class="min-w-0">
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Datos de Persona</p>
-                    <h2 class="mt-1 text-lg font-semibold text-gray-900">
-                        {{ trim($persona->nombres.' '.($persona->apellido_paterno ?? '').' '.($persona->apellido_materno ?? '')) }}
-                    </h2>
-                    <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                        <span><strong class="font-medium text-gray-700">RUT:</strong> {{ $persona->rut }}</span>
-                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $persona->active ? 'bg-green-50 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $persona->active ? 'Activo' : 'Inactivo' }}</span>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-3 sm:justify-end">
-                @can('personas.gestionar')
-                    <a href="{{ route('admin.personas.edit', $persona) }}" class="text-sm text-indigo-700 hover:underline">Editar Persona</a>
-                    <form method="POST" action="{{ route('admin.personas.activo', $persona) }}" class="inline" onsubmit="return confirm('{{ $persona->active ? '¿Confirma que desea inactivar esta persona?' : '¿Confirma que desea reactivar esta persona?' }}')">
-                        @csrf
-                        @method('PATCH')
-                        <button type="submit" class="text-sm text-indigo-700 hover:underline">{{ $persona->active ? 'Inactivar' : 'Reactivar' }}</button>
-                    </form>
-                @endcan
-                <a href="{{ route('admin.personas.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition duration-150 ease-in-out hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Volver al listado</a>
-                </div>
-            </div>
-        </section>
-
-        <section class="rounded-xl bg-white p-5 shadow-sm">
-            <h2 class="text-base font-semibold text-gray-800">Acceso al sistema</h2>
-
-            @if ($persona->user)
-                <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                    <div>
-                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Usuario</dt>
-                        <dd class="mt-1 text-gray-800">{{ $persona->user->email }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Estado</dt>
-                        <dd class="mt-1 text-gray-800">{{ $persona->user->active ? 'Activo' : 'Inactivo' }}</dd>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Roles</dt>
-                        <dd class="mt-1 text-gray-800">{{ $persona->user->roles->pluck('name')->join(', ') ?: 'Sin roles asignados' }}</dd>
-                    </div>
-                </dl>
-                <div class="mt-4 flex flex-wrap gap-3 border-t border-gray-100 pt-4">
-                    @can('admin.usuarios')
-                        <a href="{{ route('admin.usuarios.index', ['user_id' => $persona->user->id]).'#usuario-'.$persona->user->id }}" class="text-sm text-indigo-700 hover:underline">Administrar roles</a>
-                    @endcan
-                    @can('accesos_operativos.ver')
-                        <a href="{{ route('admin.accesos.index', ['usuario' => $persona->user->email]) }}" class="text-sm text-indigo-700 hover:underline">Accesos operativos</a>
-                    @endcan
-                </div>
-            @else
-                <p class="mt-3 text-sm text-gray-600"><strong class="font-medium text-gray-700">Estado:</strong> Sin cuenta de usuario</p>
-                @can('admin.usuarios')
-                    <a href="{{ route('admin.usuarios.create-for-persona', $persona) }}" class="mt-4 inline-flex items-center justify-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition duration-150 ease-in-out hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Crear acceso al sistema</a>
-                @endcan
+            @if (session('status'))
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{{ session('status') }}</div>
             @endif
-        </section>
-
-        @if ($verDotacion)
-            <section class="rounded-xl bg-white p-5 shadow-sm">
-                @php
-                    $vinculosVigentes = $vinculos->filter(fn ($vinculo) => $vinculo->estadoEn(now())->name === 'VIGENTE');
-                    $vinculosHistoricos = $vinculos->filter(fn ($vinculo) => $vinculo->estadoEn(now())->name === 'FINALIZADO');
-                @endphp
-
-                <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="text-base font-semibold text-gray-800">Dotación</h2>
-                    @if ($puedeAgregarVinculo)
-                    <a href="{{ route('admin.dotacion.create', ['persona_id' => $persona->id]) }}" class="inline-flex items-center justify-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition duration-150 ease-in-out hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Agregar vínculo de dotación</a>
+            @if ($errors->any())
+                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+                    <ul class="list-disc pl-5">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                    @if ($errors->has('responsabilidad_incompatible'))
+                        <a href="{{ route('admin.responsabilidades.index', ['persona' => $persona->rut]) }}" class="mt-3 inline-flex font-medium text-red-800 underline">Administrar responsabilidad afectada</a>
                     @endif
                 </div>
+            @endif
 
-                <div>
-                    <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-700">Vínculos vigentes</h3>
-                    @if ($vinculosVigentes->isEmpty())
-                        <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-600">
-                            No existen vínculos de dotación vigentes.
+            <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500">Datos personales</p>
+                        <h2 class="mt-1 text-xl font-semibold text-gray-900">{{ $persona->nombre_completo }}</h2>
+                        <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                            <span>RUT {{ $persona->rut }}</span>
+                            <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $persona->active ? 'bg-green-50 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $persona->active ? 'Activo' : 'Inactivo' }}</span>
                         </div>
-                    @else
-                        <div class="grid gap-4 md:grid-cols-2">
-                            @foreach ($vinculosVigentes as $vinculo)
-                            <article class="rounded-xl border border-indigo-100 bg-indigo-50/40 p-5 shadow-sm">
-                                <div class="mb-4 flex items-start justify-between gap-3 border-b border-indigo-100 pb-3">
-                                    <h4 class="text-base font-semibold text-gray-900">{{ $vinculo->unidad->nombre ?? '-' }}</h4>
-                                    <span class="inline-flex shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800">VIGENTE</span>
-                                </div>
-                                <dl class="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Cargo/función</dt>
-                                        <dd class="mt-1 text-gray-800">{{ $vinculo->cargo_funcion ?: '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Calidad contractual</dt>
-                                        <dd class="mt-1 text-gray-800">{{ $vinculo->calidadContractual->nombre ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Profesión</dt>
-                                        <dd class="mt-1 text-gray-800">{{ $vinculo->profesion->nombre ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Estamento</dt>
-                                        <dd class="mt-1 text-gray-800">{{ $vinculo->estamento->nombre ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Grado EUS</dt>
-                                        <dd class="mt-1 text-gray-800">{{ $vinculo->grado_eus ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Vigencia</dt>
-                                        <dd class="mt-1 text-gray-800">{{ $vinculo->vigente_desde->format('d/m/Y') }} → Actualidad</dd>
-                                    </div>
-                                    <div class="sm:col-span-2">
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Origen</dt>
-                                        <dd class="mt-1 text-gray-800">
-                                            {{ $vinculo->origen->name ?? '-' }}
-                                            @if ($vinculo->esGeneradoPorTramite())
-                                                <span class="block text-xs font-medium text-indigo-700">
-                                                    Generado por trámite
-                                                    @can('view', $vinculo->tramiteOrigen)
-                                                        <a class="underline" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
-                                                    @else
-                                                        {{ $vinculo->tramiteOrigen->codigo }}
-                                                    @endcan
-                                                </span>
-                                            @endif
-                                        </dd>
-                                    </div>
-                                </dl>
-
-                                @can('dotacion.gestionar')
-                                @can('update', $vinculo)
-                                <div class="mt-4 border-t border-gray-100 pt-4">
-                                    <a href="{{ route('admin.dotacion.edit', $vinculo) }}" class="text-indigo-700 hover:underline">Editar</a>
-                                    @if ($vinculo->vigente_hasta === null)
-                                        <form method="POST" action="{{ route('admin.dotacion.close', $vinculo) }}" class="mt-3 flex flex-wrap items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar este vínculo laboral?')">
-                                            @csrf
-                                            @method('PATCH')
-                                            <label class="text-xs text-gray-600" for="vigente_hasta_{{ $vinculo->id }}">Fecha de término</label>
-                                            <input type="date" name="vigente_hasta" id="vigente_hasta_{{ $vinculo->id }}" min="{{ $vinculo->vigente_desde->toDateString() }}" value="{{ old('vigente_hasta', $vinculo->vigente_hasta?->toDateString()) }}" class="w-40 rounded border-gray-300 text-sm" required>
-                                            <button type="submit" class="text-indigo-700 hover:underline">Cerrar vínculo</button>
-                                        </form>
-                                    @endif
-                                </div>
-                                @endcan
-                                @endcan
-                            </article>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-
-                <div class="mt-7 border-t border-gray-100 pt-5">
-                    <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-600">Historial de dotación</h3>
-                    @if ($vinculosHistoricos->isNotEmpty())
-                        <div class="grid gap-4 md:grid-cols-2">
-                            @foreach ($vinculosHistoricos as $vinculo)
-                            <article class="rounded-lg border border-gray-200 bg-gray-50/60 p-4">
-                                <div class="mb-3 flex items-start justify-between gap-3 border-b border-gray-200 pb-3">
-                                    <h4 class="font-semibold text-gray-800">{{ $vinculo->unidad->nombre ?? '-' }}</h4>
-                                    <span class="inline-flex shrink-0 rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">FINALIZADO</span>
-                                </div>
-                                <dl class="grid gap-x-4 gap-y-2.5 text-sm sm:grid-cols-2">
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Cargo/función</dt>
-                                        <dd class="mt-1 text-gray-700">{{ $vinculo->cargo_funcion ?: '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Calidad contractual</dt>
-                                        <dd class="mt-1 text-gray-700">{{ $vinculo->calidadContractual->nombre ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Profesión</dt>
-                                        <dd class="mt-1 text-gray-700">{{ $vinculo->profesion->nombre ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Estamento</dt>
-                                        <dd class="mt-1 text-gray-700">{{ $vinculo->estamento->nombre ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Grado EUS</dt>
-                                        <dd class="mt-1 text-gray-700">{{ $vinculo->grado_eus ?? '-' }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Vigencia</dt>
-                                        <dd class="mt-1 text-gray-700">{{ $vinculo->vigente_desde->format('d/m/Y') }} → {{ $vinculo->vigente_hasta?->format('d/m/Y') ?? '-' }}</dd>
-                                    </div>
-                                    <div class="sm:col-span-2">
-                                        <dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Origen</dt>
-                                        <dd class="mt-1 text-gray-700">
-                                            {{ $vinculo->origen->name ?? '-' }}
-                                            @if ($vinculo->esGeneradoPorTramite())
-                                                <span class="block text-xs font-medium text-indigo-700">
-                                                    Generado por trámite
-                                                    @can('view', $vinculo->tramiteOrigen)
-                                                        <a class="underline" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
-                                                    @else
-                                                        {{ $vinculo->tramiteOrigen->codigo }}
-                                                    @endcan
-                                                </span>
-                                            @endif
-                                        </dd>
-                                    </div>
-                                </dl>
-
-                                <div class="mt-3 border-t border-gray-200 pt-3">
-                                    @can('dotacion.gestionar')
-                                    @can('update', $vinculo)
-                                    <a href="{{ route('admin.dotacion.edit', $vinculo) }}" class="text-indigo-700 hover:underline">Editar</a>
-                                    @endcan
-                                    @endcan
-                                </div>
-                            </article>
-                            @endforeach
-                        </div>
-                    @endif
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        @can('personas.gestionar')
+                            <a href="{{ route('admin.personas.edit', $persona) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar Persona</a>
+                            <form method="POST" action="{{ route('admin.personas.activo', $persona) }}" onsubmit="return confirm('{{ $persona->active ? '¿Confirma que desea inactivar esta persona?' : '¿Confirma que desea reactivar esta persona?' }}')">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900 hover:underline">{{ $persona->active ? 'Inactivar' : 'Reactivar' }}</button>
+                            </form>
+                        @endcan
+                        <a href="{{ route('admin.personas.index') }}" class="text-sm text-gray-600 hover:text-gray-900 hover:underline">Volver al listado</a>
+                    </div>
                 </div>
             </section>
-        @endif
+
+            <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-900">Acceso al sistema</h2>
+                        <p class="mt-1 text-sm text-gray-500">Cuenta, roles y unidades sobre las que puede operar.</p>
+                    </div>
+                    @if ($persona->user && auth()->user()->can('admin.usuarios') && auth()->user()->hasRole('Administrador'))
+                        <a href="{{ route('admin.usuarios.perfil-acceso.edit', $persona->user) }}" class="inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600">Administrar acceso</a>
+                    @endif
+                </div>
+
+                @if ($persona->user)
+                    <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+                        <div><dt class="text-xs font-medium text-gray-500">Usuario</dt><dd class="mt-1 text-gray-900">{{ $persona->user->email }}</dd></div>
+                        <div><dt class="text-xs font-medium text-gray-500">Estado</dt><dd class="mt-1 text-gray-900">{{ $persona->user->active ? 'Activo' : 'Inactivo' }}</dd></div>
+                        <div><dt class="text-xs font-medium text-gray-500">Roles</dt><dd class="mt-1 text-gray-900">{{ $persona->user->roles->pluck('name')->join(', ') ?: 'Sin roles asignados' }}</dd></div>
+                    </dl>
+
+                    @can('admin.usuarios')
+                        @if (! $persona->user->is(auth()->user()))
+                            <form method="POST" action="{{ route('admin.usuarios.activo', $persona->user) }}" class="mt-4">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900 hover:underline">{{ $persona->user->active ? 'Desactivar usuario' : 'Activar usuario' }}</button>
+                            </form>
+                        @endif
+                    @endcan
+
+                    @can('accesos_operativos.ver')
+                        <div class="mt-6 border-t border-gray-100 pt-5">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">Unidades autorizadas</h3>
+                                    <p class="mt-1 text-xs text-gray-500">Accesos adicionales registrados para este User.</p>
+                                </div>
+                                @can('create', App\Models\UserUnidadAcceso::class)
+                                    <a href="{{ route('admin.accesos.create', ['user_id' => $persona->user->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar unidad autorizada</a>
+                                @endcan
+                            </div>
+
+                            @foreach (['Vigentes' => $accesosVigentes, 'Futuros' => $accesosFuturos, 'Históricos' => $accesosHistoricos] as $titulo => $grupo)
+                                @if ($grupo->isNotEmpty())
+                                    <div class="mt-4">
+                                        <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $titulo }}</h4>
+                                        <div class="mt-2 divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                            @foreach ($grupo as $acceso)
+                                                <article class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div>
+                                                        <p class="text-sm font-medium text-gray-900">{{ $acceso->unidad->nombre }}</p>
+                                                        <p class="mt-1 text-xs text-gray-500">{{ $acceso->alcance->etiqueta() }} · {{ $acceso->vigente_desde->format('d/m/Y') }} → {{ $acceso->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }}</p>
+                                                    </div>
+                                                    @can('update', $acceso)
+                                                        <div class="flex flex-wrap items-end gap-3">
+                                                            <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar</a>
+                                                            @if ($acceso->vigente_hasta === null)
+                                                                <form method="POST" action="{{ route('admin.accesos.close', $acceso) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta unidad autorizada?')">
+                                                                    @csrf @method('PATCH')
+                                                                    <input type="hidden" name="return_to" value="persona">
+                                                                    <label class="text-xs text-gray-500">Término<input type="date" name="vigente_hasta" min="{{ $acceso->vigente_desde->toDateString() }}" required class="mt-1 block w-32 rounded-md border-gray-300 py-1.5 text-xs"></label>
+                                                                    <button type="submit" class="pb-1 text-sm font-medium text-red-700 hover:underline">Cerrar</button>
+                                                                </form>
+                                                            @endif
+                                                        </div>
+                                                    @endcan
+                                                </article>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                            @if ($accesos->isEmpty())
+                                <p class="mt-4 text-sm text-gray-500">Sin unidades autorizadas registradas.</p>
+                            @endif
+                        </div>
+                    @endcan
+                @else
+                    <p class="mt-4 text-sm text-gray-600">Sin cuenta de usuario.</p>
+                    @can('admin.usuarios')
+                        <a href="{{ route('admin.usuarios.create-for-persona', $persona) }}" class="mt-4 inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600">Crear acceso al sistema</a>
+                    @endcan
+                @endif
+            </section>
+
+            @if ($verDotacion)
+                <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div><h2 class="text-base font-semibold text-gray-900">Dotación</h2><p class="mt-1 text-sm text-gray-500">Vínculos laborales de la Persona.</p></div>
+                        @if ($puedeAgregarVinculo)
+                            <a href="{{ route('admin.dotacion.create', ['persona_id' => $persona->id]) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar a dotación</a>
+                        @endif
+                    </div>
+
+                    @foreach (['Vínculos futuros' => $vinculosFuturos, 'Vínculos vigentes' => $vinculosVigentes, 'Historial de vínculos' => $vinculosHistoricos] as $titulo => $grupo)
+                        <div class="mt-5">
+                            <h3 class="text-sm font-semibold text-gray-800">{{ $titulo }}</h3>
+                            @if ($grupo->isEmpty())
+                                <p class="mt-2 text-sm text-gray-500">Sin registros.</p>
+                            @else
+                                <div class="mt-3 grid gap-3 md:grid-cols-2">
+                                    @foreach ($grupo as $vinculo)
+                                        <article class="rounded-lg border border-gray-200 p-4">
+                                            <header class="flex items-start justify-between gap-3">
+                                                <h4 class="font-semibold text-gray-900">{{ $vinculo->unidad->nombre }}</h4>
+                                                <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ $vinculo->estadoEn(today())->value === 'VIGENTE' ? 'bg-green-50 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $vinculo->estadoEn(today())->value }}</span>
+                                            </header>
+                                            <p class="mt-3 text-sm font-medium text-gray-800">{{ $vinculo->cargo_funcion }}</p>
+                                            <p class="mt-1 text-xs text-gray-500">{{ $vinculo->estamento->nombre }} · {{ $vinculo->profesion?->nombre ?? 'Sin profesión' }}</p>
+                                            <p class="text-xs text-gray-500">{{ $vinculo->calidadContractual->nombre }}@if($vinculo->grado_eus) · Grado {{ $vinculo->grado_eus }}@endif</p>
+                                            <p class="mt-2 text-sm text-gray-700">{{ $vinculo->vigente_desde->format('d/m/Y') }} → {{ $vinculo->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }}</p>
+                                            @if ($vinculo->esGeneradoPorTramite())
+                                                <p class="mt-2 text-xs font-medium text-indigo-700">Generado por trámite {{ $vinculo->tramiteOrigen->codigo }}</p>
+                                            @endif
+
+                                            @can('update', $vinculo)
+                                                <div class="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-3">
+                                                    <a href="{{ route('admin.dotacion.edit', ['vinculo' => $vinculo, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar</a>
+                                                    @if ($vinculo->vigente_hasta === null)
+                                                        <form method="POST" action="{{ route('admin.dotacion.close', $vinculo) }}" class="flex flex-wrap items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar este vínculo laboral?')">
+                                                            @csrf @method('PATCH')
+                                                            <input type="hidden" name="return_to" value="persona">
+                                                            <label class="text-xs text-gray-500">Término<input type="date" name="vigente_hasta" min="{{ $vinculo->vigente_desde->toDateString() }}" required class="mt-1 block w-32 rounded-md border-gray-300 py-1.5 text-xs"></label>
+                                                            <button type="submit" class="pb-1 text-sm font-medium text-red-700 hover:underline">Cerrar</button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            @endcan
+                                        </article>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </section>
+            @endif
+
+            @can('responsabilidades.ver')
+                <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div><h2 class="text-base font-semibold text-gray-900">Responsabilidades institucionales</h2><p class="mt-1 text-sm text-gray-500">Titularidades y subrogancias, independientes de los vínculos laborales.</p></div>
+
+                    @foreach (['Vigentes' => $responsabilidadesVigentes, 'Futuras' => $responsabilidadesFuturas, 'Históricas' => $responsabilidadesHistoricas] as $titulo => $grupo)
+                        <div class="mt-5">
+                            <h3 class="text-sm font-semibold text-gray-800">{{ $titulo }}</h3>
+                            @if ($grupo->isEmpty())
+                                <p class="mt-2 text-sm text-gray-500">Sin registros.</p>
+                            @else
+                                <div class="mt-2 divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                    @foreach ($grupo as $responsabilidad)
+                                        <article class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <p class="text-sm font-semibold text-gray-900">{{ $responsabilidad->tipo->etiqueta() }} · {{ $responsabilidad->unidad->nombre }}</p>
+                                                    <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ $responsabilidad->estaVigenteEn(today()) ? 'bg-green-50 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $responsabilidad->vigente_desde->gt(today()) ? 'FUTURA' : ($responsabilidad->estaVigenteEn(today()) ? 'VIGENTE' : 'FINALIZADA') }}</span>
+                                                </div>
+                                                <p class="mt-1 text-xs text-gray-500">{{ $responsabilidad->vigente_desde->format('d/m/Y') }} → {{ $responsabilidad->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }} · {{ $responsabilidad->puede_aprobar ? 'Puede aprobar' : 'Sin aprobación' }}</p>
+                                            </div>
+                                            @can('update', $responsabilidad)
+                                                <div class="flex flex-wrap items-end gap-3">
+                                                    <a href="{{ route('admin.responsabilidades.edit', ['responsabilidad' => $responsabilidad, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar</a>
+                                                    @if ($responsabilidad->vigente_hasta === null)
+                                                        <form method="POST" action="{{ route('admin.responsabilidades.close', $responsabilidad) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta responsabilidad?')">
+                                                            @csrf @method('PATCH')
+                                                            <input type="hidden" name="return_to" value="persona">
+                                                            <label class="text-xs text-gray-500">Término<input type="date" name="vigente_hasta" min="{{ $responsabilidad->vigente_desde->toDateString() }}" required class="mt-1 block w-32 rounded-md border-gray-300 py-1.5 text-xs"></label>
+                                                            <button type="submit" class="pb-1 text-sm font-medium text-red-700 hover:underline">Cerrar</button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            @endcan
+                                        </article>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </section>
+            @endcan
         </div>
     </div>
 </x-app-layout>

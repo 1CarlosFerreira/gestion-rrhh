@@ -36,6 +36,11 @@ class ResponsabilidadInstitucionalService
     {
         return DB::transaction(function () use ($responsabilidad, $datos, $actor): UnidadResponsable {
             $responsabilidad = UnidadResponsable::query()->lockForUpdate()->findOrFail($responsabilidad->id);
+            if ($responsabilidad->vigente_hasta !== null
+                && array_key_exists('vigente_hasta', $datos)
+                && empty($datos['vigente_hasta'])) {
+                throw ValidationException::withMessages(['vigente_hasta' => 'Una responsabilidad finalizada no puede reabrirse desde la edición general.']);
+            }
             $identidadCambiada = collect(['unidad_organizacional_id', 'persona_id', 'tipo', 'vigente_desde'])->contains(function (string $campo) use ($datos, $responsabilidad): bool {
                 if (! array_key_exists($campo, $datos)) {
                     return false;

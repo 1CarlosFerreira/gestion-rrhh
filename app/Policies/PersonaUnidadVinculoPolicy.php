@@ -5,15 +5,11 @@ namespace App\Policies;
 use App\Models\PersonaUnidadVinculo;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
-use App\Services\Accesos\AccesoOperativoService;
 use App\Services\Alcances\AlcanceFuncionalUnidadResolver;
 
 class PersonaUnidadVinculoPolicy
 {
-    public function __construct(
-        private readonly AccesoOperativoService $accesos,
-        private readonly AlcanceFuncionalUnidadResolver $alcance,
-    ) {}
+    public function __construct(private readonly AlcanceFuncionalUnidadResolver $alcance) {}
 
     public function viewAny(User $user): bool
     {
@@ -31,17 +27,20 @@ class PersonaUnidadVinculoPolicy
 
     public function create(User $user, UnidadOrganizacional $unidad): bool
     {
-        return $this->puede($user, 'dotacion.gestionar', $unidad);
+        return $this->puedeGestionarManualmente($user, $unidad);
     }
 
     public function update(User $user, PersonaUnidadVinculo $vinculo): bool
     {
         return ! $vinculo->esGeneradoPorTramite()
-            && $this->puede($user, 'dotacion.gestionar', $vinculo->unidad);
+            && $this->puedeGestionarManualmente($user, $vinculo->unidad);
     }
 
-    private function puede(User $user, string $permiso, UnidadOrganizacional $unidad): bool
+    private function puedeGestionarManualmente(User $user, UnidadOrganizacional $unidad): bool
     {
-        return $this->accesos->tienePermisoYAcceso($user, $permiso, $unidad, today());
+        return $user->active
+            && $user->hasRole('Administrador')
+            && $user->can('dotacion.gestionar')
+            && $unidad->activo;
     }
 }

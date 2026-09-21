@@ -310,13 +310,14 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $this->assertDatabaseCount('reemplazo_formalizaciones', 0);
     }
 
-    public function test_global_formalizer_can_formalize_without_operational_access(): void
+    public function test_gestion_personas_can_formalize_and_create_document_staffing_without_manual_write_permission(): void
     {
         $tramite = $this->tramiteConDocumento();
         $global = User::factory()->create(['active' => true]);
-        $global->givePermissionTo(['reemplazos.formalizar', 'tramites.ver_todos']);
+        $global->assignRole('Gestión de Personas');
 
         $this->assertCount(0, $global->accesosOperativos);
+        $this->assertFalse($global->can('dotacion.gestionar'));
         $this->actingAs($global)
             ->post(route('reemplazos.formalizaciones.store', $tramite), $this->datosValidos())
             ->assertRedirect(route('gestion-personas.reemplazos.show', $tramite));
@@ -325,6 +326,11 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $this->assertDatabaseHas('reemplazo_formalizaciones', [
             'tramite_id' => $tramite->id,
             'formalizado_por' => $global->id,
+        ]);
+        $this->assertDatabaseHas('persona_unidad_vinculos', [
+            'persona_id' => $tramite->reemplazo->reemplazante_id,
+            'origen' => 'DOCUMENTO_FIRMADO',
+            'origen_tramite_id' => $tramite->id,
         ]);
     }
 

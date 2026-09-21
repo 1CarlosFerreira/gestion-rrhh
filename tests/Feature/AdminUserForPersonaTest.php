@@ -127,8 +127,8 @@ class AdminUserForPersonaTest extends TestCase
             ->assertSee('persona@example.test')
             ->assertSee('Inactivo')
             ->assertSee('Solicitante')
-            ->assertSee('Administrar roles')
-            ->assertSee('Accesos operativos');
+            ->assertSee('Administrar acceso')
+            ->assertSee('Unidades autorizadas');
     }
 
     public function test_user_list_is_paginated_and_can_be_filtered_by_search_state_and_role(): void

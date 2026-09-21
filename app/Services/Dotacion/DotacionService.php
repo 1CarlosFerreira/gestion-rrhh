@@ -60,6 +60,11 @@ class DotacionService
             if ($vinculo->esGeneradoPorTramite()) {
                 throw ValidationException::withMessages(['vinculo' => 'Los vínculos generados por una formalización no pueden modificarse desde Dotación.']);
             }
+            if ($vinculo->vigente_hasta !== null
+                && array_key_exists('vigente_hasta', $datos)
+                && empty($datos['vigente_hasta'])) {
+                throw ValidationException::withMessages(['vigente_hasta' => 'Un vínculo laboral finalizado no puede reabrirse desde la edición general.']);
+            }
             $identidad = ['persona_id', 'unidad_organizacional_id', 'calidad_contractual_id', 'cargo_funcion', 'estamento_id', 'profesion_id', 'grado_eus', 'origen', 'origen_tramite_id', 'vigente_desde'];
             if ($vinculo->vigente_desde->lte(today()) && $this->cambia($vinculo, $datos, $identidad)) {
                 throw ValidationException::withMessages(['vinculo' => 'Un vínculo iniciado conserva sus datos laborales; ciérrelo y cree uno nuevo.']);
@@ -69,6 +74,7 @@ class DotacionService
             $this->validarReferencias($combinados, $vinculo->vigente_desde->lte(today()));
             $combinados = $this->normalizar($combinados);
             $this->validarPeriodo($combinados);
+            $this->validarResponsabilidadesDentroDelPeriodo($vinculo, $combinados);
             $this->validarSolapamiento($combinados, $vinculo->id);
             $vinculo->update([...$datos, 'cargo_funcion_normalizado' => $combinados['cargo_funcion_normalizado'], 'updated_by' => $actor->id]);
 
@@ -168,6 +174,48 @@ class DotacionService
     {
         if (! empty($datos['vigente_hasta']) && CarbonImmutable::parse($datos['vigente_hasta'])->lt(CarbonImmutable::parse($datos['vigente_desde']))) {
             throw ValidationException::withMessages(['vigente_hasta' => 'La fecha final no puede ser anterior al inicio.']);
+        }
+    }
+
+    private function validarResponsabilidadesDentroDelPeriodo(PersonaUnidadVinculo $vinculo, array $datos): void
+    {
+        $nuevoInicio = CarbonImmutable::parse($datos['vigente_desde']);
+        $nuevoFin = empty($datos['vigente_hasta']) ? null : CarbonImmutable::parse($datos['vigente_hasta']);
+        $acortaInicio = $nuevoInicio->gt($vinculo->vigente_desde);
+        $acortaFin = $nuevoFin !== null
+            && ($vinculo->vigente_hasta === null || $nuevoFin->lt($vinculo->vigente_hasta));
+
+        if (! $acortaInicio && ! $acortaFin) {
+            return;
+        }
+
+        $responsabilidades = $vinculo->persona->responsabilidades()
+            ->with('unidad')
+            ->where('unidad_organizacional_id', $vinculo->unidad_organizacional_id)
+            ->whereDate('vigente_desde', '<=', $vinculo->vigente_hasta?->toDateString() ?? '9999-12-31')
+            ->where(fn (Builder $query) => $query
+                ->whereNull('vigente_hasta')
+                ->orWhereDate('vigente_hasta', '>=', $vinculo->vigente_desde->toDateString()))
+            ->get();
+
+        foreach ($responsabilidades as $responsabilidad) {
+            $fueraDelInicio = $responsabilidad->vigente_desde->lt($nuevoInicio);
+            $fueraDelFin = $nuevoFin !== null
+                && ($responsabilidad->vigente_hasta === null || $responsabilidad->vigente_hasta->gt($nuevoFin));
+
+            if ($fueraDelInicio || $fueraDelFin) {
+                $vigencia = $responsabilidad->vigente_desde->format('d/m/Y').' → '
+                    .($responsabilidad->vigente_hasta?->format('d/m/Y') ?? 'sin término');
+
+                throw ValidationException::withMessages([
+                    'responsabilidad_incompatible' => sprintf(
+                        'No es posible acortar el vínculo: la responsabilidad %s en %s (%s) quedaría fuera del período laboral. Administre primero esa responsabilidad.',
+                        $responsabilidad->tipo->etiqueta(),
+                        $responsabilidad->unidad->nombre,
+                        $vigencia,
+                    ),
+                ]);
+            }
         }
     }
 

@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
         Route::get('/personas/{persona}/usuario/crear', [UserController::class, 'createForPersona'])->name('usuarios.create-for-persona');
         Route::post('/personas/{persona}/usuario', [UserController::class, 'storeForPersona'])->name('usuarios.store-for-persona');
+        Route::get('/usuarios/{user}/perfil-acceso', [UserController::class, 'editAccessProfile'])->name('usuarios.perfil-acceso.edit');
         Route::put('/usuarios/{user}/roles', [UserController::class, 'updateRoles'])->name('usuarios.roles.update');
         Route::patch('/usuarios/{user}/activo', [UserController::class, 'toggleActive'])->name('usuarios.activo');
     });
@@ -105,6 +106,7 @@ Route::middleware('auth')->group(function (): void {
         Route::middleware('can:dotacion.gestionar')->group(function (): void {
             Route::get('/dotacion/crear', [DotacionController::class, 'create'])->name('dotacion.create');
             Route::post('/dotacion', [DotacionController::class, 'store'])->name('dotacion.store');
+            Route::get('/dotacion/{vinculo}/continuar', [DotacionController::class, 'continue'])->name('dotacion.continue');
             Route::get('/dotacion/{vinculo}/editar', [DotacionController::class, 'edit'])->name('dotacion.edit');
             Route::put('/dotacion/{vinculo}', [DotacionController::class, 'update'])->name('dotacion.update');
             Route::patch('/dotacion/{vinculo}/cerrar', [DotacionController::class, 'close'])->name('dotacion.close');
