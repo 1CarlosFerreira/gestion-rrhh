@@ -1,3 +1,9 @@
+@php
+    $permisosAdministracion = ['admin.usuarios', 'admin.roles_permisos', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'];
+    $muestraAdministracion = auth()->user()->canAny($permisosAdministracion);
+    $muestraOrganizacionConsulta = auth()->user()->can('estructura_organizacional.ver') && ! $muestraAdministracion;
+@endphp
+
 <nav x-data="{ open: false }" class="border-b border-gray-100 bg-white">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 justify-between">
@@ -53,7 +59,26 @@
                             <x-nav-link :href="route('admin.dotacion.index')" :active="request()->routeIs('admin.dotacion.*')">Dotación</x-nav-link>
                         @endcan
                     @endif
-                    @canany(['admin.usuarios', 'admin.roles_permisos', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
+                    @if ($muestraOrganizacionConsulta)
+                        <x-dropdown align="left" width="w-64">
+                            <x-slot name="trigger">
+                                <button type="button" :aria-expanded="open" @keydown.escape.stop="open = false" @class([
+                                    'inline-flex items-center gap-1 border-b-2 px-1 pt-1 text-sm font-medium leading-5 focus:outline-none transition duration-150 ease-in-out',
+                                    'border-indigo-400 text-gray-900 focus:border-indigo-700' => request()->routeIs('admin.estructura.*'),
+                                    'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:text-gray-700 focus:border-gray-300' => ! request()->routeIs('admin.estructura.*'),
+                                ])>
+                                    Organización<span aria-hidden="true">▾</span>
+                                </button>
+                            </x-slot>
+                            <x-slot name="content">
+                                <div @keydown.escape.stop="open = false">
+                                    <x-dropdown-link :href="route('admin.estructura.index')" :class="request()->routeIs('admin.estructura.index') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''">Estructura organizacional</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.estructura.organigrama')" :class="request()->routeIs('admin.estructura.organigrama') ? 'bg-indigo-50 text-indigo-700 font-medium' : ''">Organigrama</x-dropdown-link>
+                                </div>
+                            </x-slot>
+                        </x-dropdown>
+                    @endif
+                    @if ($muestraAdministracion)
                         <x-dropdown align="left" width="w-64">
                             <x-slot name="trigger">
                             <button type="button" :aria-expanded="open" @keydown.escape.stop="open = false" @class([
@@ -87,7 +112,7 @@
                                 </div>
                             </x-slot>
                         </x-dropdown>
-                    @endcanany
+                    @endif
                 </div>
             </div>
             <div class="hidden items-center sm:flex">
@@ -145,7 +170,14 @@
                 <x-responsive-nav-link :href="route('admin.dotacion.index')" :active="request()->routeIs('admin.dotacion.*')">Dotación</x-responsive-nav-link>
             @endcan
         @endif
-        @canany(['admin.usuarios', 'admin.roles_permisos', 'estructura_organizacional.ver', 'responsabilidades.ver', 'accesos_operativos.ver', 'calidades_contractuales.ver'])
+        @if ($muestraOrganizacionConsulta)
+            <section class="mt-3 border-t border-gray-100 pt-3">
+                <h2 class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Organización</h2>
+                <x-responsive-nav-link :href="route('admin.estructura.index')" :active="request()->routeIs('admin.estructura.index')">Estructura organizacional</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.estructura.organigrama')" :active="request()->routeIs('admin.estructura.organigrama')">Organigrama</x-responsive-nav-link>
+            </section>
+        @endif
+        @if ($muestraAdministracion)
             <section class="mt-3 border-t border-gray-100 pt-3">
                 <h2 class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Administración</h2>
                 @can('admin.usuarios')
@@ -167,7 +199,7 @@
                     <x-responsive-nav-link :href="route('admin.calidades.index')" :active="request()->routeIs('admin.calidades.*')">Calidades contractuales</x-responsive-nav-link>
                 @endcan
             </section>
-        @endcanany
+        @endif
         <section class="mt-3 border-t border-gray-100 pt-3">
             <h2 class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Usuario</h2>
             <div class="px-3 py-2 break-words">

@@ -73,6 +73,11 @@ class RolesPermisosSeeder extends Seeder
                 'tramites.crear',
                 'tramites.ver_propios',
             ],
+            'Jefatura' => [
+                'dotacion.ver',
+                'estructura_organizacional.ver',
+                'tramites.adjuntos.descargar',
+            ],
             'Funcionario' => [],
         ];
 

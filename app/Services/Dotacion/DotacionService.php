@@ -3,6 +3,7 @@
 namespace App\Services\Dotacion;
 
 use App\Enums\OrigenVinculoDotacion;
+use App\Enums\TipoResponsabilidad;
 use App\Models\CalidadContractual;
 use App\Models\Estamento;
 use App\Models\Persona;
@@ -192,6 +193,7 @@ class DotacionService
         $responsabilidades = $vinculo->persona->responsabilidades()
             ->with('unidad')
             ->where('unidad_organizacional_id', $vinculo->unidad_organizacional_id)
+            ->where('tipo', TipoResponsabilidad::TITULAR->value)
             ->whereDate('vigente_desde', '<=', $vinculo->vigente_hasta?->toDateString() ?? '9999-12-31')
             ->where(fn (Builder $query) => $query
                 ->whereNull('vigente_hasta')
@@ -199,11 +201,25 @@ class DotacionService
             ->get();
 
         foreach ($responsabilidades as $responsabilidad) {
-            $fueraDelInicio = $responsabilidad->vigente_desde->lt($nuevoInicio);
-            $fueraDelFin = $nuevoFin !== null
-                && ($responsabilidad->vigente_hasta === null || $responsabilidad->vigente_hasta->gt($nuevoFin));
+            $vinculoEditadoCubre = $responsabilidad->vigente_desde->gte($nuevoInicio)
+                && ($responsabilidad->vigente_hasta === null
+                    ? $nuevoFin === null
+                    : $nuevoFin === null || $responsabilidad->vigente_hasta->lte($nuevoFin));
+            $otroVinculoCubre = PersonaUnidadVinculo::query()
+                ->whereKeyNot($vinculo->id)
+                ->where('persona_id', $vinculo->persona_id)
+                ->where('unidad_organizacional_id', $vinculo->unidad_organizacional_id)
+                ->whereDate('vigente_desde', '<=', $responsabilidad->vigente_desde->toDateString())
+                ->when(
+                    $responsabilidad->vigente_hasta === null,
+                    fn (Builder $q) => $q->whereNull('vigente_hasta'),
+                    fn (Builder $q) => $q->where(fn (Builder $q) => $q
+                        ->whereNull('vigente_hasta')
+                        ->orWhereDate('vigente_hasta', '>=', $responsabilidad->vigente_hasta->toDateString())),
+                )
+                ->exists();
 
-            if ($fueraDelInicio || $fueraDelFin) {
+            if (! $vinculoEditadoCubre && ! $otroVinculoCubre) {
                 $vigencia = $responsabilidad->vigente_desde->format('d/m/Y').' → '
                     .($responsabilidad->vigente_hasta?->format('d/m/Y') ?? 'sin término');
 

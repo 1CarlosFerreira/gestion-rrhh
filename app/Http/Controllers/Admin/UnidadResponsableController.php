@@ -34,16 +34,22 @@ class UnidadResponsableController extends Controller
         return view('admin.responsabilidades.index', ['responsabilidades' => $responsabilidades, 'unidades' => UnidadOrganizacional::query()->orderBy('nombre')->get(), 'tipos' => TipoResponsabilidad::cases(), 'fecha' => $fecha, 'estructura' => $estructura]);
     }
 
-    public function create(EstructuraOrganizacionalService $estructura): View
+    public function create(Request $request, EstructuraOrganizacionalService $estructura): View
     {
         Gate::authorize('create', UnidadResponsable::class);
 
-        return $this->form(null, $estructura);
+        $personaSeleccionada = $request->integer('persona_id') ?: null;
+
+        return $this->form(null, $estructura, $personaSeleccionada);
     }
 
     public function store(SaveUnidadResponsableRequest $request, ResponsabilidadInstitucionalService $service): RedirectResponse
     {
-        $service->crear($this->data($request), $request->user());
+        $responsabilidad = $service->crear($this->data($request), $request->user());
+
+        if ($request->string('return_to')->toString() === 'persona') {
+            return redirect()->route('admin.personas.show', $responsabilidad->persona_id)->with('status', 'Responsabilidad registrada.');
+        }
 
         return redirect()->route('admin.responsabilidades.index')->with('status', 'Responsabilidad registrada.');
     }
@@ -80,9 +86,14 @@ class UnidadResponsableController extends Controller
         return back()->with('status', 'Responsabilidad cerrada.');
     }
 
-    private function form(?UnidadResponsable $responsabilidad, EstructuraOrganizacionalService $estructura): View
+    private function form(?UnidadResponsable $responsabilidad, EstructuraOrganizacionalService $estructura, ?int $personaSeleccionada = null): View
     {
-        return view('admin.responsabilidades.form', ['responsabilidad' => $responsabilidad, 'tipos' => TipoResponsabilidad::cases(), 'personas' => Persona::query()->where('active', true)->orderBy('apellido_paterno')->orderBy('nombres')->get(), 'unidades' => UnidadOrganizacional::query()->where('activo', true)->orderBy('nombre')->get()->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)])]);
+        $personas = Persona::query()->where('active', true)->orderBy('apellido_paterno')->orderBy('nombres')->get();
+        if ($personaSeleccionada !== null && ! $personas->contains('id', $personaSeleccionada)) {
+            abort(404);
+        }
+
+        return view('admin.responsabilidades.form', ['responsabilidad' => $responsabilidad, 'personaSeleccionada' => $personaSeleccionada, 'tipos' => TipoResponsabilidad::cases(), 'personas' => $personas, 'unidades' => UnidadOrganizacional::query()->where('activo', true)->orderBy('nombre')->get()->map(fn ($u) => ['id' => $u->id, 'ruta' => $estructura->ruta($u)])]);
     }
 
     private function data(SaveUnidadResponsableRequest $request): array

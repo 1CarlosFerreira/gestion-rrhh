@@ -6,6 +6,7 @@ use App\Enums\TipoResponsabilidad;
 use App\Models\CalidadContractual;
 use App\Models\Estamento;
 use App\Models\Persona;
+use App\Models\PersonaUnidadVinculo;
 use App\Models\TipoUnidadOrganizacional;
 use App\Models\UnidadOrganizacional;
 use App\Models\UnidadResponsable;
@@ -219,37 +220,52 @@ class DotacionResponsabilidadCoordinadaTest extends TestCase
         $this->assertNull($responsabilidad->vigente_hasta);
     }
 
-    public function test_responsabilidad_no_puede_comenzar_antes_del_vinculo_laboral(): void
+    public function test_subrogancia_puede_comenzar_antes_del_vinculo_laboral(): void
     {
         $this->actingAs($this->admin)
             ->post(route('admin.dotacion.store'), $this->datos([
-                'responsabilidad_tipo' => 'TITULAR',
+                'responsabilidad_tipo' => 'SUBROGANTE',
                 'responsabilidad_desde' => '2025-12-31',
             ]))
-            ->assertSessionHasErrors('responsabilidad_desde');
+            ->assertRedirect();
 
-        $this->assertDatabaseCount('persona_unidad_vinculos', 0);
-        $this->assertDatabaseCount('unidad_responsables', 0);
+        $this->assertDatabaseCount('persona_unidad_vinculos', 1);
+        $this->assertDatabaseCount('unidad_responsables', 1);
     }
 
-    public function test_responsabilidad_no_puede_terminar_despues_del_vinculo_y_hace_rollback(): void
+    public function test_subrogancia_puede_terminar_despues_del_vinculo(): void
     {
         $this->actingAs($this->admin)
             ->post(route('admin.dotacion.store'), $this->datos([
                 'vigente_hasta' => '2026-01-31',
-                'responsabilidad_tipo' => 'TITULAR',
+                'responsabilidad_tipo' => 'SUBROGANTE',
                 'responsabilidad_desde' => '2026-01-10',
                 'responsabilidad_hasta' => '2026-02-01',
             ]))
-            ->assertSessionHasErrors('responsabilidad_hasta');
+            ->assertRedirect();
 
-        $this->assertDatabaseCount('persona_unidad_vinculos', 0);
-        $this->assertDatabaseCount('unidad_responsables', 0);
+        $this->assertDatabaseCount('persona_unidad_vinculos', 1);
+        $this->assertDatabaseCount('unidad_responsables', 1);
     }
 
     public function test_solapamiento_existente_de_responsabilidad_rechaza_y_revierte_el_vinculo(): void
     {
         $otraPersona = Persona::query()->create(['rut' => '22222222-2', 'nombres' => 'Titular', 'active' => true]);
+        PersonaUnidadVinculo::query()->create([
+            'persona_id' => $otraPersona->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'estamento_id' => $this->estamento->id,
+            'profesion_id' => null,
+            'calidad_contractual_id' => $this->calidad->id,
+            'cargo_funcion' => 'Cargo base',
+            'cargo_funcion_normalizado' => 'cargo base',
+            'grado_eus' => null,
+            'vigente_desde' => '2026-01-01',
+            'vigente_hasta' => null,
+            'origen' => 'MANUAL',
+            'observacion' => null,
+            'created_by' => $this->admin->id,
+        ]);
         app(ResponsabilidadInstitucionalService::class)->crear([
             'unidad_organizacional_id' => $this->unidad->id,
             'persona_id' => $otraPersona->id,
@@ -267,7 +283,7 @@ class DotacionResponsabilidadCoordinadaTest extends TestCase
             ]))
             ->assertSessionHasErrors('vigente_desde');
 
-        $this->assertDatabaseCount('persona_unidad_vinculos', 0);
+        $this->assertDatabaseCount('persona_unidad_vinculos', 1);
         $this->assertDatabaseCount('unidad_responsables', 1);
     }
 

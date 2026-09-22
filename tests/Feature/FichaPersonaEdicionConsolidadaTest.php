@@ -107,11 +107,12 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
             ->assertSeeInOrder(['Vínculos futuros', 'Cargo futuro', 'Vínculos vigentes', 'Cargo vigente', 'Historial de vínculos', 'Cargo histórico'])
             ->assertSee('Responsabilidades institucionales')
             ->assertSee('Titular · '.$this->unidad->nombre)
-            ->assertSee('Unidades autorizadas')
+            ->assertSee('Ámbito de operación')
             ->assertSee('Solo unidad')
             ->assertSee(route('admin.usuarios.perfil-acceso.edit', $this->userPersona), false)
             ->assertSee('Administrar acceso')
-            ->assertSee('+ Agregar unidad autorizada');
+            ->assertSee('+ Agregar autorización adicional')
+            ->assertSee('+ Agregar responsabilidad');
     }
 
     public function test_ediciones_y_cierres_iniciados_desde_ficha_regresan_a_la_misma_persona(): void
@@ -119,6 +120,7 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
         $vinculo = app(DotacionService::class)->crear($this->datosVinculo(['cargo_funcion' => 'Editable']), $this->admin);
         $responsabilidad = app(ResponsabilidadInstitucionalService::class)->crear($this->datosResponsabilidad([
             'unidad_organizacional_id' => $this->otraUnidad()->id,
+            'tipo' => TipoResponsabilidad::SUBROGANTE->value,
         ]), $this->admin);
         $acceso = app(AccesoOperativoService::class)->crear($this->datosAcceso([
             'unidad_organizacional_id' => $responsabilidad->unidad_organizacional_id,
@@ -131,6 +133,7 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
         $this->actingAs($this->admin)
             ->put(route('admin.responsabilidades.update', $responsabilidad), [...$this->datosResponsabilidad([
                 'unidad_organizacional_id' => $responsabilidad->unidad_organizacional_id,
+                'tipo' => TipoResponsabilidad::SUBROGANTE->value,
                 'observacion' => 'Actualizada',
             ]), 'return_to' => 'persona'])
             ->assertRedirect(route('admin.personas.show', $this->persona));
@@ -199,7 +202,7 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
         $this->assertSame(today()->subDay()->toDateString(), $responsabilidad->fresh()->vigente_hasta->toDateString());
     }
 
-    public function test_subrogancia_sin_termino_tambien_bloquea_el_cierre_laboral(): void
+    public function test_subrogancia_sin_termino_no_bloquea_el_cierre_laboral(): void
     {
         $vinculo = app(DotacionService::class)->crear($this->datosVinculo(), $this->admin);
         $responsabilidad = app(ResponsabilidadInstitucionalService::class)->crear($this->datosResponsabilidad([
@@ -209,9 +212,10 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
 
         $this->actingAs($this->admin)
             ->patch(route('admin.dotacion.close', $vinculo), ['vigente_hasta' => today()->toDateString(), 'return_to' => 'persona'])
-            ->assertSessionHasErrors('responsabilidad_incompatible');
+            ->assertRedirect(route('admin.personas.show', $this->persona))
+            ->assertSessionDoesntHaveErrors();
 
-        $this->assertNull($vinculo->fresh()->vigente_hasta);
+        $this->assertSame(today()->toDateString(), $vinculo->fresh()->vigente_hasta->toDateString());
         $this->assertNull($responsabilidad->fresh()->vigente_hasta);
     }
 
@@ -233,6 +237,29 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
         $this->assertSame(today()->addMonth()->toDateString(), $vinculo->fresh()->vigente_hasta->toDateString());
     }
 
+    public function test_cierre_laboral_no_bloquea_si_otro_vinculo_cubre_toda_la_titularidad(): void
+    {
+        $vinculoACerrar = app(DotacionService::class)->crear($this->datosVinculo([
+            'cargo_funcion' => 'Primer cargo',
+            'vigente_desde' => today()->subMonth()->toDateString(),
+        ]), $this->admin);
+        app(DotacionService::class)->crear($this->datosVinculo([
+            'cargo_funcion' => 'Segundo cargo',
+            'vigente_desde' => today()->subMonth()->toDateString(),
+        ]), $this->admin);
+        $responsabilidad = app(ResponsabilidadInstitucionalService::class)->crear($this->datosResponsabilidad([
+            'vigente_desde' => today()->subWeek()->toDateString(),
+        ]), $this->admin);
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.dotacion.close', $vinculoACerrar), ['vigente_hasta' => today()->toDateString(), 'return_to' => 'persona'])
+            ->assertRedirect(route('admin.personas.show', $this->persona))
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(today()->toDateString(), $vinculoACerrar->fresh()->vigente_hasta->toDateString());
+        $this->assertNull($responsabilidad->fresh()->vigente_hasta);
+    }
+
     public function test_no_se_pueden_reabrir_registros_finalizados_desde_edicion_general(): void
     {
         $vinculo = app(DotacionService::class)->crear($this->datosVinculo([
@@ -241,6 +268,7 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
         ]), $this->admin);
         $responsabilidad = app(ResponsabilidadInstitucionalService::class)->crear($this->datosResponsabilidad([
             'unidad_organizacional_id' => $this->otraUnidad()->id,
+            'tipo' => TipoResponsabilidad::SUBROGANTE->value,
             'vigente_desde' => today()->subMonth()->toDateString(),
             'vigente_hasta' => today()->subDay()->toDateString(),
         ]), $this->admin);

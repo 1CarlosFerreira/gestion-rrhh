@@ -1,5 +1,7 @@
 @php
     $esEdicion = $responsabilidad !== null;
+    $personaSeleccionada ??= null;
+    $personaFijada = ! $esEdicion && $personaSeleccionada !== null ? $personas->firstWhere('id', $personaSeleccionada) : null;
     $tipoSeleccionado = old('tipo', $responsabilidad?->tipo?->value ?? $tipos[0]->value);
 @endphp
 
@@ -34,13 +36,18 @@
 
             <div>
                 <x-input-label for="persona_id" value="Persona" />
-                <p class="mt-1 text-xs text-gray-500">Selecciona por nombre y confirma su identidad mediante el RUT.</p>
-                <select id="persona_id" name="persona_id" class="mt-2 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                    <option value="">Seleccione una persona</option>
-                    @foreach ($personas as $persona)
-                        <option value="{{ $persona->id }}" @selected(old('persona_id', $responsabilidad?->persona_id) == $persona->id)>{{ $persona->nombre_completo }} · RUT {{ $persona->rut }}</option>
-                    @endforeach
-                </select>
+                @if ($personaFijada)
+                    <input type="hidden" id="persona_id" name="persona_id" value="{{ $personaFijada->id }}">
+                    <p class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900">{{ $personaFijada->nombre_completo }} · RUT {{ $personaFijada->rut }}</p>
+                @else
+                    <p class="mt-1 text-xs text-gray-500">Selecciona por nombre y confirma su identidad mediante el RUT.</p>
+                    <select id="persona_id" name="persona_id" class="mt-2 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">Seleccione una persona</option>
+                        @foreach ($personas as $persona)
+                            <option value="{{ $persona->id }}" @selected(old('persona_id', $responsabilidad?->persona_id) == $persona->id)>{{ $persona->nombre_completo }} · RUT {{ $persona->rut }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 <x-input-error :messages="$errors->get('persona_id')" class="mt-2" />
             </div>
 
@@ -90,7 +97,7 @@
             <x-input-error :messages="$errors->get('responsabilidad')" />
 
             <div class="flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
-                <a href="{{ request('return_to') === 'persona' && $responsabilidad ? route('admin.personas.show', $responsabilidad->persona_id) : route('admin.responsabilidades.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Cancelar</a>
+                <a href="{{ request('return_to') === 'persona' ? route('admin.personas.show', $responsabilidad?->persona_id ?? $personaSeleccionada) : route('admin.responsabilidades.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Cancelar</a>
                 <x-primary-button class="justify-center">{{ $esEdicion ? 'Guardar cambios' : 'Registrar responsabilidad' }}</x-primary-button>
             </div>
         </form>

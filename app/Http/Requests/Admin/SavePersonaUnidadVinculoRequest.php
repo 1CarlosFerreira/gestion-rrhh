@@ -21,7 +21,7 @@ class SavePersonaUnidadVinculoRequest extends FormRequest
         if ($this->isMethod('post')) {
             $rules += [
                 'responsabilidad_tipo' => ['required', Rule::in(['FUNCIONARIO', TipoResponsabilidad::TITULAR->value, TipoResponsabilidad::SUBROGANTE->value])],
-                'responsabilidad_desde' => ['nullable', 'required_unless:responsabilidad_tipo,FUNCIONARIO', 'date', 'after_or_equal:vigente_desde'],
+                'responsabilidad_desde' => ['nullable', 'required_unless:responsabilidad_tipo,FUNCIONARIO', 'date'],
                 'responsabilidad_hasta' => ['nullable', 'date', 'after_or_equal:responsabilidad_desde'],
             ];
         }

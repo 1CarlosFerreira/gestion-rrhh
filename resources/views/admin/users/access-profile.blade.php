@@ -3,6 +3,7 @@
         'Administrador' => 'Administración completa del sistema.',
         'Gestión de Personas' => 'Gestión institucional de RRHH y trámites.',
         'Solicitante' => 'Creación y seguimiento de trámites autorizados.',
+        'Jefatura' => 'Consulta básica dentro de su ámbito de operación.',
         'Funcionario' => 'Acceso personal según funcionalidades habilitadas.',
     ];
 @endphp
@@ -72,19 +73,19 @@
                 </section>
 
                 <section class="rounded-xl border border-gray-200 bg-gray-50/70 p-5">
-                    <h2 class="text-sm font-semibold text-gray-800">Unidades autorizadas</h2>
-                    <p class="mt-1 text-sm text-gray-500">Configuración avanzada e independiente de las responsabilidades institucionales.</p>
+                    <h2 class="text-sm font-semibold text-gray-800">Autorizaciones adicionales</h2>
+                    <p class="mt-1 text-sm text-gray-500">Unidades en las que este usuario puede operar cuando su rol lo permita, independientemente de sus responsabilidades institucionales.</p>
                     <ul class="mt-4 space-y-2 text-sm text-gray-700">
                         @forelse ($accesosOperativos as $acceso)
                             <li class="rounded-lg border border-gray-200 bg-white p-3">{{ $acceso->unidad->nombre }} · {{ $acceso->alcance->etiqueta() }} · {{ $acceso->vigente_desde->format('d/m/Y') }} → {{ $acceso->vigente_hasta?->format('d/m/Y') ?? 'Sin término' }}</li>
                         @empty
-                            <li class="text-gray-500">Sin accesos operativos vigentes.</li>
+                            <li class="text-gray-500">Sin autorizaciones adicionales vigentes.</li>
                         @endforelse
                     </ul>
 
                     @can('create', App\Models\UserUnidadAcceso::class)
                         <div class="mt-4">
-                            <a href="{{ route('admin.accesos.create', ['user_id' => $user->id]) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar unidad autorizada</a>
+                            <a href="{{ route('admin.accesos.create', ['user_id' => $user->id]) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar autorización adicional</a>
                         </div>
                     @endcan
                 </section>

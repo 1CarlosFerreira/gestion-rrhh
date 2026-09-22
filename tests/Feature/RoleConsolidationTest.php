@@ -13,16 +13,21 @@ class RoleConsolidationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_seeder_defines_the_four_base_roles_and_their_permissions(): void
+    public function test_seeder_defines_the_five_base_roles_and_their_permissions(): void
     {
         $this->seed(RolesPermisosSeeder::class);
         $this->seed(RolesPermisosSeeder::class);
 
         $this->assertSame(
-            ['Administrador', 'Funcionario', 'Gestión de Personas', 'Solicitante'],
+            ['Administrador', 'Funcionario', 'Gestión de Personas', 'Jefatura', 'Solicitante'],
             Role::query()->orderBy('name')->pluck('name')->all()
         );
         $this->assertSame([], Role::findByName('Funcionario')->permissions()->pluck('name')->all());
+        $this->assertEqualsCanonicalizing([
+            'dotacion.ver',
+            'estructura_organizacional.ver',
+            'tramites.adjuntos.descargar',
+        ], Role::findByName('Jefatura')->permissions()->pluck('name')->all());
         $this->assertEqualsCanonicalizing([
             'dotacion.ver',
             'estructura_organizacional.ver',
@@ -51,6 +56,19 @@ class RoleConsolidationTest extends TestCase
         $this->assertFalse(Role::findByName('Solicitante')->hasPermissionTo('dotacion.ver_todas'));
         $this->assertFalse(Role::findByName('Funcionario')->hasPermissionTo('dotacion.ver_todas'));
         $this->assertCount(Permission::query()->count(), Role::findByName('Administrador')->permissions);
+    }
+
+    public function test_user_can_have_jefatura_and_solicitante_without_creating_domain_records(): void
+    {
+        $this->seed(RolesPermisosSeeder::class);
+        $user = User::factory()->create();
+
+        $user->assignRole(['Jefatura', 'Solicitante']);
+
+        $this->assertEqualsCanonicalizing(['Jefatura', 'Solicitante'], $user->getRoleNames()->all());
+        $this->assertDatabaseCount('unidad_responsables', 0);
+        $this->assertDatabaseCount('user_unidad_accesos', 0);
+        $this->assertDatabaseCount('persona_unidad_vinculos', 0);
     }
 
     public function test_migration_consolidates_roles_preserving_jefatura_id_assignments_and_permissions(): void

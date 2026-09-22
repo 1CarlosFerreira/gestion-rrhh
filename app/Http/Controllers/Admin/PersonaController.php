@@ -72,6 +72,29 @@ class PersonaController extends Controller
             $persona->loadMissing('responsabilidades.unidad');
         }
 
+        $ambitoOperacion = collect();
+        if ($persona->user !== null) {
+            $responsabilidadesAmbito = $persona->relationLoaded('responsabilidades')
+                ? $persona->responsabilidades->filter(fn ($responsabilidad) => $responsabilidad->puede_aprobar
+                    && $responsabilidad->estaVigenteEn(today())
+                    && $responsabilidad->unidad->activo)
+                : collect();
+            $accesosAmbito = $persona->user->relationLoaded('accesosOperativos')
+                ? $persona->user->accesosOperativos->filter(fn ($acceso) => $acceso->estaVigenteEn(today()) && $acceso->unidad->activo)
+                : collect();
+
+            $ambitoOperacion = $responsabilidadesAmbito->pluck('unidad')
+                ->merge($accesosAmbito->pluck('unidad'))
+                ->unique('id')
+                ->sortBy('nombre')
+                ->map(fn (UnidadOrganizacional $unidad) => [
+                    'unidad' => $unidad,
+                    'responsabilidades' => $responsabilidadesAmbito->where('unidad_organizacional_id', $unidad->id),
+                    'accesos' => $accesosAmbito->where('unidad_organizacional_id', $unidad->id),
+                ])
+                ->values();
+        }
+
         $verDotacion = $request->user()->active && $request->user()->can('dotacion.ver');
         $vinculos = collect();
         $puedeAgregarVinculo = false;
@@ -93,7 +116,7 @@ class PersonaController extends Controller
                     && Gate::allows('create', [PersonaUnidadVinculo::class, $unidad]));
         }
 
-        return view('admin.personas.show', compact('persona', 'verDotacion', 'vinculos', 'puedeAgregarVinculo'));
+        return view('admin.personas.show', compact('persona', 'ambitoOperacion', 'verDotacion', 'vinculos', 'puedeAgregarVinculo'));
     }
 
     public function edit(Persona $persona): View

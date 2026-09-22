@@ -63,14 +63,23 @@ class UserPerfilAccesoContinuidadTest extends TestCase
             ->assertSee('✓ Usuario creado correctamente')
             ->assertSee($this->persona->nombre_completo)
             ->assertSee('Administración completa del sistema.')
+            ->assertSee('Consulta básica dentro de su ámbito de operación.')
             ->assertSee('El rol define las acciones disponibles; el alcance determina las unidades sobre las que puede operar.')
-            ->assertSeeInOrder(['Rol del sistema', 'Alcance actual', 'Unidades autorizadas', 'Guardar roles y finalizar'])
+            ->assertSeeInOrder(['Rol del sistema', 'Alcance actual', 'Autorizaciones adicionales', 'Guardar roles y finalizar'])
             ->assertSee('Guardar roles y finalizar')
-            ->assertSee('Agregar unidad autorizada')
+            ->assertSee('Agregar autorización adicional')
             ->assertDontSee('value="Administrador" checked', false)
             ->assertDontSee('value="Gestión de Personas" checked', false)
+            ->assertDontSee('value="Jefatura" checked', false)
             ->assertDontSee('value="Solicitante" checked', false)
-            ->assertDontSee('value="Funcionario" checked', false);
+            ->assertDontSee('value="Funcionario" checked', false)
+            ->assertSeeInOrder([
+                'value="Administrador"',
+                'value="Funcionario"',
+                'value="Gestión de Personas"',
+                'value="Jefatura"',
+                'value="Solicitante"',
+            ], false);
     }
 
     public function test_perfil_muestra_alcance_aportado_por_responsabilidad_y_no_crea_acceso(): void
@@ -92,24 +101,31 @@ class UserPerfilAccesoContinuidadTest extends TestCase
             ->assertSee('Titular')
             ->assertSee($this->unidad->nombre)
             ->assertSee('Aportado por responsabilidad institucional.')
-            ->assertSee('Sin accesos operativos vigentes.');
+            ->assertSee('Sin autorizaciones adicionales vigentes.');
 
         $this->assertDatabaseCount('user_unidad_accesos', 0);
     }
 
-    public function test_puede_guardar_roles_y_finalizar_en_la_ficha_de_la_persona(): void
+    public function test_puede_guardar_jefatura_y_solicitante_sin_modificar_otras_dimensiones(): void
     {
         $user = $this->usuarioPersona();
 
+        $this->actingAs($this->admin)->put(route('admin.usuarios.roles.update', $user), [
+            'roles' => ['Jefatura'],
+        ])->assertRedirect();
+        $this->assertSame(['Jefatura'], $user->fresh()->getRoleNames()->all());
+
         $response = $this->actingAs($this->admin)->put(route('admin.usuarios.roles.update', $user), [
-            'roles' => ['Solicitante', 'Funcionario'],
+            'roles' => ['Jefatura', 'Solicitante'],
             'finalizar_perfil' => 1,
         ]);
 
         $response->assertRedirect(route('admin.personas.show', $this->persona));
-        $this->assertEqualsCanonicalizing(['Solicitante', 'Funcionario'], $user->fresh()->getRoleNames()->all());
+        $this->assertEqualsCanonicalizing(['Jefatura', 'Solicitante'], $user->fresh()->getRoleNames()->all());
         $this->assertDatabaseCount('users', 2);
+        $this->assertDatabaseCount('unidad_responsables', 0);
         $this->assertDatabaseCount('user_unidad_accesos', 0);
+        $this->assertDatabaseCount('persona_unidad_vinculos', 0);
     }
 
     public function test_user_existente_puede_revisar_el_mismo_perfil_y_acceso_operativo_llega_preseleccionado(): void
@@ -121,6 +137,7 @@ class UserPerfilAccesoContinuidadTest extends TestCase
             ->get(route('admin.usuarios.perfil-acceso.edit', $user))
             ->assertOk()
             ->assertSee('Configurar perfil de acceso')
+            ->assertSee('value="Jefatura"', false)
             ->assertSee('value="Funcionario" checked', false);
 
         $this->actingAs($this->admin)

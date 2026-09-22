@@ -83,53 +83,67 @@
                         @endif
                     @endcan
 
-                    @can('accesos_operativos.ver')
-                        <div class="mt-6 border-t border-gray-100 pt-5">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                    <h3 class="text-sm font-semibold text-gray-900">Unidades autorizadas</h3>
-                                    <p class="mt-1 text-xs text-gray-500">Unidades en las que este usuario puede operar cuando su rol lo permita.</p>
-                                </div>
-                                @can('create', App\Models\UserUnidadAcceso::class)
-                                    <a href="{{ route('admin.accesos.create', ['user_id' => $persona->user->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar unidad autorizada</a>
-                                @endcan
+                    <div class="mt-6 border-t border-gray-100 pt-5">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900">Ámbito de operación</h3>
+                                <p class="mt-1 text-xs text-gray-500">Estas unidades determinan dónde puede operar este usuario cuando sus roles y permisos lo permitan.</p>
                             </div>
+                            @can('create', App\Models\UserUnidadAcceso::class)
+                                <a href="{{ route('admin.accesos.create', ['user_id' => $persona->user->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar autorización adicional</a>
+                            @endcan
+                        </div>
 
-                            @foreach (['Vigentes' => $accesosVigentes, 'Futuros' => $accesosFuturos, 'Históricos' => $accesosHistoricos] as $titulo => $grupo)
+                        @if ($ambitoOperacion->isEmpty())
+                            <p class="mt-4 text-sm text-gray-500">Sin unidades vigentes en el ámbito de operación.</p>
+                        @else
+                            <div class="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                @foreach ($ambitoOperacion as $origenes)
+                                    <article class="p-3">
+                                        <p class="text-sm font-medium text-gray-900">{{ $origenes['unidad']->nombre }}</p>
+                                        <ul class="mt-1 space-y-1 text-xs text-gray-500">
+                                            @foreach ($origenes['responsabilidades'] as $responsabilidad)
+                                                <li>{{ $responsabilidad->tipo->etiqueta() }}</li>
+                                            @endforeach
+                                            @foreach ($origenes['accesos'] as $acceso)
+                                                <li class="flex flex-wrap items-center justify-between gap-2">
+                                                    <span>Autorización adicional · {{ $acceso->alcance->etiqueta() }}</span>
+                                                    @can('update', $acceso)
+                                                        <span class="flex items-center gap-3">
+                                                            <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="font-medium text-indigo-700 hover:underline">Editar</a>
+                                                            @if ($acceso->vigente_hasta === null)
+                                                                <form method="POST" action="{{ route('admin.accesos.close', $acceso) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta autorización adicional?')">
+                                                                    @csrf @method('PATCH')
+                                                                    <input type="hidden" name="return_to" value="persona">
+                                                                    <label>Término<input type="date" name="vigente_hasta" min="{{ $acceso->vigente_desde->toDateString() }}" required class="ml-1 w-32 rounded-md border-gray-300 py-1 text-xs"></label>
+                                                                    <button type="submit" class="font-medium text-red-700 hover:underline">Cerrar</button>
+                                                                </form>
+                                                            @endif
+                                                        </span>
+                                                    @endcan
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </article>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @can('accesos_operativos.ver')
+                            @foreach (['Autorizaciones futuras' => $accesosFuturos, 'Historial de autorizaciones' => $accesosHistoricos] as $titulo => $grupo)
                                 @if ($grupo->isNotEmpty())
                                     <div class="mt-4">
                                         <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $titulo }}</h4>
-                                        <div class="mt-2 divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                        <ul class="mt-2 space-y-1 text-sm text-gray-700">
                                             @foreach ($grupo as $acceso)
-                                                <article class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
-                                                    <div>
-                                                        <p class="text-sm font-medium text-gray-900">{{ $acceso->unidad->nombre }}</p>
-                                                        <p class="mt-1 text-xs text-gray-500">{{ $acceso->alcance->etiqueta() }} · {{ $acceso->vigente_desde->format('d/m/Y') }} → {{ $acceso->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }}</p>
-                                                    </div>
-                                                    @can('update', $acceso)
-                                                        <div class="flex flex-wrap items-end gap-3">
-                                                            <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar</a>
-                                                            @if ($acceso->vigente_hasta === null)
-                                                                <form method="POST" action="{{ route('admin.accesos.close', $acceso) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta unidad autorizada?')">
-                                                                    @csrf @method('PATCH')
-                                                                    <input type="hidden" name="return_to" value="persona">
-                                                                    <label class="text-xs text-gray-500">Término<input type="date" name="vigente_hasta" min="{{ $acceso->vigente_desde->toDateString() }}" required class="mt-1 block w-32 rounded-md border-gray-300 py-1.5 text-xs"></label>
-                                                                    <button type="submit" class="pb-1 text-sm font-medium text-red-700 hover:underline">Cerrar</button>
-                                                                </form>
-                                                            @endif
-                                                        </div>
-                                                    @endcan
-                                                </article>
+                                                <li>{{ $acceso->unidad->nombre }} · Autorización adicional · {{ $acceso->alcance->etiqueta() }} · {{ $acceso->vigente_desde->format('d/m/Y') }} → {{ $acceso->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }}</li>
                                             @endforeach
-                                        </div>
+                                        </ul>
                                     </div>
                                 @endif
                             @endforeach
-                            @if ($accesos->isEmpty())
-                                <p class="mt-4 text-sm text-gray-500">Sin unidades autorizadas registradas.</p>
-                            @endif
-                        </div>
-                    @endcan
+                        @endcan
+                    </div>
                 @else
                     <p class="mt-4 text-sm text-gray-600">Sin cuenta de usuario.</p>
                     @can('admin.usuarios')
@@ -192,7 +206,12 @@
 
             @can('responsabilidades.ver')
                 <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                    <div><h2 class="text-base font-semibold text-gray-900">Responsabilidades institucionales</h2><p class="mt-1 text-sm text-gray-500">Titularidades y subrogancias, independientes de los vínculos laborales.</p></div>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div><h2 class="text-base font-semibold text-gray-900">Responsabilidades institucionales</h2><p class="mt-1 text-sm text-gray-500">Titularidades y subrogancias, independientes de los vínculos laborales.</p></div>
+                        @can('create', App\Models\UnidadResponsable::class)
+                            <a href="{{ route('admin.responsabilidades.create', ['persona_id' => $persona->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar responsabilidad</a>
+                        @endcan
+                    </div>
 
                     @foreach (['Vigentes' => $responsabilidadesVigentes, 'Futuras' => $responsabilidadesFuturas, 'Históricas' => $responsabilidadesHistoricas] as $titulo => $grupo)
                         <div class="mt-5">

@@ -84,7 +84,13 @@
                 <section class="rounded-xl border border-indigo-100 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6">
                     <div>
                         <h1 class="text-xl font-semibold text-slate-900">Hola, {{ auth()->user()->name }}</h1>
-                        <p class="mt-1 text-sm text-slate-600">Gestiona y realiza seguimiento a tus solicitudes.</p>
+                        @if (auth()->user()->can('tramites.ver_propios'))
+                            <p class="mt-1 text-sm text-slate-600">Gestiona y realiza seguimiento a tus solicitudes.</p>
+                        @elseif (auth()->user()->canAny(['dotacion.ver', 'estructura_organizacional.ver']))
+                            <p class="mt-1 text-sm text-slate-600">Consulta la dotación y estructura organizacional de las unidades dentro de tu ámbito de operación.</p>
+                        @else
+                            <p class="mt-1 text-sm text-slate-600">Gestiona y realiza seguimiento a tus solicitudes.</p>
+                        @endif
                     </div>
                     @can('reemplazos.crear')
                         <a href="{{ route('reemplazos.create') }}" class="mt-4 inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0">+ Nueva solicitud</a>

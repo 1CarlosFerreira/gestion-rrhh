@@ -4,6 +4,7 @@ namespace App\Services\Responsabilidades;
 
 use App\Enums\TipoResponsabilidad;
 use App\Models\Persona;
+use App\Models\PersonaUnidadVinculo;
 use App\Models\UnidadOrganizacional;
 use App\Models\UnidadResponsable;
 use App\Models\User;
@@ -20,11 +21,13 @@ class ResponsabilidadInstitucionalService
     public function crear(array $datos, User $actor): UnidadResponsable
     {
         return DB::transaction(function () use ($datos, $actor): UnidadResponsable {
+            Persona::query()->lockForUpdate()->findOrFail($datos['persona_id']);
             $unidad = UnidadOrganizacional::query()->lockForUpdate()->findOrFail($datos['unidad_organizacional_id']);
             if (! $unidad->activo) {
                 throw ValidationException::withMessages(['unidad_organizacional_id' => 'La unidad debe estar activa.']);
             }
             $this->validarPeriodo($datos);
+            $this->validarCoberturaTitular($datos);
             $this->validarSolapamiento($datos);
 
             return UnidadResponsable::query()->create([...$datos, 'created_by' => $actor->id]);
@@ -53,7 +56,10 @@ class ResponsabilidadInstitucionalService
                 throw ValidationException::withMessages(['responsabilidad' => 'Una responsabilidad ya iniciada conserva persona, unidad, tipo y fecha inicial.']);
             }
             $combinados = [...$responsabilidad->getAttributes(), ...$datos];
+            Persona::query()->lockForUpdate()->findOrFail($combinados['persona_id']);
+            UnidadOrganizacional::query()->lockForUpdate()->findOrFail($combinados['unidad_organizacional_id']);
             $this->validarPeriodo($combinados);
+            $this->validarCoberturaTitular($combinados);
             $this->validarSolapamiento($combinados, $responsabilidad->id);
             $responsabilidad->update([...$datos, 'updated_by' => $actor->id]);
 
@@ -121,9 +127,54 @@ class ResponsabilidadInstitucionalService
     {
         $inicio = CarbonImmutable::parse($datos['vigente_desde'])->toDateString();
         $fin = empty($datos['vigente_hasta']) ? '9999-12-31' : CarbonImmutable::parse($datos['vigente_hasta'])->toDateString();
-        $existe = UnidadResponsable::query()->where('unidad_organizacional_id', $datos['unidad_organizacional_id'])->where('tipo', $datos['tipo'] instanceof TipoResponsabilidad ? $datos['tipo']->value : $datos['tipo'])->when($ignorarId, fn (Builder $q) => $q->whereKeyNot($ignorarId))->whereDate('vigente_desde', '<=', $fin)->where(fn (Builder $q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $inicio))->exists();
+        $tipo = $datos['tipo'] instanceof TipoResponsabilidad ? $datos['tipo']->value : $datos['tipo'];
+        $seSuperpone = fn (Builder $query): Builder => $query
+            ->when($ignorarId, fn (Builder $q) => $q->whereKeyNot($ignorarId))
+            ->whereDate('vigente_desde', '<=', $fin)
+            ->where(fn (Builder $q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $inicio));
+        $existe = $seSuperpone(UnidadResponsable::query()
+            ->where('unidad_organizacional_id', $datos['unidad_organizacional_id'])
+            ->where('tipo', $tipo))
+            ->exists();
         if ($existe) {
             throw ValidationException::withMessages(['vigente_desde' => 'El periodo se superpone con otra responsabilidad del mismo tipo.']);
+        }
+
+        if ($tipo === TipoResponsabilidad::TITULAR->value
+            && $seSuperpone(UnidadResponsable::query()
+                ->where('persona_id', $datos['persona_id'])
+                ->where('tipo', TipoResponsabilidad::TITULAR->value))
+                ->exists()) {
+            throw ValidationException::withMessages([
+                'vigente_desde' => 'La persona ya tiene una titularidad institucional durante parte de este período.',
+            ]);
+        }
+    }
+
+    private function validarCoberturaTitular(array $datos): void
+    {
+        $tipo = $datos['tipo'] instanceof TipoResponsabilidad ? $datos['tipo']->value : $datos['tipo'];
+        if ($tipo !== TipoResponsabilidad::TITULAR->value) {
+            return;
+        }
+
+        $inicio = CarbonImmutable::parse($datos['vigente_desde'])->toDateString();
+        $fin = empty($datos['vigente_hasta']) ? null : CarbonImmutable::parse($datos['vigente_hasta'])->toDateString();
+        $cubierta = PersonaUnidadVinculo::query()
+            ->where('persona_id', $datos['persona_id'])
+            ->where('unidad_organizacional_id', $datos['unidad_organizacional_id'])
+            ->whereDate('vigente_desde', '<=', $inicio)
+            ->when(
+                $fin === null,
+                fn (Builder $q) => $q->whereNull('vigente_hasta'),
+                fn (Builder $q) => $q->where(fn (Builder $q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $fin)),
+            )
+            ->exists();
+
+        if (! $cubierta) {
+            throw ValidationException::withMessages([
+                'persona_id' => 'La titularidad requiere una dotación de la persona en la misma unidad que cubra todo el período.',
+            ]);
         }
     }
 }

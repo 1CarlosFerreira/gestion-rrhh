@@ -6,10 +6,8 @@ use App\Enums\TipoResponsabilidad;
 use App\Models\User;
 use App\Services\Dotacion\DotacionService;
 use App\Services\Responsabilidades\ResponsabilidadInstitucionalService;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class CrearVinculoManualDotacion
 {
@@ -32,7 +30,6 @@ class CrearVinculoManualDotacion
                 return new ResultadoAltaDotacionManual($vinculo, null);
             }
 
-            $this->validarVigenciaResponsabilidad($datos);
             $responsabilidad = $this->responsabilidades->crear([
                 'unidad_organizacional_id' => $vinculo->unidad_organizacional_id,
                 'persona_id' => $vinculo->persona_id,
@@ -45,25 +42,5 @@ class CrearVinculoManualDotacion
 
             return new ResultadoAltaDotacionManual($vinculo, $responsabilidad);
         });
-    }
-
-    private function validarVigenciaResponsabilidad(array $datos): void
-    {
-        $vinculoDesde = CarbonImmutable::parse($datos['vigente_desde']);
-        $responsabilidadDesde = CarbonImmutable::parse($datos['responsabilidad_desde']);
-
-        if ($responsabilidadDesde->lt($vinculoDesde)) {
-            throw ValidationException::withMessages([
-                'responsabilidad_desde' => 'La responsabilidad no puede comenzar antes que el vínculo laboral.',
-            ]);
-        }
-
-        if (! empty($datos['vigente_hasta'])
-            && ! empty($datos['responsabilidad_hasta'])
-            && CarbonImmutable::parse($datos['responsabilidad_hasta'])->gt(CarbonImmutable::parse($datos['vigente_hasta']))) {
-            throw ValidationException::withMessages([
-                'responsabilidad_hasta' => 'La responsabilidad no puede terminar después que el vínculo laboral.',
-            ]);
-        }
     }
 }

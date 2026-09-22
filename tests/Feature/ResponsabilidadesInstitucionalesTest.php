@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\TipoResponsabilidad;
+use App\Models\CalidadContractual;
+use App\Models\Estamento;
 use App\Models\Persona;
+use App\Models\PersonaUnidadVinculo;
 use App\Models\TipoUnidadOrganizacional;
 use App\Models\UnidadOrganizacional;
 use App\Models\UnidadResponsable;
@@ -24,6 +27,10 @@ class ResponsabilidadesInstitucionalesTest extends TestCase
 
     private ResponsabilidadInstitucionalService $service;
 
+    private CalidadContractual $calidad;
+
+    private Estamento $estamento;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -32,6 +39,8 @@ class ResponsabilidadesInstitucionalesTest extends TestCase
         $this->actor->assignRole('Administrador');
         $tipo = TipoUnidadOrganizacional::where('codigo', 'UNIDAD')->firstOrFail();
         $this->unidad = UnidadOrganizacional::create(['tipo_unidad_organizacional_id' => $tipo->id, 'codigo' => 'U-1', 'nombre' => 'Unidad Uno', 'activo' => true, 'participa_en_aprobacion' => true, 'orden' => 1]);
+        $this->calidad = CalidadContractual::query()->firstOrCreate(['codigo' => 'TEST'], ['nombre' => 'Calidad test', 'activo' => true, 'orden' => 1]);
+        $this->estamento = Estamento::query()->firstOrCreate(['codigo' => 'TEST'], ['nombre' => 'Estamento test', 'activo' => true]);
         $this->service = app(ResponsabilidadInstitucionalService::class);
     }
 
@@ -69,6 +78,99 @@ class ResponsabilidadesInstitucionalesTest extends TestCase
         $this->crear(TipoResponsabilidad::SUBROGANTE, '2026-02-01', '2026-02-10');
         $this->expectException(ValidationException::class);
         $this->crear(TipoResponsabilidad::SUBROGANTE, '2026-02-05', '2026-02-12');
+    }
+
+    public function test_persona_can_hold_one_title_and_multiple_subrogations_in_other_units(): void
+    {
+        $persona = $this->persona();
+        $segunda = $this->unidad('U-2');
+        $tercera = $this->unidad('U-3');
+
+        $this->crear(TipoResponsabilidad::TITULAR, '2026-01-01', null, true, $this->unidad, $persona);
+        $this->crear(TipoResponsabilidad::SUBROGANTE, '2026-01-01', null, true, $segunda, $persona);
+        $this->crear(TipoResponsabilidad::SUBROGANTE, '2026-01-01', null, true, $tercera, $persona);
+
+        $this->assertCount(3, $persona->responsabilidades);
+        $this->assertSame(1, $persona->responsabilidades->where('tipo', TipoResponsabilidad::TITULAR)->count());
+    }
+
+    public function test_persona_cannot_hold_overlapping_titles_in_different_units_but_can_hold_consecutive_titles(): void
+    {
+        $persona = $this->persona();
+        $segunda = $this->unidad('U-2');
+        $this->crear(TipoResponsabilidad::TITULAR, '2026-01-01', '2026-01-31', true, $this->unidad, $persona);
+
+        try {
+            $this->crear(TipoResponsabilidad::TITULAR, '2026-01-31', '2026-02-15', true, $segunda, $persona);
+            $this->fail('Debió rechazar titularidades globales superpuestas.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('vigente_desde', $exception->errors());
+        }
+
+        $this->crear(TipoResponsabilidad::TITULAR, '2026-02-01', null, true, $segunda, $persona);
+        $this->assertCount(2, $persona->responsabilidades()->where('tipo', TipoResponsabilidad::TITULAR->value)->get());
+    }
+
+    public function test_title_requires_full_staffing_coverage_but_subrogation_does_not(): void
+    {
+        $persona = $this->persona();
+        $sinDotacion = $this->unidad('U-2');
+        $this->crear(TipoResponsabilidad::SUBROGANTE, '2026-01-01', null, true, $sinDotacion, $persona);
+
+        try {
+            $this->service->crear(['unidad_organizacional_id' => $sinDotacion->id, 'persona_id' => $persona->id, 'tipo' => TipoResponsabilidad::TITULAR->value, 'vigente_desde' => '2026-01-01', 'vigente_hasta' => null, 'puede_aprobar' => true, 'observacion' => null], $this->actor);
+            $this->fail('Debió exigir cobertura laboral completa.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('persona_id', $exception->errors());
+        }
+    }
+
+    public function test_updating_title_dates_requires_full_staffing_coverage(): void
+    {
+        $persona = $this->persona();
+        PersonaUnidadVinculo::query()->create([
+            'persona_id' => $persona->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'calidad_contractual_id' => $this->calidad->id,
+            'estamento_id' => $this->estamento->id,
+            'cargo_funcion' => 'Cobertura finita',
+            'cargo_funcion_normalizado' => 'cobertura finita',
+            'vigente_desde' => '2027-01-01',
+            'vigente_hasta' => '2027-01-31',
+            'origen' => 'MANUAL',
+            'created_by' => $this->actor->id,
+        ]);
+        $responsabilidad = $this->service->crear([
+            'unidad_organizacional_id' => $this->unidad->id,
+            'persona_id' => $persona->id,
+            'tipo' => TipoResponsabilidad::TITULAR->value,
+            'vigente_desde' => '2027-01-01',
+            'vigente_hasta' => '2027-01-15',
+            'puede_aprobar' => true,
+            'observacion' => null,
+        ], $this->actor);
+
+        try {
+            $this->service->actualizar($responsabilidad, ['vigente_hasta' => '2027-02-01'], $this->actor);
+            $this->fail('Debió rechazar una extensión sin cobertura laboral.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('persona_id', $exception->errors());
+        }
+
+        $this->assertSame('2027-01-15', $responsabilidad->fresh()->vigente_hasta->toDateString());
+    }
+
+    public function test_creating_responsibility_does_not_assign_roles_access_or_staffing(): void
+    {
+        $persona = $this->persona();
+        $user = User::factory()->create(['persona_id' => $persona->id]);
+        $unidad = $this->unidad('U-4');
+
+        $this->crear(TipoResponsabilidad::SUBROGANTE, '2026-01-01', null, true, $unidad, $persona);
+
+        $this->assertCount(0, $user->fresh()->roles);
+        $this->assertDatabaseCount('user_unidad_accesos', 0);
+        $this->assertFalse($persona->vinculosDotacion()->where('unidad_organizacional_id', $unidad->id)->exists());
     }
 
     public function test_rejects_invalid_dates_and_inactive_unit(): void
@@ -144,7 +246,35 @@ class ResponsabilidadesInstitucionalesTest extends TestCase
 
     private function crear(TipoResponsabilidad $tipo, string $desde, ?string $hasta = null, bool $aprobar = true, ?UnidadOrganizacional $unidad = null, ?Persona $persona = null): UnidadResponsable
     {
-        return $this->service->crear(['unidad_organizacional_id' => ($unidad ?? $this->unidad)->id, 'persona_id' => ($persona ?? $this->persona())->id, 'tipo' => $tipo->value, 'vigente_desde' => $desde, 'vigente_hasta' => $hasta, 'puede_aprobar' => $aprobar, 'observacion' => null], $this->actor);
+        $unidad ??= $this->unidad;
+        $persona ??= $this->persona();
+        if ($tipo === TipoResponsabilidad::TITULAR) {
+            $this->crearCobertura($persona, $unidad);
+        }
+
+        return $this->service->crear(['unidad_organizacional_id' => $unidad->id, 'persona_id' => $persona->id, 'tipo' => $tipo->value, 'vigente_desde' => $desde, 'vigente_hasta' => $hasta, 'puede_aprobar' => $aprobar, 'observacion' => null], $this->actor);
+    }
+
+    private function crearCobertura(Persona $persona, UnidadOrganizacional $unidad): void
+    {
+        PersonaUnidadVinculo::query()->firstOrCreate([
+            'persona_id' => $persona->id,
+            'unidad_organizacional_id' => $unidad->id,
+        ], [
+            'calidad_contractual_id' => $this->calidad->id,
+            'estamento_id' => $this->estamento->id,
+            'cargo_funcion' => 'Cargo test',
+            'cargo_funcion_normalizado' => 'cargo test',
+            'vigente_desde' => '1900-01-01',
+            'vigente_hasta' => null,
+            'origen' => 'MANUAL',
+            'created_by' => $this->actor->id,
+        ]);
+    }
+
+    private function unidad(string $codigo): UnidadOrganizacional
+    {
+        return UnidadOrganizacional::query()->create(['tipo_unidad_organizacional_id' => $this->unidad->tipo_unidad_organizacional_id, 'codigo' => $codigo, 'nombre' => "Unidad {$codigo}", 'activo' => true, 'participa_en_aprobacion' => true]);
     }
 
     private function persona(?string $rut = null): Persona
