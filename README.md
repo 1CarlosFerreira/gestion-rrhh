@@ -87,7 +87,7 @@ Contraseña: password
 
 Estas credenciales son ficticias y deben reemplazarse en cualquier entorno distinto de desarrollo.
 
-El usuario de jefatura es ficticio y tiene acceso limitado a las unidades asignadas en `user_unidades`.
+El usuario de jefatura es ficticio y tiene acceso limitado a las unidades asignadas en `user_unidad_accesos`.
 
 ## Alcance actual
 

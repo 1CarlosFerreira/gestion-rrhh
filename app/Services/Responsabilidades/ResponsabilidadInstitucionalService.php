@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\EstructuraOrganizacionalService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -104,21 +103,6 @@ class ResponsabilidadInstitucionalService
         }
 
         return null;
-    }
-
-    public function historicas(UnidadOrganizacional $unidad): Collection
-    {
-        return $unidad->responsables()->with(['persona.user', 'creadoPor', 'actualizadoPor'])->orderByDesc('vigente_desde')->get();
-    }
-
-    public function vigentesDePersona(Persona $persona, string|\DateTimeInterface $fecha): Collection
-    {
-        return $persona->responsabilidades()->vigentesEn($fecha)->with('unidad')->get();
-    }
-
-    public function esResponsable(Persona $persona, UnidadOrganizacional $unidad, string|\DateTimeInterface $fecha, bool $requiereAprobacion = false): bool
-    {
-        return $unidad->responsables()->whereBelongsTo($persona)->vigentesEn($fecha)->when($requiereAprobacion, fn (Builder $q) => $q->where('puede_aprobar', true))->exists();
     }
 
     private function vigente(UnidadOrganizacional $unidad, TipoResponsabilidad $tipo, string|\DateTimeInterface $fecha, ?Persona $excluir = null): ?UnidadResponsable

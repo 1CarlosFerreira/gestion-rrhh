@@ -88,7 +88,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <h3 class="text-sm font-semibold text-gray-900">Unidades autorizadas</h3>
-                                    <p class="mt-1 text-xs text-gray-500">Accesos adicionales registrados para este User.</p>
+                                    <p class="mt-1 text-xs text-gray-500">Unidades en las que este usuario puede operar cuando su rol lo permita.</p>
                                 </div>
                                 @can('create', App\Models\UserUnidadAcceso::class)
                                     <a href="{{ route('admin.accesos.create', ['user_id' => $persona->user->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar unidad autorizada</a>

@@ -115,7 +115,7 @@ class EstructuraOrganizacionalTest extends TestCase
     {
         $raiz = $this->unidad('COD-RAIZ', 'Dirección visual');
         $hijo = $this->unidad('COD-HIJO', 'Departamento visual', $raiz);
-        $this->unidad('COD-NIETO', 'Unidad visual', $hijo);
+        $nieto = $this->unidad('COD-NIETO', 'Unidad visual', $hijo);
         $this->unidad('COD-INACTIVO', 'Nodo inactivo visual', $raiz, 0, false);
         $reader = User::factory()->create();
         $reader->givePermissionTo(Permission::findByName('estructura_organizacional.ver'));
@@ -125,17 +125,30 @@ class EstructuraOrganizacionalTest extends TestCase
             ->assertOk()
             ->assertSee('Ver organigrama');
 
-        $this->actingAs($reader)
+        $response = $this->actingAs($reader)
             ->get(route('admin.estructura.organigrama'))
             ->assertOk()
-            ->assertSeeInOrder(['Dirección visual', 'Departamento visual', 'Unidad visual'])
-            ->assertSee('Volver a administración')
+            ->assertSee(route('admin.estructura.index'), false)
+            ->assertSee('Cerrar')
             ->assertDontSee('COD-RAIZ')
             ->assertDontSee('COD-HIJO')
             ->assertDontSee('COD-NIETO')
             ->assertDontSee('Nodo inactivo visual')
             ->assertDontSee('Crear nodo raíz')
             ->assertDontSee('Editar');
+
+        $raizRenderizada = $response->viewData('raices')->firstWhere('id', $raiz->id);
+        $hijoRenderizado = $raizRenderizada->activeChildren->firstWhere('id', $hijo->id);
+
+        $this->assertSame('Dirección visual', $raizRenderizada->nombre);
+        $this->assertSame([$hijo->id], $raizRenderizada->activeChildren->pluck('id')->all());
+        $this->assertSame('Departamento visual', $hijoRenderizado->nombre);
+        $this->assertSame([$nieto->id], $hijoRenderizado->activeChildren->pluck('id')->all());
+        $this->assertSame('Unidad visual', $hijoRenderizado->activeChildren->first()->nombre);
+
+        $response
+            ->assertSee('x-for="hijoId in actual.hijos"', false)
+            ->assertSee('x-text="nodos[hijoId].nombre"', false);
 
         $this->actingAs(User::factory()->create())
             ->get(route('admin.estructura.organigrama'))

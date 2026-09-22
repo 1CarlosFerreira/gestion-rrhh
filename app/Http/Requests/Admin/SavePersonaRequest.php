@@ -18,7 +18,7 @@ class SavePersonaRequest extends FormRequest
     {
         $personaId = $this->route('persona')?->id;
 
-        return [
+        $rules = [
             'rut' => [
                 'required',
                 'string',
@@ -29,8 +29,13 @@ class SavePersonaRequest extends FormRequest
             'nombres' => ['required', 'string', 'max:120'],
             'apellido_paterno' => ['nullable', 'string', 'max:100'],
             'apellido_materno' => ['nullable', 'string', 'max:100'],
-            'active' => $this->isMethod('post') ? ['required', 'boolean'] : ['sometimes', 'boolean'],
         ];
+
+        if ($this->isMethod('post')) {
+            $rules['active'] = ['required', 'boolean'];
+        }
+
+        return $rules;
     }
 
     protected function prepareForValidation(): void
