@@ -104,6 +104,10 @@
                         <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Unidad</dt>
                         <dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->unidadOrganizacional->nombre }}</dd>
                     </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Creado por</dt>
+                        <dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->creador?->name ?? 'No informado' }}</dd>
+                    </div>
                 </dl>
                 <div class="mt-5 border-t border-gray-200 pt-5">
                     <h3 id="justificacion-title" class="text-base font-semibold text-gray-950">Justificación</h3>

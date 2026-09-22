@@ -26,7 +26,10 @@ class RoleConsolidationTest extends TestCase
         $this->assertEqualsCanonicalizing([
             'dotacion.ver',
             'estructura_organizacional.ver',
+            'reemplazos.crear',
+            'tramites.adjuntos.cargar',
             'tramites.adjuntos.descargar',
+            'tramites.ver_unidades',
         ], Role::findByName('Jefatura')->permissions()->pluck('name')->all());
         $this->assertEqualsCanonicalizing([
             'dotacion.ver',
@@ -37,7 +40,7 @@ class RoleConsolidationTest extends TestCase
             'tramites.adjuntos.cargar',
             'tramites.adjuntos.descargar',
             'tramites.crear',
-            'tramites.ver_propios',
+            'tramites.ver_unidades',
         ], Role::findByName('Solicitante')->permissions()->pluck('name')->all());
         $this->assertEqualsCanonicalizing([
             'dotacion.ver',
@@ -55,6 +58,8 @@ class RoleConsolidationTest extends TestCase
         ], Role::findByName('Gestión de Personas')->permissions()->pluck('name')->all());
         $this->assertFalse(Role::findByName('Solicitante')->hasPermissionTo('dotacion.ver_todas'));
         $this->assertFalse(Role::findByName('Funcionario')->hasPermissionTo('dotacion.ver_todas'));
+        $this->assertFalse(Role::findByName('Jefatura')->hasAnyPermission(['reemplazos.revisar', 'reemplazos.generar_documento', 'reemplazos.formalizar', 'tramites.ver_todos']));
+        $this->assertFalse(Permission::query()->whereIn('name', ['tramites.ver_propios', 'tramites.ver_unidad'])->exists());
         $this->assertCount(Permission::query()->count(), Role::findByName('Administrador')->permissions);
     }
 

@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -210,6 +211,42 @@ class ReemplazosV2BBorradorTest extends TestCase
             ->assertOk()
             ->assertSee('respaldo.pdf')
             ->assertSee("funcionarioId: '".$this->funcionario->id."'", false);
+    }
+
+    public function test_attachments_follow_permissions_and_current_unit_scope_instead_of_creator(): void
+    {
+        Storage::fake('private');
+        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
+        $tramite = Tramite::query()->firstOrFail();
+        $collaborator = User::factory()->create(['active' => true]);
+        $collaborator->givePermissionTo(['tramites.ver_unidades', 'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar']);
+        UserUnidadAcceso::query()->create(['user_id' => $collaborator->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
+
+        $this->actingAs($collaborator)
+            ->post(route('reemplazos.adjuntos.store', $tramite), ['archivo' => UploadedFile::fake()->create('colaborador.pdf', 20, 'application/pdf')])
+            ->assertRedirect();
+        $adjunto = $tramite->adjuntos()->firstOrFail();
+        $this->actingAs($collaborator)->get(route('reemplazos.adjuntos.download', [$tramite, $adjunto]))->assertOk();
+
+        $outsider = User::factory()->create(['active' => true]);
+        $outsider->givePermissionTo(['tramites.ver_unidades', 'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar']);
+        $this->actingAs($outsider)
+            ->post(route('reemplazos.adjuntos.store', $tramite), ['archivo' => UploadedFile::fake()->create('fuera.pdf', 20, 'application/pdf')])
+            ->assertForbidden();
+        $this->actingAs($outsider)->get(route('reemplazos.adjuntos.download', [$tramite, $adjunto]))->assertForbidden();
+
+        $this->user->accesosOperativos()->update(['vigente_hasta' => today()->subDay()]);
+        $this->actingAs($this->user)->get(route('reemplazos.adjuntos.download', [$tramite, $adjunto]))->assertForbidden();
+
+        $otroTramite = Tramite::query()->create([
+            'public_id' => (string) Str::ulid(),
+            'codigo' => 'ADJ-OTRO',
+            'tipo_tramite_id' => $tramite->tipo_tramite_id,
+            'estado_tramite_id' => $tramite->estado_tramite_id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'created_by' => $collaborator->id,
+        ]);
+        $this->actingAs($collaborator)->get(route('reemplazos.adjuntos.download', [$otroTramite, $adjunto]))->assertForbidden();
     }
 
     public function test_saved_employee_is_loaded_using_the_draft_start_date(): void

@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AlcanceAccesoOperativo;
 use App\Enums\TipoResponsabilidad;
 use App\Models\CalidadContractual;
 use App\Models\Estamento;
 use App\Models\Persona;
 use App\Models\PersonaUnidadVinculo;
+use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Models\UnidadResponsable;
 use App\Models\User;
+use App\Models\UserUnidadAcceso;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,15 +46,16 @@ class DashboardJefaturaTest extends TestCase
         $response = $this->actingAs($this->jefatura)->get(route('dashboard'));
 
         $response->assertOk()
-            ->assertSee('Consulta la dotación y estructura organizacional de las unidades dentro de tu ámbito de operación.')
-            ->assertDontSee('Gestiona y realiza seguimiento a tus solicitudes.')
+            ->assertSee('Gestiona y realiza seguimiento a tus solicitudes.')
+            ->assertSee('Solicitudes de mis unidades')
             ->assertSee('Inicio')
             ->assertSee('Dotación')
             ->assertSee('Organización')
             ->assertSee('Estructura organizacional')
             ->assertSee('Organigrama')
             ->assertDontSee('Administración<span', false)
-            ->assertDontSee('>Trámites<', false)
+            ->assertSee('Trámites')
+            ->assertSee('Nueva solicitud de reemplazo')
             ->assertDontSee('Usuarios')
             ->assertDontSee('Roles y permisos')
             ->assertDontSee('Responsables')
@@ -60,6 +64,10 @@ class DashboardJefaturaTest extends TestCase
             ->assertSee(route('admin.dotacion.index'), false)
             ->assertSee(route('admin.estructura.index'), false)
             ->assertSee(route('admin.estructura.organigrama'), false);
+
+        $this->assertTrue($this->jefatura->can('reemplazos.crear'));
+        $this->assertTrue($this->jefatura->can('tramites.ver_unidades'));
+        $this->assertFalse($this->jefatura->canAny(['reemplazos.revisar', 'reemplazos.generar_documento', 'reemplazos.formalizar', 'tramites.ver_todos']));
 
         $this->actingAs($this->jefatura)->get(route('admin.estructura.index'))->assertOk();
         $this->actingAs($this->jefatura)->get(route('admin.estructura.organigrama'))->assertOk();
@@ -118,6 +126,31 @@ class DashboardJefaturaTest extends TestCase
             ->assertSee('Trámites')
             ->assertSee('Nueva solicitud de reemplazo')
             ->assertDontSee('Consulta la dotación y estructura organizacional de las unidades dentro de tu ámbito de operación.');
+    }
+
+    public function test_jefatura_and_solicitante_can_continue_each_others_drafts_in_the_same_unit(): void
+    {
+        $solicitante = User::factory()->create(['active' => true]);
+        $solicitante->assignRole('Solicitante');
+        UserUnidadAcceso::query()->create([
+            'user_id' => $solicitante->id,
+            'unidad_organizacional_id' => $this->unidadTitular->id,
+            'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD,
+            'vigente_desde' => today(),
+            'created_by' => $this->jefatura->id,
+        ]);
+
+        $this->actingAs($this->jefatura)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidadTitular->id])->assertRedirect();
+        $creadoPorJefatura = Tramite::query()->latest('id')->firstOrFail();
+        $this->actingAs($solicitante)->get(route('reemplazos.edit', $creadoPorJefatura))->assertOk();
+        $this->actingAs($solicitante)->put(route('reemplazos.update', $creadoPorJefatura), ['unidad_organizacional_id' => $this->unidadTitular->id, 'justificacion' => 'Continuado por Solicitante.'])->assertRedirect();
+        $this->assertSame($this->jefatura->id, $creadoPorJefatura->fresh()->created_by);
+
+        $this->actingAs($solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidadTitular->id])->assertRedirect();
+        $creadoPorSolicitante = Tramite::query()->latest('id')->firstOrFail();
+        $this->actingAs($this->jefatura)->get(route('reemplazos.edit', $creadoPorSolicitante))->assertOk();
+        $this->actingAs($this->jefatura)->put(route('reemplazos.update', $creadoPorSolicitante), ['unidad_organizacional_id' => $this->unidadTitular->id, 'justificacion' => 'Continuado por Jefatura.'])->assertRedirect();
+        $this->assertSame($solicitante->id, $creadoPorSolicitante->fresh()->created_by);
     }
 
     private function responsabilidad(UnidadOrganizacional $unidad, TipoResponsabilidad $tipo): void

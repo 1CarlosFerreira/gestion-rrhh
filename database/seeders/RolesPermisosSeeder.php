@@ -16,7 +16,7 @@ class RolesPermisosSeeder extends Seeder
         $permissions = [
             'admin.usuarios',
             'admin.roles_permisos',
-            'tramites.ver_propios',
+            'tramites.ver_unidades',
             'tramites.ver_todos',
             'tramites.crear',
             'tramites.adjuntos.cargar',
@@ -71,12 +71,15 @@ class RolesPermisosSeeder extends Seeder
                 'tramites.adjuntos.cargar',
                 'tramites.adjuntos.descargar',
                 'tramites.crear',
-                'tramites.ver_propios',
+                'tramites.ver_unidades',
             ],
             'Jefatura' => [
                 'dotacion.ver',
                 'estructura_organizacional.ver',
+                'reemplazos.crear',
+                'tramites.adjuntos.cargar',
                 'tramites.adjuntos.descargar',
+                'tramites.ver_unidades',
             ],
             'Funcionario' => [],
         ];
@@ -84,6 +87,12 @@ class RolesPermisosSeeder extends Seeder
         foreach ($rolePermissions as $roleName => $assignedPermissions) {
             Role::findOrCreate($roleName, 'web')->syncPermissions($assignedPermissions);
         }
+
+        Permission::query()
+            ->whereIn('name', ['tramites.ver_propios', 'tramites.ver_unidad'])
+            ->where('guard_name', 'web')
+            ->get()
+            ->each->delete();
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }

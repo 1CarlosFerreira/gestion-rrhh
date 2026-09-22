@@ -60,13 +60,13 @@ class RolesPermisosAdministrationTest extends TestCase
         $this->actingAs($actor)
             ->put(route('admin.roles-permisos.update', $role), [
                 'name' => 'Consulta general',
-                'permissions' => ['tramites.ver_propios'],
+                'permissions' => ['tramites.ver_unidades'],
             ])
             ->assertRedirect(route('admin.roles-permisos.index'));
 
         $role->refresh();
         $this->assertSame('Consulta general', $role->name);
-        $this->assertSame(['tramites.ver_propios'], $role->permissions()->pluck('name')->all());
+        $this->assertSame(['tramites.ver_unidades'], $role->permissions()->pluck('name')->all());
         $this->assertSame($permissionCount, Permission::query()->count());
         $this->assertSame(['admin.roles_permisos'], $actor->permissions()->pluck('name')->all());
     }

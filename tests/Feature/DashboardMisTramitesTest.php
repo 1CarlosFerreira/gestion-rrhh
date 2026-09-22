@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AlcanceAccesoOperativo;
+use App\Enums\TipoResponsabilidad;
 use App\Models\EstadoTramite;
 use App\Models\Persona;
 use App\Models\TipoDocumento;
@@ -10,6 +11,7 @@ use App\Models\TipoReemplazo;
 use App\Models\TipoTramite;
 use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
+use App\Models\UnidadResponsable;
 use App\Models\User;
 use App\Models\UserUnidadAcceso;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,31 +37,36 @@ class DashboardMisTramitesTest extends TestCase
     {
         parent::setUp();
         $this->seed();
-        Permission::findOrCreate('tramites.ver_propios');
+        Permission::findOrCreate('tramites.ver_unidades');
         Permission::findOrCreate('reemplazos.crear');
         $this->user = User::factory()->create(['active' => true]);
-        $this->user->givePermissionTo(['tramites.ver_propios', 'reemplazos.crear']);
+        $this->user->givePermissionTo(['tramites.ver_unidades', 'reemplazos.crear']);
         $this->unidad = UnidadOrganizacional::query()->where('codigo', 'SDGADM-INF')->firstOrFail();
         UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
         $this->funcionario = Persona::query()->create(['rut' => '72000101-1', 'nombres' => 'Funcionario Dashboard', 'active' => true]);
         $this->reemplazante = Persona::query()->create(['rut' => '72000102-2', 'nombres' => 'Reemplazante Dashboard', 'active' => true]);
     }
 
-    public function test_dashboard_lists_only_five_most_recent_own_open_procedures(): void
+    public function test_dashboard_lists_five_most_recent_open_procedures_from_authorized_units_regardless_of_creator(): void
     {
         $ownOpen = collect(range(1, 6))->map(fn (int $index) => $this->tramite('ENVIADA_GESTION_PERSONAS', $this->user, now()->subDays(7 - $index)));
         $formalizada = $this->tramite('FORMALIZADA', $this->user, now(), now());
         $other = User::factory()->create(['active' => true]);
-        $other->givePermissionTo('tramites.ver_propios');
+        $other->givePermissionTo('tramites.ver_unidades');
         $ajeno = $this->tramite('ENVIADA_GESTION_PERSONAS', $other, now()->addMinute());
+        $fuera = UnidadOrganizacional::query()->whereKeyNot($this->unidad->id)->where('activo', true)->firstOrFail();
+        $fueraDeAmbito = $this->tramite('ENVIADA_GESTION_PERSONAS', $other, now()->addMinutes(2), null, $fuera);
 
         $response = $this->actingAs($this->user)->get(route('dashboard'))->assertOk();
 
-        $expected = $ownOpen->reverse()->take(5)->pluck('codigo')->all();
+        $expected = collect([$ajeno])->concat($ownOpen->reverse()->take(4))->pluck('codigo')->all();
         $response->assertSeeInOrder($expected);
-        $response->assertDontSee($ownOpen->first()->codigo)
+        $response->assertSee('Solicitudes de mis unidades')
+            ->assertSee('Creado por')
+            ->assertSee($other->name)
+            ->assertDontSee($ownOpen->take(2)->pluck('codigo')->all())
             ->assertDontSee($formalizada->codigo)
-            ->assertDontSee($ajeno->codigo);
+            ->assertDontSee($fueraDeAmbito->codigo);
     }
 
     public function test_dashboard_uses_continue_for_editable_states_and_view_for_other_open_states(): void
@@ -119,7 +126,7 @@ class DashboardMisTramitesTest extends TestCase
             ->assertDontSee('Iniciar revisión');
 
         $unauthorized = User::factory()->create(['active' => true]);
-        $unauthorized->givePermissionTo('tramites.ver_propios');
+        $unauthorized->givePermissionTo('tramites.ver_unidades');
         $this->actingAs($unauthorized)->get(route('reemplazos.show', $tramite))->assertForbidden();
     }
 
@@ -132,7 +139,22 @@ class DashboardMisTramitesTest extends TestCase
             ->assertDontSee('Requieren mi atención');
     }
 
-    private function tramite(string $estado, User $creator, \DateTimeInterface $updatedAt, ?\DateTimeInterface $finalizedAt = null): Tramite
+    public function test_descendant_scope_and_overlapping_responsibility_do_not_duplicate_dashboard_rows(): void
+    {
+        $parent = UnidadOrganizacional::query()->where('codigo', 'SDGADM')->firstOrFail();
+        $persona = Persona::query()->create(['rut' => '72000103-0', 'nombres' => 'Responsable Dashboard', 'active' => true]);
+        $this->user->update(['persona_id' => $persona->id]);
+        $this->user->accesosOperativos()->delete();
+        UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $parent->id, 'alcance' => AlcanceAccesoOperativo::UNIDAD_Y_DESCENDIENTES, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
+        UnidadResponsable::query()->create(['unidad_organizacional_id' => $this->unidad->id, 'persona_id' => $persona->id, 'tipo' => TipoResponsabilidad::SUBROGANTE, 'vigente_desde' => today(), 'puede_aprobar' => true, 'created_by' => $this->user->id]);
+        $tramite = $this->tramite('ENVIADA_GESTION_PERSONAS', User::factory()->create(), now());
+
+        $response = $this->actingAs($this->user)->get(route('dashboard'))->assertOk();
+
+        $this->assertSame(1, substr_count($response->getContent(), $tramite->codigo));
+    }
+
+    private function tramite(string $estado, User $creator, \DateTimeInterface $updatedAt, ?\DateTimeInterface $finalizedAt = null, ?UnidadOrganizacional $unidad = null): Tramite
     {
         $this->sequence++;
         $tipo = TipoTramite::query()->where('codigo', 'REEMPLAZO')->firstOrFail();
@@ -141,7 +163,7 @@ class DashboardMisTramitesTest extends TestCase
             'codigo' => 'DASH-'.str_pad((string) $this->sequence, 3, '0', STR_PAD_LEFT),
             'tipo_tramite_id' => $tipo->id,
             'estado_tramite_id' => EstadoTramite::query()->where('tipo_tramite_id', $tipo->id)->where('codigo', $estado)->firstOrFail()->id,
-            'unidad_organizacional_id' => $this->unidad->id,
+            'unidad_organizacional_id' => ($unidad ?? $this->unidad)->id,
             'created_by' => $creator->id,
             'finalized_at' => $finalizedAt,
         ]);

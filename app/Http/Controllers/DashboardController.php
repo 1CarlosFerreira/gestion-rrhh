@@ -7,13 +7,14 @@ use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
+use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, AccesoOperativoService $accesos): View
+    public function __invoke(Request $request, AccesoOperativoService $accesos, AlcanceSolicitudReemplazoService $alcanceReemplazos): View
     {
         $user = $request->user();
         $esAdministrador = $user->hasRole('Administrador');
@@ -21,22 +22,25 @@ class DashboardController extends Controller
         $misTramites = collect();
         $tramitesRequierenAtencion = collect();
         $resumenMisTramites = ['requieren_atencion' => 0, 'en_tramitacion' => 0, 'abiertos' => 0];
-        if ($user->can('tramites.ver_propios')) {
-            $propiosAbiertos = Tramite::query()
-                ->where('created_by', $user->id)
+        if ($user->active && $user->can('tramites.ver_unidades')) {
+            $unidadesAutorizadas = $alcanceReemplazos->unidadesAutorizadas($user, today())->pluck('id');
+            $tramitesAbiertos = Tramite::query()
+                ->whereIn('unidad_organizacional_id', $unidadesAutorizadas)
                 ->whereNull('finalized_at');
-            $requierenAtencion = fn ($query) => $query->whereHas('estadoTramite', fn ($estado) => $estado->whereIn('codigo', ['BORRADOR', 'DEVUELTA_PARA_CORRECCION']));
-            $resumenMisTramites['abiertos'] = (clone $propiosAbiertos)->count();
-            $resumenMisTramites['requieren_atencion'] = (clone $propiosAbiertos)->tap($requierenAtencion)->count();
+            $requierenAtencion = fn ($query) => $query
+                ->whereHas('estadoTramite', fn ($estado) => $estado->whereIn('codigo', ['BORRADOR', 'DEVUELTA_PARA_CORRECCION']))
+                ->when(! $user->can('reemplazos.crear'), fn ($query) => $query->whereRaw('1 = 0'));
+            $resumenMisTramites['abiertos'] = (clone $tramitesAbiertos)->count();
+            $resumenMisTramites['requieren_atencion'] = (clone $tramitesAbiertos)->tap($requierenAtencion)->count();
             $resumenMisTramites['en_tramitacion'] = $resumenMisTramites['abiertos'] - $resumenMisTramites['requieren_atencion'];
-            $misTramites = (clone $propiosAbiertos)
-                ->with(['tipoTramite', 'estadoTramite', 'unidadOrganizacional', 'reemplazo.funcionario'])
+            $misTramites = (clone $tramitesAbiertos)
+                ->with(['tipoTramite', 'estadoTramite', 'unidadOrganizacional', 'creador', 'reemplazo.funcionario'])
                 ->latest('updated_at')
                 ->limit(5)
                 ->get();
-            $tramitesRequierenAtencion = (clone $propiosAbiertos)
+            $tramitesRequierenAtencion = (clone $tramitesAbiertos)
                 ->tap($requierenAtencion)
-                ->with(['tipoTramite', 'estadoTramite', 'unidadOrganizacional'])
+                ->with(['tipoTramite', 'estadoTramite', 'unidadOrganizacional', 'creador'])
                 ->latest('updated_at')
                 ->limit(5)
                 ->get();

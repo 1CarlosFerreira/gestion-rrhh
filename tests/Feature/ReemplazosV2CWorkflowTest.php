@@ -66,6 +66,33 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->assertSame(9, $tramite->reemplazo->diasSinCobertura());
     }
 
+    public function test_another_authorized_user_in_the_same_unit_can_update_and_send_without_changing_creator(): void
+    {
+        $tramite = $this->draft();
+        $creatorId = $tramite->created_by;
+        $collaborator = User::factory()->create(['active' => true]);
+        $collaborator->givePermissionTo(['reemplazos.crear', 'tramites.ver_unidades']);
+        UserUnidadAcceso::query()->create([
+            'user_id' => $collaborator->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD,
+            'vigente_desde' => today(),
+            'created_by' => $this->solicitante->id,
+        ]);
+
+        $datos = $this->draftData($tramite, ['justificacion' => 'Actualizada por otro usuario autorizado.']);
+        $this->actingAs($collaborator)->get(route('reemplazos.show', $tramite))->assertOk();
+        $this->actingAs($collaborator)->put(route('reemplazos.update', $tramite), $datos)->assertRedirect();
+        $this->actingAs($collaborator)->put(route('reemplazos.send', $tramite), $datos)->assertRedirect(route('dashboard'));
+
+        $this->assertSame($creatorId, $tramite->fresh()->created_by);
+        $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $creatorId, 'action_code' => 'TRAMITE_CREADO']);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $collaborator->id, 'action_code' => 'BORRADOR_ACTUALIZADO']);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $collaborator->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
+        $this->actingAs($this->solicitante)->get(route('reemplazos.show', $tramite))->assertOk();
+    }
+
     public function test_sending_persists_current_justification_and_other_form_changes(): void
     {
         $tramite = $this->draft();
