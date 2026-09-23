@@ -45,7 +45,7 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         @can('personas.gestionar')
-                            <a href="{{ route('admin.personas.edit', $persona) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar Persona</a>
+                            <a href="{{ route('admin.personas.edit', $persona) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar datos personales</a>
                             <form method="POST" action="{{ route('admin.personas.activo', $persona) }}" onsubmit="return confirm('{{ $persona->active ? '¿Confirma que desea inactivar esta persona?' : '¿Confirma que desea reactivar esta persona?' }}')">
                                 @csrf @method('PATCH')
                                 <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900 hover:underline">{{ $persona->active ? 'Inactivar' : 'Reactivar' }}</button>
@@ -136,7 +136,24 @@
                                         <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $titulo }}</h4>
                                         <ul class="mt-2 space-y-1 text-sm text-gray-700">
                                             @foreach ($grupo as $acceso)
-                                                <li>{{ $acceso->unidad->nombre }} · Autorización adicional · {{ $acceso->alcance->etiqueta() }} · {{ $acceso->vigente_desde->format('d/m/Y') }} → {{ $acceso->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }}</li>
+                                                <li class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                    <span>{{ $acceso->unidad->nombre }} · Autorización adicional · {{ $acceso->alcance->etiqueta() }} · {{ $acceso->vigente_desde->format('d/m/Y') }} → {{ $acceso->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }}</span>
+                                                    @if ($titulo === 'Autorizaciones futuras')
+                                                        @can('update', $acceso)
+                                                            <span class="flex shrink-0 flex-wrap items-end gap-3">
+                                                                <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="font-medium text-indigo-700 hover:underline">Editar</a>
+                                                                @if ($acceso->vigente_hasta === null)
+                                                                    <form method="POST" action="{{ route('admin.accesos.close', $acceso) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta autorización adicional?')">
+                                                                        @csrf @method('PATCH')
+                                                                        <input type="hidden" name="return_to" value="persona">
+                                                                        <label>Término<input type="date" name="vigente_hasta" min="{{ $acceso->vigente_desde->toDateString() }}" required class="ml-1 w-32 rounded-md border-gray-300 py-1 text-xs"></label>
+                                                                        <button type="submit" class="font-medium text-red-700 hover:underline">Cerrar</button>
+                                                                    </form>
+                                                                @endif
+                                                            </span>
+                                                        @endcan
+                                                    @endif
+                                                </li>
                                             @endforeach
                                         </ul>
                                     </div>

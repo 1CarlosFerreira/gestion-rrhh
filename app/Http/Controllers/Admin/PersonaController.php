@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Personas\ActualizarIdentidadPersona;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SavePersonaRequest;
 use App\Models\Persona;
@@ -126,11 +127,11 @@ class PersonaController extends Controller
         return view('admin.personas.edit', compact('persona'));
     }
 
-    public function update(SavePersonaRequest $request, Persona $persona): RedirectResponse
+    public function update(SavePersonaRequest $request, Persona $persona, ActualizarIdentidadPersona $actualizarIdentidad): RedirectResponse
     {
         Gate::authorize('personas.gestionar');
 
-        $persona->update($request->safe()->except('active'));
+        $actualizarIdentidad->execute($persona, $request->safe()->except('active'));
 
         return redirect()->route('admin.personas.show', $persona)->with('status', 'Persona actualizada correctamente.');
     }

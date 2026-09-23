@@ -115,6 +115,76 @@ class FichaPersonaEdicionConsolidadaTest extends TestCase
             ->assertSee('+ Agregar responsabilidad');
     }
 
+    public function test_edicion_personal_usa_nomenclatura_correcta_y_cancelar_vuelve_a_la_ficha(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.personas.show', $this->persona))
+            ->assertOk()
+            ->assertSee('Editar datos personales')
+            ->assertDontSee('Editar Persona');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.personas.edit', $this->persona))
+            ->assertOk()
+            ->assertSee('Editar datos personales')
+            ->assertSee('Guardar datos personales')
+            ->assertSee('href="'.route('admin.personas.show', $this->persona).'"', false);
+    }
+
+    public function test_actualizar_identidad_sincroniza_solo_nombre_y_rut_del_user(): void
+    {
+        $acceso = app(AccesoOperativoService::class)->crear($this->datosAcceso(), $this->admin);
+        $email = $this->userPersona->email;
+        $active = $this->userPersona->active;
+        $roles = $this->userPersona->getRoleNames()->all();
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.personas.update', $this->persona), [
+                'rut' => '12.345.678-5',
+                'nombres' => 'Nombre Nuevo',
+                'apellido_paterno' => 'Apellido Uno',
+                'apellido_materno' => 'Apellido Dos',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.personas.show', $this->persona));
+
+        $persona = $this->persona->fresh();
+        $user = $this->userPersona->fresh();
+        $this->assertSame('12345678-5', $persona->rut);
+        $this->assertSame('Nombre Nuevo Apellido Uno Apellido Dos', $persona->nombre_completo);
+        $this->assertSame($persona->rut, $user->rut);
+        $this->assertSame($persona->nombre_completo, $user->name);
+        $this->assertSame($email, $user->email);
+        $this->assertSame($active, $user->active);
+        $this->assertEqualsCanonicalizing($roles, $user->getRoleNames()->all());
+        $this->assertDatabaseHas('user_unidad_accesos', [
+            'id' => $acceso->id,
+            'user_id' => $user->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+        ]);
+    }
+
+    public function test_autorizacion_futura_muestra_acciones_y_la_historica_no_ofrece_reapertura(): void
+    {
+        $historica = app(AccesoOperativoService::class)->crear($this->datosAcceso([
+            'vigente_desde' => today()->subMonths(2)->toDateString(),
+            'vigente_hasta' => today()->subMonth()->toDateString(),
+        ]), $this->admin);
+        $futura = app(AccesoOperativoService::class)->crear($this->datosAcceso([
+            'vigente_desde' => today()->addMonth()->toDateString(),
+        ]), $this->admin);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.personas.show', $this->persona))
+            ->assertOk()
+            ->assertSee('Autorizaciones futuras')
+            ->assertSee(route('admin.accesos.edit', ['acceso' => $futura, 'return_to' => 'persona']), false)
+            ->assertSee(route('admin.accesos.close', $futura), false)
+            ->assertSee('Historial de autorizaciones')
+            ->assertDontSee(route('admin.accesos.edit', ['acceso' => $historica, 'return_to' => 'persona']), false)
+            ->assertDontSee(route('admin.accesos.close', $historica), false);
+    }
+
     public function test_ediciones_y_cierres_iniciados_desde_ficha_regresan_a_la_misma_persona(): void
     {
         $vinculo = app(DotacionService::class)->crear($this->datosVinculo(['cargo_funcion' => 'Editable']), $this->admin);
