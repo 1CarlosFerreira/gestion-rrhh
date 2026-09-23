@@ -36,9 +36,8 @@
                     <td class="px-4 py-3">{{ $persona->nombre_completo }}</td>
                     <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $persona->active ? 'bg-green-50 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $persona->active ? 'Activo' : 'Inactivo' }}</span></td>
                     <td class="whitespace-nowrap px-4 py-3">
-                        <a href="{{ route('admin.personas.show', $persona) }}" class="text-indigo-700 hover:underline">Ver</a>
+                        <a href="{{ route('admin.personas.show', $persona) }}" class="text-indigo-700 hover:underline">Administrar</a>
                         @can('personas.gestionar')
-                            <a href="{{ route('admin.personas.edit', $persona) }}" class="ml-3 text-indigo-700 hover:underline">Editar</a>
                             @if ($persona->active)
                                 <button
                                     type="button"

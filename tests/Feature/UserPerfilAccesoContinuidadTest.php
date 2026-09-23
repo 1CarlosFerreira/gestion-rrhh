@@ -9,8 +9,10 @@ use App\Models\TipoUnidadOrganizacional;
 use App\Models\UnidadOrganizacional;
 use App\Models\UnidadResponsable;
 use App\Models\User;
+use App\Models\UserUnidadAcceso;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class UserPerfilAccesoContinuidadTest extends TestCase
@@ -137,6 +139,9 @@ class UserPerfilAccesoContinuidadTest extends TestCase
             ->get(route('admin.usuarios.perfil-acceso.edit', $user))
             ->assertOk()
             ->assertSee('Configurar perfil de acceso')
+            ->assertSee('Credenciales')
+            ->assertSee('Cambiar correo')
+            ->assertSee('Restablecer contraseña')
             ->assertSee('value="Jefatura"', false)
             ->assertSee('value="Funcionario" checked', false);
 
@@ -167,6 +172,124 @@ class UserPerfilAccesoContinuidadTest extends TestCase
             'unidad_organizacional_id' => $this->unidad->id,
             'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD->value,
         ]);
+    }
+
+    public function test_administrador_actualiza_email_sin_modificar_otros_dominios_del_user(): void
+    {
+        $user = $this->usuarioPersona();
+        $user->assignRole('Funcionario');
+        $acceso = UserUnidadAcceso::query()->create([
+            'user_id' => $user->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD,
+            'vigente_desde' => today(),
+            'created_by' => $this->admin->id,
+        ]);
+        $personaAntes = $this->persona->fresh()->only(['rut', 'nombres', 'apellido_paterno', 'apellido_materno', 'active']);
+        $passwordAntes = $user->password;
+        $rolesAntes = $user->getRoleNames()->all();
+
+        $this->actingAs($this->admin)
+            ->from(route('admin.usuarios.perfil-acceso.edit', $user))
+            ->patch(route('admin.usuarios.email.update', $user), ['email' => ' NUEVO.CORREO@EXAMPLE.TEST '])
+            ->assertRedirect(route('admin.usuarios.perfil-acceso.edit', $user))
+            ->assertSessionHas('status', 'Correo de acceso actualizado correctamente.');
+
+        $user = $user->fresh();
+        $this->assertSame('nuevo.correo@example.test', $user->email);
+        $this->assertSame($passwordAntes, $user->password);
+        $this->assertTrue($user->active);
+        $this->assertSame($this->persona->rut, $user->rut);
+        $this->assertSame($this->persona->nombre_completo, $user->name);
+        $this->assertSame($personaAntes, $this->persona->fresh()->only(['rut', 'nombres', 'apellido_paterno', 'apellido_materno', 'active']));
+        $this->assertEqualsCanonicalizing($rolesAntes, $user->getRoleNames()->all());
+        $this->assertDatabaseHas('user_unidad_accesos', ['id' => $acceso->id, 'user_id' => $user->id]);
+    }
+
+    public function test_email_invalido_o_duplicado_es_rechazado(): void
+    {
+        $user = $this->usuarioPersona();
+        User::factory()->create(['email' => 'ocupado@example.test']);
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.usuarios.email.update', $user), ['email' => 'correo-invalido'])
+            ->assertSessionHasErrors('email');
+        $this->actingAs($this->admin)
+            ->patch(route('admin.usuarios.email.update', $user), ['email' => 'OCUPADO@EXAMPLE.TEST'])
+            ->assertSessionHasErrors('email');
+
+        $this->assertSame('persona@example.test', $user->fresh()->email);
+    }
+
+    public function test_administrador_restablece_password_hasheada_sin_exponerla(): void
+    {
+        $user = $this->usuarioPersona();
+        $password = 'nueva-password-segura';
+
+        $response = $this->actingAs($this->admin)
+            ->from(route('admin.usuarios.perfil-acceso.edit', $user))
+            ->patch(route('admin.usuarios.password.update', $user), [
+                'password' => $password,
+                'password_confirmation' => $password,
+            ]);
+
+        $response
+            ->assertRedirect(route('admin.usuarios.perfil-acceso.edit', $user))
+            ->assertSessionHas('status', 'Contraseña actualizada correctamente.')
+            ->assertDontSee($password)
+            ->assertDontSee($user->fresh()->password);
+        $this->assertTrue(Hash::check($password, $user->fresh()->password));
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.usuarios.perfil-acceso.edit', $user))
+            ->assertOk()
+            ->assertDontSee($password)
+            ->assertDontSee($user->fresh()->password)
+            ->assertDontSee('Contraseña: ********');
+    }
+
+    public function test_password_invalida_o_sin_confirmacion_correcta_es_rechazada(): void
+    {
+        $user = $this->usuarioPersona();
+        $hashAntes = $user->password;
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.usuarios.password.update', $user), [
+                'password' => 'corta',
+                'password_confirmation' => 'corta',
+            ])
+            ->assertSessionHasErrors('password');
+        $this->actingAs($this->admin)
+            ->patch(route('admin.usuarios.password.update', $user), [
+                'password' => 'password-nueva',
+                'password_confirmation' => 'otra-password',
+            ])
+            ->assertSessionHasErrors('password');
+
+        $this->assertSame($hashAntes, $user->fresh()->password);
+    }
+
+    public function test_no_administrador_no_puede_modificar_credenciales_por_endpoint_directo(): void
+    {
+        $user = $this->usuarioPersona();
+        $gestionPersonas = User::factory()->create(['active' => true]);
+        $gestionPersonas->assignRole('Gestión de Personas');
+        $gestionPersonas->givePermissionTo('admin.usuarios');
+        $emailAntes = $user->email;
+        $hashAntes = $user->password;
+
+        $this->actingAs($gestionPersonas)
+            ->patch(route('admin.usuarios.email.update', $user), ['email' => 'forzado@example.test'])
+            ->assertForbidden();
+        $this->actingAs($gestionPersonas)
+            ->patch(route('admin.usuarios.password.update', $user), [
+                'password' => 'password-forzada',
+                'password_confirmation' => 'password-forzada',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame($emailAntes, $user->fresh()->email);
+        $this->assertSame($hashAntes, $user->fresh()->password);
     }
 
     public function test_perfil_de_continuidad_es_solo_para_administrador_con_admin_usuarios(): void

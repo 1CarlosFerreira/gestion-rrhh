@@ -56,6 +56,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/personas/{persona}/usuario/crear', [UserController::class, 'createForPersona'])->name('usuarios.create-for-persona');
         Route::post('/personas/{persona}/usuario', [UserController::class, 'storeForPersona'])->name('usuarios.store-for-persona');
         Route::get('/usuarios/{user}/perfil-acceso', [UserController::class, 'editAccessProfile'])->name('usuarios.perfil-acceso.edit');
+        Route::patch('/usuarios/{user}/email', [UserController::class, 'updateEmail'])->name('usuarios.email.update');
+        Route::patch('/usuarios/{user}/password', [UserController::class, 'resetPassword'])->name('usuarios.password.update');
         Route::put('/usuarios/{user}/roles', [UserController::class, 'updateRoles'])->name('usuarios.roles.update');
         Route::patch('/usuarios/{user}/activo', [UserController::class, 'toggleActive'])->name('usuarios.activo');
     });

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ResetUserPasswordRequest;
 use App\Http\Requests\Admin\StoreUserForPersonaRequest;
+use App\Http\Requests\Admin\UpdateUserEmailRequest;
 use App\Http\Requests\Admin\UpdateUserRolesRequest;
 use App\Models\Persona;
 use App\Models\UnidadResponsable;
@@ -123,6 +125,20 @@ class UserController extends Controller
         }
 
         return back()->with('status', 'Roles actualizados.');
+    }
+
+    public function updateEmail(UpdateUserEmailRequest $request, User $user): RedirectResponse
+    {
+        $user->update(['email' => $request->validated('email')]);
+
+        return back()->with('status', 'Correo de acceso actualizado correctamente.');
+    }
+
+    public function resetPassword(ResetUserPasswordRequest $request, User $user): RedirectResponse
+    {
+        $user->update(['password' => $request->validated('password')]);
+
+        return back()->with('status', 'Contraseña actualizada correctamente.');
     }
 
     public function toggleActive(User $user): RedirectResponse

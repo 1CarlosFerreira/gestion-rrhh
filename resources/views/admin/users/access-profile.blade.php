@@ -22,11 +22,48 @@
             @endif
 
             <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h2 class="text-base font-semibold text-gray-900">Cuenta</h2>
                 <dl class="grid gap-4 text-sm sm:grid-cols-3">
                     <div><dt class="text-xs font-medium text-gray-500">Persona</dt><dd class="mt-1 font-medium text-gray-900">{{ $user->persona->nombre_completo }}</dd></div>
-                    <div><dt class="text-xs font-medium text-gray-500">Correo</dt><dd class="mt-1 text-gray-900">{{ $user->email }}</dd></div>
-                    <div><dt class="text-xs font-medium text-gray-500">Estado</dt><dd class="mt-1"><span class="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-800">{{ $user->active ? 'Activo' : 'Inactivo' }}</span></dd></div>
+                    <div><dt class="text-xs font-medium text-gray-500">Correo de acceso</dt><dd class="mt-1 text-gray-900">{{ $user->email }}</dd></div>
+                    <div><dt class="text-xs font-medium text-gray-500">Estado</dt><dd class="mt-1"><span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $user->active ? 'bg-green-50 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $user->active ? 'Activo' : 'Inactivo' }}</span></dd></div>
                 </dl>
+            </section>
+
+            <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <h2 class="text-base font-semibold text-gray-900">Credenciales</h2>
+                <p class="mt-1 text-sm text-gray-500">Administra las credenciales de acceso sin modificar los datos personales, roles ni ámbito de operación.</p>
+
+                <div class="mt-5 grid gap-5 lg:grid-cols-2">
+                    <form method="POST" action="{{ route('admin.usuarios.email.update', $user) }}" class="rounded-lg border border-gray-200 p-4">
+                        @csrf
+                        @method('PATCH')
+                        <h3 class="text-sm font-semibold text-gray-900">Cambiar correo</h3>
+                        <div class="mt-3">
+                            <x-input-label for="email" value="Correo de acceso" />
+                            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" autocomplete="email" required />
+                            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                        </div>
+                        <x-primary-button class="mt-4">Actualizar correo</x-primary-button>
+                    </form>
+
+                    <form method="POST" action="{{ route('admin.usuarios.password.update', $user) }}" class="rounded-lg border border-gray-200 p-4">
+                        @csrf
+                        @method('PATCH')
+                        <h3 class="text-sm font-semibold text-gray-900">Restablecer contraseña</h3>
+                        <p class="mt-1 text-xs text-gray-500">Establece una nueva contraseña. La contraseña actual nunca se muestra ni puede recuperarse.</p>
+                        <div class="mt-3">
+                            <x-input-label for="password" value="Nueva contraseña" />
+                            <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" autocomplete="new-password" required />
+                            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                        </div>
+                        <div class="mt-3">
+                            <x-input-label for="password_confirmation" value="Confirmar nueva contraseña" />
+                            <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" autocomplete="new-password" required />
+                        </div>
+                        <x-primary-button class="mt-4">Restablecer contraseña</x-primary-button>
+                    </form>
+                </div>
             </section>
 
             <form method="POST" action="{{ route('admin.usuarios.roles.update', $user) }}" class="space-y-5">

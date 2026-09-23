@@ -81,6 +81,16 @@ class PersonasDotacionMejorasTest extends TestCase
             });
     }
 
+    public function test_listado_administra_desde_la_ficha_sin_acceso_directo_a_edicion(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.personas.index'))
+            ->assertOk()
+            ->assertSee('Administrar')
+            ->assertSee(route('admin.personas.show', $this->persona), false)
+            ->assertDontSee(route('admin.personas.edit', $this->persona), false);
+    }
+
     public function test_busqueda_por_nombre_y_rut_conserva_filtros_al_paginar(): void
     {
         foreach (range(1, 26) as $numero) {
