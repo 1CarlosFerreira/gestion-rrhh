@@ -163,11 +163,13 @@
             $vinculosUnidad = $vinculos->where('unidad_organizacional_id', $unidad->id);
             $vinculosVigentes = $vinculosUnidad->filter(fn ($vinculo) => $vinculo->estadoEn($fecha)->value === 'VIGENTE');
             $personasVigentes = $vinculosVigentes->pluck('persona_id')->unique()->count();
+            $personasReemplazo = $vinculosVigentes->filter(fn ($vinculo) => $reemplazosPorVinculo->has($vinculo->id))->pluck('persona_id')->unique();
+            $cantidadReemplazos = $personasReemplazo->count();
         @endphp
 
-        <x-modal name="dotacion-unidad-{{ $unidad->id }}" maxWidth="2xl" focusable>
+        <x-modal name="dotacion-unidad-{{ $unidad->id }}" maxWidth="6xl" focusable>
             <div
-                class="flex max-h-[calc(100vh-3rem)] max-h-[calc(100dvh-3rem)] flex-col overflow-hidden"
+                class="flex max-h-[92vh] max-h-[min(92dvh,calc(100dvh-3rem))] flex-col overflow-hidden"
                 x-data="{
                     buscar: '',
                     coincide(texto) {
@@ -176,17 +178,22 @@
                     }
                 }"
             >
-                <header class="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 sm:px-6">
+                <header class="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-5 py-3 sm:px-6">
                     <div class="min-w-0">
                         <h2 class="truncate text-lg font-semibold text-gray-900">{{ $unidad->nombre }}</h2>
-                        <p class="mt-1 text-sm text-gray-600">{{ $personasVigentes }} {{ $personasVigentes === 1 ? 'funcionario vigente' : 'funcionarios vigentes' }}</p>
+                        <p class="mt-1 text-sm text-gray-600">
+                            {{ $personasVigentes }} {{ $personasVigentes === 1 ? 'funcionario vigente' : 'funcionarios vigentes' }}
+                            @if ($personasVigentes > 0)
+                                · {{ $cantidadReemplazos }} {{ $cantidadReemplazos === 1 ? 'reemplazo' : 'reemplazos' }}
+                            @endif
+                        </p>
                     </div>
                     <button type="button" class="rounded-md p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" x-on:click="$dispatch('close')" aria-label="Cerrar modal">
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L8.94 10l-4.72 4.72a.75.75 0 1 0 1.06 1.06L10 11.06l4.72 4.72a.75.75 0 1 0 1.06-1.06L11.06 10l4.72-4.72a.75.75 0 0 0-1.06-1.06L10 8.94 5.28 4.22Z" /></svg>
                     </button>
                 </header>
 
-                <div class="shrink-0 border-b border-gray-100 px-5 py-3 sm:px-6">
+                <div class="shrink-0 border-b border-gray-100 px-5 py-2 sm:px-6">
                     <label for="buscar-dotacion-{{ $unidad->id }}" class="sr-only">Buscar por nombre o RUT</label>
                     <div class="relative">
                         <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd" /></svg>
@@ -194,60 +201,101 @@
                     </div>
                 </div>
 
-                <div class="min-h-0 flex-1 overscroll-contain overflow-y-auto px-5 py-4 sm:px-6">
+                <div class="min-h-0 flex-1 overscroll-contain overflow-y-auto px-5 py-3 sm:px-6">
                     @if ($vinculosUnidad->isEmpty())
                         <div class="rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-600">No existen personas vinculadas en la fecha seleccionada.</div>
                     @else
-                        <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
                             @foreach ($vinculosUnidad as $vinculo)
                                 @php
                                     $estadoVinculo = $vinculo->estadoEn($fecha)->value;
                                     $textoBusqueda = $vinculo->persona->nombre_completo.' '.$vinculo->persona->rut;
+                                    $reemplazoOrigen = $reemplazosPorVinculo->get($vinculo->id);
+                                    $esReemplazo = $reemplazoOrigen !== null;
+                                    $coberturas = $coberturasActuales->get($unidad->id.':'.$vinculo->persona_id, collect());
+                                    $esReemplazoVigente = $esReemplazo && $estadoVinculo === 'VIGENTE';
+                                    $estaSiendoReemplazado = $coberturas->isNotEmpty();
+                                    $rolDotacion = $rolesDotacion->get($vinculo->id, App\Enums\RolDotacion::INTEGRANTE);
                                 @endphp
-                                <article class="px-4 py-3" x-show="coincide(@js($textoBusqueda))">
-                                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <article @class([
+                                    'flex h-full flex-col rounded-xl border p-4 shadow-sm',
+                                    'border-amber-300 border-l-4 border-l-amber-400 bg-white' => $esReemplazoVigente,
+                                    'border-indigo-300 border-l-4 border-l-indigo-400 bg-white' => ! $esReemplazoVigente && $estaSiendoReemplazado,
+                                    'border-slate-300 border-l-4 border-l-slate-400 bg-slate-50' => ! $esReemplazoVigente && ! $estaSiendoReemplazado && $estadoVinculo !== 'VIGENTE',
+                                    'border-gray-200 bg-white' => ! $esReemplazoVigente && ! $estaSiendoReemplazado && $estadoVinculo === 'VIGENTE',
+                                ]) x-show="coincide(@js($textoBusqueda))">
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div class="min-w-0">
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <h3 class="font-semibold text-gray-900">{{ $vinculo->persona->nombre_completo }}</h3>
                                                 <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold {{ $estadoVinculo === 'VIGENTE' ? 'bg-green-100 text-green-800' : ($estadoVinculo === 'FUTURO' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700') }}">{{ $estadoVinculo }}</span>
+                                                <span @class([
+                                                    'inline-flex rounded-full px-2 py-0.5 text-xs font-semibold',
+                                                    'bg-amber-100 text-amber-800' => $rolDotacion === App\Enums\RolDotacion::REEMPLAZO,
+                                                    'bg-purple-100 text-purple-800' => $rolDotacion === App\Enums\RolDotacion::SUBROGANTE,
+                                                    'bg-indigo-100 text-indigo-800' => $rolDotacion === App\Enums\RolDotacion::JEFATURA_TITULAR,
+                                                    'bg-slate-100 text-slate-700' => $rolDotacion === App\Enums\RolDotacion::INTEGRANTE,
+                                                ])>{{ $rolDotacion->etiqueta() }}</span>
                                             </div>
                                             <p class="mt-0.5 text-xs text-gray-500">RUT {{ $vinculo->persona->rut }}</p>
-                                            @if ($vinculo->esGeneradoPorTramite())
-                                                <p class="mt-1 text-xs font-medium text-indigo-700">
-                                                    Generado por trámite
-                                                    @can('view', $vinculo->tramiteOrigen)
-                                                        <a class="underline" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
-                                                    @else
-                                                        {{ $vinculo->tramiteOrigen->codigo }}
-                                                    @endcan
-                                                </p>
-                                            @endif
-                                        </div>
-
-                                        <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                                            <a class="font-medium text-indigo-700 hover:underline" href="{{ route('admin.dotacion.persona', $vinculo->persona) }}">Ver ficha</a>
-                                            @can('update', $vinculo)
-                                                <a class="font-medium text-indigo-700 hover:underline" href="{{ route('admin.dotacion.edit', $vinculo) }}">Editar</a>
-                                                @if (! $vinculo->vigente_hasta)
-                                                    <button type="button" class="font-medium text-red-700 hover:underline" x-on:click="$dispatch('close-modal', 'dotacion-unidad-{{ $unidad->id }}'); $dispatch('open-modal', 'cerrar-vinculo-{{ $vinculo->id }}')">Cerrar vínculo</button>
-                                                @endif
-                                            @endcan
                                         </div>
                                     </div>
 
-                                    <dl class="mt-3 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                                    @if ($esReemplazo)
+                                        <div class="mt-3 rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2 text-sm">
+                                            <p class="font-medium text-gray-800">↳ Reemplaza a {{ $reemplazoOrigen->funcionario->nombre_completo }}</p>
+                                            <p class="mt-1 text-xs text-gray-600">{{ $reemplazoOrigen->fecha_reemplazante_desde->format('d/m/Y') }} — {{ $reemplazoOrigen->fecha_reemplazante_hasta->format('d/m/Y') }}</p>
+                                            <p class="mt-1 text-xs font-medium text-indigo-700">
+                                                Trámite
+                                                @can('view', $vinculo->tramiteOrigen)
+                                                    <a class="underline hover:text-indigo-900" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
+                                                @else
+                                                    {{ $vinculo->tramiteOrigen->codigo }}
+                                                @endcan
+                                            </p>
+                                        </div>
+                                    @elseif ($coberturas->isNotEmpty())
+                                        <div class="mt-3 space-y-2">
+                                            @foreach ($coberturas as $cobertura)
+                                                <div class="rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-sm">
+                                                    <p class="font-medium text-gray-800">↳ Actualmente reemplazado por {{ $cobertura->reemplazante->nombre_completo }}</p>
+                                                    <p class="mt-1 text-xs text-gray-600">{{ $cobertura->fecha_reemplazante_desde->format('d/m/Y') }} — {{ $cobertura->fecha_reemplazante_hasta->format('d/m/Y') }}</p>
+                                                    <p class="mt-1 text-xs font-medium text-indigo-700">
+                                                        Trámite
+                                                        @can('view', $cobertura->tramite)
+                                                            <a class="underline hover:text-indigo-900" href="{{ route('reemplazos.show', $cobertura->tramite) }}">{{ $cobertura->tramite->codigo }}</a>
+                                                        @else
+                                                            {{ $cobertura->tramite->codigo }}
+                                                        @endcan
+                                                    </p>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <dl class="mt-3 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
                                         <div class="min-w-0"><dt class="text-xs font-medium text-gray-500">Cargo/función</dt><dd class="truncate text-gray-800" title="{{ $vinculo->cargo_funcion }}">{{ $vinculo->cargo_funcion }}</dd></div>
                                         <div class="min-w-0"><dt class="text-xs font-medium text-gray-500">Calidad contractual</dt><dd class="truncate text-gray-800" title="{{ $vinculo->calidadContractual->nombre }}">{{ $vinculo->calidadContractual->nombre }}</dd></div>
                                         <div class="min-w-0"><dt class="text-xs font-medium text-gray-500">Profesión</dt><dd class="truncate text-gray-800" title="{{ $vinculo->profesion?->nombre ?? '-' }}">{{ $vinculo->profesion?->nombre ?? '-' }}</dd></div>
                                         <div><dt class="text-xs font-medium text-gray-500">Grado EUS</dt><dd class="text-gray-800">{{ $vinculo->grado_eus ?? '-' }}</dd></div>
                                     </dl>
+
+                                    <div class="mt-auto flex flex-wrap justify-end gap-x-3 gap-y-1 border-t border-gray-100 pt-3 text-sm">
+                                        <a class="font-medium text-indigo-700 hover:underline" href="{{ route('admin.dotacion.persona', $vinculo->persona) }}">Ver ficha</a>
+                                        @can('update', $vinculo)
+                                            <a class="font-medium text-indigo-700 hover:underline" href="{{ route('admin.dotacion.edit', $vinculo) }}">Editar</a>
+                                            @if (! $vinculo->vigente_hasta)
+                                                <button type="button" class="font-medium text-red-700 hover:underline" x-on:click="$dispatch('close-modal', 'dotacion-unidad-{{ $unidad->id }}'); $dispatch('open-modal', 'cerrar-vinculo-{{ $vinculo->id }}')">Cerrar vínculo</button>
+                                            @endif
+                                        @endcan
+                                    </div>
                                 </article>
                             @endforeach
                         </div>
                     @endif
                 </div>
 
-                <footer class="flex shrink-0 justify-end border-t border-gray-200 px-5 py-3 sm:px-6">
+                <footer class="flex shrink-0 justify-end border-t border-gray-200 px-5 py-2 sm:px-6">
                     <x-secondary-button type="button" x-on:click="$dispatch('close')">Cerrar</x-secondary-button>
                 </footer>
             </div>

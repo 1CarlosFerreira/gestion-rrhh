@@ -30,11 +30,18 @@
                 </dl>
             </section>
 
-            <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                <h2 class="text-base font-semibold text-gray-900">Credenciales</h2>
-                <p class="mt-1 text-sm text-gray-500">Administra las credenciales de acceso sin modificar los datos personales, roles ni ámbito de operación.</p>
+            <details class="group rounded-xl border border-gray-200 bg-white shadow-sm" @if ($errors->hasAny(['email', 'password', 'password_confirmation'])) open @endif>
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:p-6 [&::-webkit-details-marker]:hidden">
+                    <span>
+                        <span class="block text-base font-semibold text-gray-900">Credenciales</span>
+                        <span class="mt-1 block text-sm text-gray-500">Cambiar correo o restablecer contraseña</span>
+                    </span>
+                    <svg class="h-5 w-5 shrink-0 text-gray-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </summary>
 
-                <div class="mt-5 grid gap-5 lg:grid-cols-2">
+                <div class="grid gap-5 border-t border-gray-100 px-5 pb-5 pt-5 sm:px-6 sm:pb-6 lg:grid-cols-2">
                     <form method="POST" action="{{ route('admin.usuarios.email.update', $user) }}" class="rounded-lg border border-gray-200 p-4">
                         @csrf
                         @method('PATCH')
@@ -64,7 +71,7 @@
                         <x-primary-button class="mt-4">Restablecer contraseña</x-primary-button>
                     </form>
                 </div>
-            </section>
+            </details>
 
             <form method="POST" action="{{ route('admin.usuarios.roles.update', $user) }}" class="space-y-5">
                 @csrf

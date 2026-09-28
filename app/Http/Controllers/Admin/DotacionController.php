@@ -16,7 +16,9 @@ use App\Models\Profesion;
 use App\Models\UnidadOrganizacional;
 use App\Models\UnidadResponsable;
 use App\Services\Alcances\AlcanceFuncionalUnidadResolver;
+use App\Services\Dotacion\ClasificacionInstitucionalDotacion;
 use App\Services\Dotacion\DotacionService;
+use App\Services\Dotacion\ResumenReemplazosDotacion;
 use App\Services\EstructuraOrganizacionalService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +30,7 @@ use Illuminate\View\View;
 
 class DotacionController extends Controller
 {
-    public function index(Request $request, AlcanceFuncionalUnidadResolver $alcance, EstructuraOrganizacionalService $estructura): View
+    public function index(Request $request, AlcanceFuncionalUnidadResolver $alcance, EstructuraOrganizacionalService $estructura, ResumenReemplazosDotacion $resumenReemplazos, ClasificacionInstitucionalDotacion $clasificacionInstitucional): View
     {
         Gate::authorize('viewAny', PersonaUnidadVinculo::class);
         $fecha = $request->date('fecha')?->toDateString() ?? today()->toDateString();
@@ -46,7 +48,7 @@ class DotacionController extends Controller
             }
         }
         $estado = $request->has('estado') ? $request->string('estado')->toString() : EstadoVinculoDotacion::VIGENTE->value;
-        $query = PersonaUnidadVinculo::query()->with(['persona.user', 'unidad', 'estamento', 'profesion', 'calidadContractual', 'creadoPor', 'tramiteOrigen'])->whereIn('unidad_organizacional_id', $ids)
+        $query = PersonaUnidadVinculo::query()->with(['persona.user', 'unidad', 'estamento', 'profesion', 'calidadContractual', 'creadoPor', 'tramiteOrigen.reemplazo.funcionario'])->whereIn('unidad_organizacional_id', $ids)
             ->when($request->filled('persona'), fn (Builder $q) => $q->whereHas('persona', fn (Builder $p) => $p->buscar($request->string('persona'))))
             ->when($request->integer('estamento_id'), fn (Builder $q, int $id) => $q->where('estamento_id', $id))
             ->when($request->integer('profesion_id'), fn (Builder $q, int $id) => $q->where('profesion_id', $id))
@@ -58,6 +60,8 @@ class DotacionController extends Controller
             default => null,
         };
         $vinculos = $query->orderByDesc('vigente_desde')->get();
+        ['reemplazosPorVinculo' => $reemplazosPorVinculo, 'coberturasActuales' => $coberturasActuales] = $resumenReemplazos->resolver($vinculos, $fecha);
+        $rolesDotacion = $clasificacionInstitucional->resolver($vinculos, $reemplazosPorVinculo, $fecha);
         $puedeRegistrarVinculo = UnidadOrganizacional::query()->where('activo', true)->get()
             ->contains(fn (UnidadOrganizacional $unidad): bool => Gate::forUser($request->user())->allows('create', [PersonaUnidadVinculo::class, $unidad]));
         $unidades = UnidadOrganizacional::query()->whereIn('id', $permitidas)->orderBy('nombre')->get();
@@ -73,7 +77,7 @@ class DotacionController extends Controller
             ->sortBy('orden_jerarquico', SORT_NATURAL)
             ->values();
 
-        return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estado' => $estado, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => $unidades, 'unidadesAgrupadas' => $unidadesAgrupadas, 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get(), 'puedeRegistrarVinculo' => $puedeRegistrarVinculo]);
+        return view('admin.dotacion.index', ['vinculos' => $vinculos, 'fecha' => $fecha, 'estado' => $estado, 'estados' => EstadoVinculoDotacion::cases(), 'unidades' => $unidades, 'unidadesAgrupadas' => $unidadesAgrupadas, 'estamentos' => Estamento::query()->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->orderBy('orden')->get(), 'puedeRegistrarVinculo' => $puedeRegistrarVinculo, 'reemplazosPorVinculo' => $reemplazosPorVinculo, 'coberturasActuales' => $coberturasActuales, 'rolesDotacion' => $rolesDotacion]);
     }
 
     public function create(Request $request, EstructuraOrganizacionalService $estructura): View
