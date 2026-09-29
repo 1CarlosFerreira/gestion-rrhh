@@ -1,4 +1,4 @@
-<x-app-layout><x-slot name="header"><div class="flex items-center justify-between"><div><h2 class="text-xl font-semibold">{{ $tramite ? $tramite->codigo : 'Nueva Solicitud de Reemplazo' }}</h2><p class="text-sm text-gray-500">Estado: {{ $tramite?->estadoTramite?->nombre ?? 'Borrador' }} @if($tramite) · {{ $tramite->unidadOrganizacional->nombre }} @endif</p></div><div class="text-right"><div class="flex gap-3"><button type="submit" form="reemplazo-form" class="rounded bg-indigo-700 px-4 py-2 text-sm font-semibold text-white">{{ $tramite?->estadoTramite?->codigo === 'DEVUELTA_PARA_CORRECCION' ? 'Guardar cambios' : 'Guardar borrador' }}</button>@if($tramite)<button type="submit" form="reemplazo-form" formaction="{{ route('reemplazos.send',$tramite) }}" class="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">{{ $tramite->estadoTramite->codigo === 'DEVUELTA_PARA_CORRECCION' ? 'Reenviar a Gestión de Personas' : 'Enviar a Gestión de Personas' }}</button>@endif</div>@if($tramite)<p class="mt-1 text-xs text-gray-500">Al enviar se guardan los cambios actuales y luego se validan los antecedentes.</p>@endif</div></div></x-slot>
+<x-app-layout><x-slot name="header"><div class="flex items-center justify-between"><div><h2 class="text-xl font-semibold">{{ $tramite ? $tramite->codigo : 'Nueva Solicitud de Reemplazo' }}</h2><p class="text-sm text-gray-500">Estado: {{ $tramite?->estadoTramite?->nombre ?? 'Borrador' }} @if($tramite) · {{ $tramite->unidadOrganizacional->nombre }} @endif</p></div><div class="text-right"><div class="flex gap-3"><button type="submit" form="reemplazo-form" class="rounded bg-brand-primary px-4 py-2 text-sm font-semibold text-white">{{ $tramite?->estadoTramite?->codigo === 'DEVUELTA_PARA_CORRECCION' ? 'Guardar cambios' : 'Guardar borrador' }}</button>@if($tramite)<button type="submit" form="reemplazo-form" formaction="{{ route('reemplazos.send',$tramite) }}" class="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">{{ $tramite->estadoTramite->codigo === 'DEVUELTA_PARA_CORRECCION' ? 'Reenviar a Gestión de Personas' : 'Enviar a Gestión de Personas' }}</button>@endif</div>@if($tramite)<p class="mt-1 text-xs text-gray-500">Al enviar se guardan los cambios actuales y luego se validan los antecedentes.</p>@endif</div></div></x-slot>
 <div class="py-10"><div class="mx-auto max-w-7xl px-4">@if(session('status'))<div class="mb-4 rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</div>@endif @if($errors->any())<div class="mb-4 rounded bg-red-50 p-3 text-red-800"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif @if($tramite)<form id="adjunto-form" method="POST" enctype="multipart/form-data" action="{{ route('reemplazos.adjuntos.store',$tramite) }}">@csrf</form>@endif
 <form id="reemplazo-form" method="POST" action="{{ $tramite ? route('reemplazos.update',$tramite) : route('reemplazos.store') }}" class="grid gap-5 lg:grid-cols-2">@csrf @if($tramite)@method('PUT')@endif
 @php
@@ -169,7 +169,7 @@
 }">
     <div class="flex items-center justify-between gap-3">
         <h3 class="font-semibold">Reemplazante</h3>
-        <button type="button" x-on:click="nuevoAbierto = ! nuevoAbierto" class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-indigo-300 hover:text-indigo-700" x-bind:aria-expanded="nuevoAbierto">
+        <button type="button" x-on:click="nuevoAbierto = ! nuevoAbierto" class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-brand-primary/40 hover:text-brand-primary-dark" x-bind:aria-expanded="nuevoAbierto">
             <span aria-hidden="true">+</span> Nuevo reemplazante
         </button>
     </div>
@@ -188,14 +188,14 @@
         </div>
         <div class="mt-2 divide-y divide-gray-200 border-t border-gray-200">
             <template x-for="item in disponibles()" x-bind:key="item.id">
-                <article class="-mx-1 px-2 py-2.5 transition" x-bind:class="vinculoBase === item.id ? 'bg-indigo-50/70' : ''">
+                <article class="-mx-1 px-2 py-2.5 transition" x-bind:class="vinculoBase === item.id ? 'bg-brand-primary-soft/70' : ''">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="truncate text-sm font-semibold text-gray-900"><span x-text="item.profesion || 'Sin profesión informada'"></span><span class="font-normal text-gray-400"> · </span><span x-text="item.estamento || 'Sin estamento informado'"></span></p>
                             <p class="mt-0.5 truncate text-xs text-gray-600"><span x-text="item.calidad_contractual || 'Calidad no informada'"></span><span class="text-gray-400"> · </span><span x-text="item.cargo_funcion || 'Cargo no informado'"></span></p>
                             <p class="mt-0.5 truncate text-xs text-gray-500"><span x-text="item.unidad || 'Unidad no informada'"></span><span class="text-gray-400"> · </span><span x-text="item.vigencia"></span></p>
                         </div>
-                        <button type="button" x-on:click="vinculoBase = item.id; copiarAntecedentes()" class="shrink-0 rounded-md border px-2.5 py-1 text-xs font-semibold" x-bind:class="vinculoBase === item.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-indigo-700 hover:border-indigo-300'" x-text="vinculoBase === item.id ? 'Base seleccionada' : 'Usar como base'"></button>
+                        <button type="button" x-on:click="vinculoBase = item.id; copiarAntecedentes()" class="shrink-0 rounded-md border px-2.5 py-1 text-xs font-semibold" x-bind:class="vinculoBase === item.id ? 'border-brand-primary/30 bg-brand-primary-soft text-brand-primary-dark' : 'border-gray-300 bg-white text-brand-primary-dark hover:border-brand-primary/40'" x-text="vinculoBase === item.id ? 'Base seleccionada' : 'Usar como base'"></button>
                     </div>
                 </article>
             </template>

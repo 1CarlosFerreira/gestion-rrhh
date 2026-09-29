@@ -24,12 +24,12 @@
                     <div class="relative min-w-0 flex-1">
                         <label for="buscar-unidad" class="sr-only">Buscar unidad</label>
                         <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd" /></svg>
-                        <input id="buscar-unidad" type="search" x-model.debounce.150ms="buscarUnidad" placeholder="Buscar unidad..." class="block w-full rounded-md border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <input id="buscar-unidad" type="search" x-model.debounce.150ms="buscarUnidad" placeholder="Buscar unidad..." class="block w-full rounded-md border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                     </div>
 
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        class="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2"
                         x-on:click="filtrosAbiertos = ! filtrosAbiertos"
                         x-bind:aria-expanded="filtrosAbiertos.toString()"
                         aria-controls="filtros-dotacion"
@@ -41,9 +41,9 @@
 
                     @if ($puedeRegistrarVinculo)
                         <div class="flex flex-wrap items-center gap-3">
-                            <a class="inline-flex flex-1 items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:flex-none" href="{{ route('admin.dotacion.create') }}">Registrar vínculo</a>
+                            <a class="inline-flex flex-1 items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-primary-dark focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 sm:flex-none" href="{{ route('admin.dotacion.create') }}">Registrar vínculo</a>
                             @can('calidades_contractuales.ver')
-                                <a class="text-sm font-medium text-indigo-700 underline" href="{{ route('admin.calidades.index') }}">Calidades</a>
+                                <a class="text-sm font-medium text-brand-primary-dark underline" href="{{ route('admin.calidades.index') }}">Calidades</a>
                             @endcan
                         </div>
                     @endif
@@ -53,7 +53,7 @@
                     <form class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="GET">
                         <x-text-input name="persona" value="{{ request('persona') }}" placeholder="RUT, nombres o apellidos" />
 
-                        <select name="unidad_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select name="unidad_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                             <option value="">Unidades accesibles</option>
                             @foreach ($unidades as $unidad)
                                 <option value="{{ $unidad->id }}" @selected(request('unidad_id') == $unidad->id)>{{ $unidad->nombre }}</option>
@@ -62,28 +62,28 @@
 
                         <x-text-input type="date" name="fecha" value="{{ $fecha }}" />
 
-                        <select name="estado" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select name="estado" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                             <option value="" @selected($estado === '')>Todos los estados</option>
                             @foreach ($estados as $opcionEstado)
                                 <option value="{{ $opcionEstado->value }}" @selected($estado === $opcionEstado->value)>{{ $opcionEstado->value }}</option>
                             @endforeach
                         </select>
 
-                        <select name="estamento_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select name="estamento_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                             <option value="">Estamentos</option>
                             @foreach ($estamentos as $estamento)
                                 <option value="{{ $estamento->id }}" @selected(request('estamento_id') == $estamento->id)>{{ $estamento->nombre }}</option>
                             @endforeach
                         </select>
 
-                        <select name="profesion_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select name="profesion_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                             <option value="">Profesiones</option>
                             @foreach ($profesiones as $profesion)
                                 <option value="{{ $profesion->id }}" @selected(request('profesion_id') == $profesion->id)>{{ $profesion->nombre }}</option>
                             @endforeach
                         </select>
 
-                        <select name="calidad_contractual_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select name="calidad_contractual_id" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                             <option value="">Calidades</option>
                             @foreach ($calidades as $calidad)
                                 <option value="{{ $calidad->id }}" @selected(request('calidad_contractual_id') == $calidad->id)>{{ $calidad->nombre }}</option>
@@ -92,7 +92,7 @@
 
                         <div class="flex flex-wrap items-center gap-3">
                             <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                                <input type="checkbox" name="incluir_descendientes" value="1" @checked(request()->boolean('incluir_descendientes')) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                <input type="checkbox" name="incluir_descendientes" value="1" @checked(request()->boolean('incluir_descendientes')) class="rounded border-gray-300 text-brand-primary shadow-sm focus:ring-brand-primary">
                                 Descendientes
                             </label>
                             <x-secondary-button>Filtrar</x-secondary-button>
@@ -122,7 +122,7 @@
 
                         <section x-show="coincideUnidad(@js($unidad->nombre))" @class([
                             'grid gap-3 px-4 py-4 transition hover:bg-gray-50 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-4 sm:px-5',
-                            'bg-indigo-50/50' => $unidad->es_encabezado_jerarquico,
+                            'bg-brand-primary-soft/50' => $unidad->es_encabezado_jerarquico,
                         ])>
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
@@ -145,7 +145,7 @@
 
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                class="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2"
                                 x-data
                                 x-on:click="$dispatch('open-modal', 'dotacion-unidad-{{ $unidad->id }}')"
                             >Ver dotación</button>
@@ -188,7 +188,7 @@
                             @endif
                         </p>
                     </div>
-                    <button type="button" class="rounded-md p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" x-on:click="$dispatch('close')" aria-label="Cerrar modal">
+                    <button type="button" class="rounded-md p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-primary" x-on:click="$dispatch('close')" aria-label="Cerrar modal">
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L8.94 10l-4.72 4.72a.75.75 0 1 0 1.06 1.06L10 11.06l4.72 4.72a.75.75 0 1 0 1.06-1.06L11.06 10l4.72-4.72a.75.75 0 0 0-1.06-1.06L10 8.94 5.28 4.22Z" /></svg>
                     </button>
                 </header>
@@ -197,7 +197,7 @@
                     <label for="buscar-dotacion-{{ $unidad->id }}" class="sr-only">Buscar por nombre o RUT</label>
                     <div class="relative">
                         <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd" /></svg>
-                        <input id="buscar-dotacion-{{ $unidad->id }}" type="search" x-model.debounce.150ms="buscar" placeholder="Buscar por nombre o RUT" class="block w-full rounded-md border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <input id="buscar-dotacion-{{ $unidad->id }}" type="search" x-model.debounce.150ms="buscar" placeholder="Buscar por nombre o RUT" class="block w-full rounded-md border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                     </div>
                 </div>
 
@@ -220,7 +220,7 @@
                                 <article @class([
                                     'flex h-full flex-col rounded-xl border p-4 shadow-sm',
                                     'border-amber-300 border-l-4 border-l-amber-400 bg-white' => $esReemplazoVigente,
-                                    'border-indigo-300 border-l-4 border-l-indigo-400 bg-white' => ! $esReemplazoVigente && $estaSiendoReemplazado,
+                                    'border-brand-primary/40 border-l-4 border-l-brand-primary bg-white' => ! $esReemplazoVigente && $estaSiendoReemplazado,
                                     'border-slate-300 border-l-4 border-l-slate-400 bg-slate-50' => ! $esReemplazoVigente && ! $estaSiendoReemplazado && $estadoVinculo !== 'VIGENTE',
                                     'border-gray-200 bg-white' => ! $esReemplazoVigente && ! $estaSiendoReemplazado && $estadoVinculo === 'VIGENTE',
                                 ]) x-show="coincide(@js($textoBusqueda))">
@@ -245,10 +245,10 @@
                                         <div class="mt-3 rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2 text-sm">
                                             <p class="font-medium text-gray-800">↳ Reemplaza a {{ $reemplazoOrigen->funcionario->nombre_completo }}</p>
                                             <p class="mt-1 text-xs text-gray-600">{{ $reemplazoOrigen->fecha_reemplazante_desde->format('d/m/Y') }} — {{ $reemplazoOrigen->fecha_reemplazante_hasta->format('d/m/Y') }}</p>
-                                            <p class="mt-1 text-xs font-medium text-indigo-700">
+                                            <p class="mt-1 text-xs font-medium text-brand-primary-dark">
                                                 Trámite
                                                 @can('view', $vinculo->tramiteOrigen)
-                                                    <a class="underline hover:text-indigo-900" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
+                                                    <a class="underline hover:text-brand-primary-dark" href="{{ route('reemplazos.show', $vinculo->tramiteOrigen) }}">{{ $vinculo->tramiteOrigen->codigo }}</a>
                                                 @else
                                                     {{ $vinculo->tramiteOrigen->codigo }}
                                                 @endcan
@@ -257,13 +257,13 @@
                                     @elseif ($coberturas->isNotEmpty())
                                         <div class="mt-3 space-y-2">
                                             @foreach ($coberturas as $cobertura)
-                                                <div class="rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-sm">
+                                                <div class="rounded-lg border border-brand-primary/20 bg-brand-primary-soft/60 px-3 py-2 text-sm">
                                                     <p class="font-medium text-gray-800">↳ Actualmente reemplazado por {{ $cobertura->reemplazante->nombre_completo }}</p>
                                                     <p class="mt-1 text-xs text-gray-600">{{ $cobertura->fecha_reemplazante_desde->format('d/m/Y') }} — {{ $cobertura->fecha_reemplazante_hasta->format('d/m/Y') }}</p>
-                                                    <p class="mt-1 text-xs font-medium text-indigo-700">
+                                                    <p class="mt-1 text-xs font-medium text-brand-primary-dark">
                                                         Trámite
                                                         @can('view', $cobertura->tramite)
-                                                            <a class="underline hover:text-indigo-900" href="{{ route('reemplazos.show', $cobertura->tramite) }}">{{ $cobertura->tramite->codigo }}</a>
+                                                            <a class="underline hover:text-brand-primary-dark" href="{{ route('reemplazos.show', $cobertura->tramite) }}">{{ $cobertura->tramite->codigo }}</a>
                                                         @else
                                                             {{ $cobertura->tramite->codigo }}
                                                         @endcan
@@ -281,9 +281,9 @@
                                     </dl>
 
                                     <div class="mt-auto flex flex-wrap justify-end gap-x-3 gap-y-1 border-t border-gray-100 pt-3 text-sm">
-                                        <a class="font-medium text-indigo-700 hover:underline" href="{{ route('admin.dotacion.persona', $vinculo->persona) }}">Ver ficha</a>
+                                        <a class="font-medium text-brand-primary-dark hover:underline" href="{{ route('admin.dotacion.persona', $vinculo->persona) }}">Ver ficha</a>
                                         @can('update', $vinculo)
-                                            <a class="font-medium text-indigo-700 hover:underline" href="{{ route('admin.dotacion.edit', $vinculo) }}">Editar</a>
+                                            <a class="font-medium text-brand-primary-dark hover:underline" href="{{ route('admin.dotacion.edit', $vinculo) }}">Editar</a>
                                             @if (! $vinculo->vigente_hasta)
                                                 <button type="button" class="font-medium text-red-700 hover:underline" x-on:click="$dispatch('close-modal', 'dotacion-unidad-{{ $unidad->id }}'); $dispatch('open-modal', 'cerrar-vinculo-{{ $vinculo->id }}')">Cerrar vínculo</button>
                                             @endif

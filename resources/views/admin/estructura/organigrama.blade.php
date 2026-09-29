@@ -31,7 +31,7 @@
                         <template x-for="(item, indice) in actual?.ruta ?? []" :key="item.id">
                             <li class="flex min-w-0 items-center gap-1">
                                 <span x-show="indice > 0" class="text-gray-400" aria-hidden="true">›</span>
-                                <button type="button" x-on:click="seleccionado = item.id" class="max-w-64 truncate text-indigo-700 hover:underline" x-text="item.nombre"></button>
+                                <button type="button" x-on:click="seleccionado = item.id" class="max-w-64 truncate text-brand-primary-dark hover:underline" x-text="item.nombre"></button>
                             </li>
                         </template>
                     </ol>
@@ -52,14 +52,14 @@
                     <section x-show="! actual" class="w-full space-y-10" aria-label="Vista general del organigrama">
                         @foreach ($raices as $raiz)
                             <div class="mx-auto w-full">
-                                <div class="mx-auto flex min-h-14 w-full max-w-xs items-center justify-center rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-3 text-center font-semibold text-indigo-900 shadow-sm">{{ $raiz->nombre }}</div>
+                                <div class="mx-auto flex min-h-14 w-full max-w-xs items-center justify-center rounded-xl border border-brand-primary/40 bg-brand-primary-soft px-5 py-3 text-center font-semibold text-brand-primary-dark shadow-sm">{{ $raiz->nombre }}</div>
                                 @if ($raiz->activeChildren->isNotEmpty())
                                     <div class="mx-auto h-8 w-px bg-gray-300" aria-hidden="true"></div>
                                     <div class="relative grid grid-cols-1 gap-4 border-t border-gray-300 pt-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                         @foreach ($raiz->activeChildren as $hijo)
                                             <div class="relative flex justify-center before:absolute before:-top-8 before:left-1/2 before:h-8 before:w-px before:bg-gray-300">
                                                 @if ($hijo->activeChildren->isNotEmpty())
-                                                    <button type="button" x-on:click="abrir({{ $hijo->id }})" class="flex min-h-14 w-full max-w-xs items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-800 shadow-sm hover:border-indigo-300 hover:bg-indigo-50"><span class="break-words">{{ $hijo->nombre }}</span><span class="shrink-0 text-indigo-600" aria-hidden="true">›</span></button>
+                                                    <button type="button" x-on:click="abrir({{ $hijo->id }})" class="flex min-h-14 w-full max-w-xs items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-800 shadow-sm hover:border-brand-primary/40 hover:bg-brand-primary-soft"><span class="break-words">{{ $hijo->nombre }}</span><span class="shrink-0 text-brand-primary" aria-hidden="true">›</span></button>
                                                 @else
                                                     <div class="flex min-h-14 w-full max-w-xs items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-medium text-gray-800 shadow-sm">{{ $hijo->nombre }}</div>
                                                 @endif
@@ -72,14 +72,14 @@
                     </section>
 
                     <section x-show="actual" class="w-full" aria-label="Rama seleccionada del organigrama">
-                        <div class="mx-auto flex min-h-14 w-full max-w-sm items-center justify-center rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-3 text-center font-semibold text-indigo-900 shadow-sm" x-text="actual?.nombre"></div>
+                        <div class="mx-auto flex min-h-14 w-full max-w-sm items-center justify-center rounded-xl border border-brand-primary/40 bg-brand-primary-soft px-5 py-3 text-center font-semibold text-brand-primary-dark shadow-sm" x-text="actual?.nombre"></div>
                         <template x-if="actual?.hijos.length">
                             <div>
                                 <div class="mx-auto h-8 w-px bg-gray-300" aria-hidden="true"></div>
                                 <div class="relative grid grid-cols-1 gap-4 border-t border-gray-300 pt-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                     <template x-for="hijoId in actual.hijos" :key="hijoId">
                                         <div class="relative flex justify-center before:absolute before:-top-8 before:left-1/2 before:h-8 before:w-px before:bg-gray-300">
-                                            <button type="button" x-on:click="abrir(hijoId)" class="flex min-h-14 w-full max-w-xs items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-medium text-gray-800 shadow-sm" :class="nodos[hijoId].hijos.length ? 'hover:border-indigo-300 hover:bg-indigo-50' : 'cursor-default'"><span class="break-words" x-text="nodos[hijoId].nombre"></span><span x-show="nodos[hijoId].hijos.length" class="shrink-0 text-indigo-600" aria-hidden="true">›</span></button>
+                                            <button type="button" x-on:click="abrir(hijoId)" class="flex min-h-14 w-full max-w-xs items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-medium text-gray-800 shadow-sm" :class="nodos[hijoId].hijos.length ? 'hover:border-brand-primary/40 hover:bg-brand-primary-soft' : 'cursor-default'"><span class="break-words" x-text="nodos[hijoId].nombre"></span><span x-show="nodos[hijoId].hijos.length" class="shrink-0 text-brand-primary" aria-hidden="true">›</span></button>
                                         </div>
                                     </template>
                                 </div>

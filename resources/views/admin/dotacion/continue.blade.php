@@ -22,7 +22,7 @@
                     <p class="mt-3 text-sm text-gray-600">Esta persona todavía no tiene una cuenta de usuario.</p>
                     <div class="mt-5 flex flex-wrap gap-3 border-t border-gray-100 pt-4">
                         <a href="{{ route('admin.personas.show', $vinculo->persona) }}" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Finalizar sin configurar</a>
-                        <a href="{{ route('admin.usuarios.create-for-persona', ['persona' => $vinculo->persona, 'continuar_perfil' => 1]) }}" class="inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600">Configurar acceso al sistema →</a>
+                        <a href="{{ route('admin.usuarios.create-for-persona', ['persona' => $vinculo->persona, 'continuar_perfil' => 1]) }}" class="inline-flex items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-dark">Configurar acceso al sistema →</a>
                     </div>
                 @else
                     <p class="mt-3 text-sm font-semibold text-green-700">✓ Usuario existente</p>
@@ -57,7 +57,7 @@
 
                     <div class="mt-5 flex flex-wrap gap-3 border-t border-gray-100 pt-4">
                         <a href="{{ route('admin.personas.show', $vinculo->persona) }}" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Finalizar</a>
-                        <a href="{{ route('admin.usuarios.perfil-acceso.edit', $user) }}" class="inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600">Revisar acceso →</a>
+                        <a href="{{ route('admin.usuarios.perfil-acceso.edit', $user) }}" class="inline-flex items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-dark">Revisar acceso →</a>
                     </div>
                 @endif
             </section>

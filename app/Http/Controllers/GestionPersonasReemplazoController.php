@@ -12,6 +12,7 @@ use App\Models\Profesion;
 use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Services\Accesos\AccesoOperativoService;
+use App\Support\Tramites\ResolverRetornoTramite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +82,7 @@ class GestionPersonasReemplazoController extends Controller
         return view('reemplazos.bandeja-revision', compact('tramites', 'estados', 'unidades', 'haySolicitudes', 'pestana'));
     }
 
-    public function show(Tramite $tramite): View
+    public function show(Request $request, Tramite $tramite, ResolverRetornoTramite $resolverRetorno): View
     {
         $this->authorizeShow($tramite);
         $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.reemplazanteEstamento', 'reemplazo.reemplazanteProfesion', 'reemplazo.reemplazanteCalidadContractual', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.revisadoPor', 'formalizacionReemplazo.estamento', 'formalizacionReemplazo.profesion', 'formalizacionReemplazo.calidadContractual', 'formalizacionReemplazo.adjunto', 'formalizacionReemplazo.formalizadoPor', 'vinculoDotacion', 'adjuntos.tipoDocumento', 'historial.usuario', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor']);
@@ -99,10 +100,17 @@ class GestionPersonasReemplazoController extends Controller
             $calidades = CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get();
             $calidadReemplazoId = $calidades->firstWhere('codigo', 'REEMPLAZO')?->id;
 
-            return view('reemplazos.documento', compact('tramite', 'estamentos', 'profesiones', 'calidades', 'calidadReemplazoId'));
+            return view('reemplazos.documento', [
+                ...compact('tramite', 'estamentos', 'profesiones', 'calidades', 'calidadReemplazoId'),
+                'retorno' => $resolverRetorno->resolve($request, 'revision_reemplazos'),
+            ]);
         }
 
-        return view('reemplazos.revision', ['tramite' => $tramite, 'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get()]);
+        return view('reemplazos.revision', [
+            'tramite' => $tramite,
+            'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
+            'retorno' => $resolverRetorno->resolve($request, 'revision_reemplazos'),
+        ]);
     }
 
     public function start(Request $request, Tramite $tramite, TransicionarTramite $transition): RedirectResponse

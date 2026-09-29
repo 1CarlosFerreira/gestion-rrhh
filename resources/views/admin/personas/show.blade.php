@@ -45,7 +45,7 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         @can('personas.gestionar')
-                            <a href="{{ route('admin.personas.edit', $persona) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar datos personales</a>
+                            <a href="{{ route('admin.personas.edit', $persona) }}" class="text-sm font-medium text-brand-primary-dark hover:underline">Editar datos personales</a>
                             <form method="POST" action="{{ route('admin.personas.activo', $persona) }}" onsubmit="return confirm('{{ $persona->active ? '¿Confirma que desea inactivar esta persona?' : '¿Confirma que desea reactivar esta persona?' }}')">
                                 @csrf @method('PATCH')
                                 <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900 hover:underline">{{ $persona->active ? 'Inactivar' : 'Reactivar' }}</button>
@@ -63,7 +63,7 @@
                         <p class="mt-1 text-sm text-gray-500">Cuenta, roles y unidades sobre las que puede operar.</p>
                     </div>
                     @if ($persona->user && auth()->user()->can('admin.usuarios') && auth()->user()->hasRole('Administrador'))
-                        <a href="{{ route('admin.usuarios.perfil-acceso.edit', $persona->user) }}" class="inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600">Administrar acceso</a>
+                        <a href="{{ route('admin.usuarios.perfil-acceso.edit', $persona->user) }}" class="inline-flex items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-dark">Administrar acceso</a>
                     @endif
                 </div>
 
@@ -90,7 +90,7 @@
                                 <p class="mt-1 text-xs text-gray-500">Estas unidades determinan dónde puede operar este usuario cuando sus roles y permisos lo permitan.</p>
                             </div>
                             @can('create', App\Models\UserUnidadAcceso::class)
-                                <a href="{{ route('admin.accesos.create', ['user_id' => $persona->user->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar autorización adicional</a>
+                                <a href="{{ route('admin.accesos.create', ['user_id' => $persona->user->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-brand-primary-dark hover:underline">+ Agregar autorización adicional</a>
                             @endcan
                         </div>
 
@@ -110,7 +110,7 @@
                                                     <span>Autorización adicional · {{ $acceso->alcance->etiqueta() }}</span>
                                                     @can('update', $acceso)
                                                         <span class="flex items-center gap-3">
-                                                            <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="font-medium text-indigo-700 hover:underline">Editar</a>
+                                                            <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="font-medium text-brand-primary-dark hover:underline">Editar</a>
                                                             @if ($acceso->vigente_hasta === null)
                                                                 <form method="POST" action="{{ route('admin.accesos.close', $acceso) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta autorización adicional?')">
                                                                     @csrf @method('PATCH')
@@ -141,7 +141,7 @@
                                                     @if ($titulo === 'Autorizaciones futuras')
                                                         @can('update', $acceso)
                                                             <span class="flex shrink-0 flex-wrap items-end gap-3">
-                                                                <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="font-medium text-indigo-700 hover:underline">Editar</a>
+                                                                <a href="{{ route('admin.accesos.edit', ['acceso' => $acceso, 'return_to' => 'persona']) }}" class="font-medium text-brand-primary-dark hover:underline">Editar</a>
                                                                 @if ($acceso->vigente_hasta === null)
                                                                     <form method="POST" action="{{ route('admin.accesos.close', $acceso) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta autorización adicional?')">
                                                                         @csrf @method('PATCH')
@@ -164,7 +164,7 @@
                 @else
                     <p class="mt-4 text-sm text-gray-600">Sin cuenta de usuario.</p>
                     @can('admin.usuarios')
-                        <a href="{{ route('admin.usuarios.create-for-persona', $persona) }}" class="mt-4 inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600">Crear acceso al sistema</a>
+                        <a href="{{ route('admin.usuarios.create-for-persona', $persona) }}" class="mt-4 inline-flex items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-dark">Crear acceso al sistema</a>
                     @endcan
                 @endif
             </section>
@@ -174,7 +174,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div><h2 class="text-base font-semibold text-gray-900">Dotación</h2><p class="mt-1 text-sm text-gray-500">Vínculos laborales de la Persona.</p></div>
                         @if ($puedeAgregarVinculo)
-                            <a href="{{ route('admin.dotacion.create', ['persona_id' => $persona->id]) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar a dotación</a>
+                            <a href="{{ route('admin.dotacion.create', ['persona_id' => $persona->id]) }}" class="text-sm font-medium text-brand-primary-dark hover:underline">+ Agregar a dotación</a>
                         @endif
                     </div>
 
@@ -196,12 +196,12 @@
                                             <p class="text-xs text-gray-500">{{ $vinculo->calidadContractual->nombre }}@if($vinculo->grado_eus) · Grado {{ $vinculo->grado_eus }}@endif</p>
                                             <p class="mt-2 text-sm text-gray-700">{{ $vinculo->vigente_desde->format('d/m/Y') }} → {{ $vinculo->vigente_hasta?->format('d/m/Y') ?? 'Actualidad' }}</p>
                                             @if ($vinculo->esGeneradoPorTramite())
-                                                <p class="mt-2 text-xs font-medium text-indigo-700">Generado por trámite {{ $vinculo->tramiteOrigen->codigo }}</p>
+                                                <p class="mt-2 text-xs font-medium text-brand-primary-dark">Generado por trámite {{ $vinculo->tramiteOrigen->codigo }}</p>
                                             @endif
 
                                             @can('update', $vinculo)
                                                 <div class="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-3">
-                                                    <a href="{{ route('admin.dotacion.edit', ['vinculo' => $vinculo, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar</a>
+                                                    <a href="{{ route('admin.dotacion.edit', ['vinculo' => $vinculo, 'return_to' => 'persona']) }}" class="text-sm font-medium text-brand-primary-dark hover:underline">Editar</a>
                                                     @if ($vinculo->vigente_hasta === null)
                                                         <form method="POST" action="{{ route('admin.dotacion.close', $vinculo) }}" class="flex flex-wrap items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar este vínculo laboral?')">
                                                             @csrf @method('PATCH')
@@ -226,7 +226,7 @@
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div><h2 class="text-base font-semibold text-gray-900">Responsabilidades institucionales</h2><p class="mt-1 text-sm text-gray-500">Titularidades y subrogancias, independientes de los vínculos laborales.</p></div>
                         @can('create', App\Models\UnidadResponsable::class)
-                            <a href="{{ route('admin.responsabilidades.create', ['persona_id' => $persona->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar responsabilidad</a>
+                            <a href="{{ route('admin.responsabilidades.create', ['persona_id' => $persona->id, 'return_to' => 'persona']) }}" class="text-sm font-medium text-brand-primary-dark hover:underline">+ Agregar responsabilidad</a>
                         @endcan
                     </div>
 
@@ -248,7 +248,7 @@
                                             </div>
                                             @can('update', $responsabilidad)
                                                 <div class="flex flex-wrap items-end gap-3">
-                                                    <a href="{{ route('admin.responsabilidades.edit', ['responsabilidad' => $responsabilidad, 'return_to' => 'persona']) }}" class="text-sm font-medium text-indigo-700 hover:underline">Editar</a>
+                                                    <a href="{{ route('admin.responsabilidades.edit', ['responsabilidad' => $responsabilidad, 'return_to' => 'persona']) }}" class="text-sm font-medium text-brand-primary-dark hover:underline">Editar</a>
                                                     @if ($responsabilidad->vigente_hasta === null)
                                                         <form method="POST" action="{{ route('admin.responsabilidades.close', $responsabilidad) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta responsabilidad?')">
                                                             @csrf @method('PATCH')

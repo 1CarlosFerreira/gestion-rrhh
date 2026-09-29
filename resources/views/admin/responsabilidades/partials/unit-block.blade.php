@@ -44,7 +44,7 @@
 
                 @can('responsabilidades.gestionar')
                     <div class="flex flex-wrap items-end gap-3 md:justify-end">
-                        <a href="{{ route('admin.responsabilidades.edit', $responsabilidad) }}" class="pb-2 text-sm font-medium text-indigo-700 hover:underline">Editar</a>
+                        <a href="{{ route('admin.responsabilidades.edit', $responsabilidad) }}" class="pb-2 text-sm font-medium text-brand-primary-dark hover:underline">Editar</a>
 
                         @if (! $responsabilidad->vigente_hasta)
                             <form method="POST" action="{{ route('admin.responsabilidades.close', $responsabilidad) }}" class="flex items-end gap-2" onsubmit="return confirm('¿Confirma que desea cerrar esta responsabilidad?')">
@@ -52,7 +52,7 @@
                                 @method('PATCH')
                                 <label class="text-xs font-medium text-gray-500">
                                     Término
-                                    <input type="date" name="vigente_hasta" min="{{ $responsabilidad->vigente_desde->toDateString() }}" required class="mt-0.5 block w-32 rounded-md border-gray-300 py-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <input type="date" name="vigente_hasta" min="{{ $responsabilidad->vigente_desde->toDateString() }}" required class="mt-0.5 block w-32 rounded-md border-gray-300 py-1.5 text-xs shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                                 </label>
                                 <button type="submit" class="mb-0.5 text-sm font-medium text-red-700 hover:underline">Cerrar</button>
                             </form>

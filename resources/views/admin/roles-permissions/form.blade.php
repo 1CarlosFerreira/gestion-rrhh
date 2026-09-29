@@ -27,7 +27,7 @@
                             <div class="mt-2 space-y-3">
                                 @foreach ($grupo['permisos'] as $permission)
                                     <label class="flex items-start gap-3 text-sm text-gray-700">
-                                        <input type="checkbox" name="permissions[]" value="{{ $permission->name }}" @checked(in_array($permission->name, old('permissions', $role?->permissions->pluck('name')->all() ?? []), true)) class="mt-0.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                        <input type="checkbox" name="permissions[]" value="{{ $permission->name }}" @checked(in_array($permission->name, old('permissions', $role?->permissions->pluck('name')->all() ?? []), true)) class="mt-0.5 rounded border-gray-300 text-brand-primary shadow-sm focus:ring-brand-primary">
                                         <span>
                                             <span class="block font-medium">{{ str($permission->name)->after('.')->replace(['.', '_'], [' · ', ' '])->ucfirst() }}</span>
                                             <span class="block text-xs text-gray-500">{{ $permission->name }}</span>

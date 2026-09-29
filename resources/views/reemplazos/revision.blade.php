@@ -10,8 +10,8 @@
 
             @if($tramite->estadoTramite->codigo === 'EN_REVISION')
                 @include('reemplazos.partials.ficha-base', [
-                    'volverHref' => route('gestion-personas.reemplazos.index'),
-                    'volverTexto' => 'Volver a Reemplazos',
+                    'volverHref' => $retorno['href'],
+                    'volverTexto' => $retorno['text'],
                     'fechaEtiqueta' => 'Fecha de envío',
                     'fechaValor' => $tramite->submitted_at,
                     'cabeceraCompacta' => true,
@@ -29,9 +29,9 @@
                     </dl>
                 </section>
 
-                <section class="rounded-xl border border-indigo-200 bg-white p-5 shadow-md ring-1 ring-indigo-100 sm:p-6">
+                <section class="rounded-xl border border-brand-primary/30 bg-white p-5 shadow-md ring-1 ring-brand-primary/20 sm:p-6">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Tarea actual</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-brand-primary">Tarea actual</p>
                         <h2 class="mt-1 text-lg font-semibold text-gray-950">Revisión Gestión de Personas</h2>
                         <p class="mt-1 text-sm text-gray-600">Completa y valida los antecedentes administrativos para continuar la tramitación.</p>
                     </div>
@@ -102,8 +102,8 @@
                 </details>
             @else
                 @include('reemplazos.partials.ficha-base', [
-                    'volverHref' => route('gestion-personas.reemplazos.index'),
-                    'volverTexto' => 'Volver a Reemplazos',
+                    'volverHref' => $retorno['href'],
+                    'volverTexto' => $retorno['text'],
                     'fechaEtiqueta' => 'Fecha de envío',
                     'fechaValor' => $tramite->submitted_at,
                     'mostrarIniciarRevision' => $tramite->estadoTramite->codigo === 'ENVIADA_GESTION_PERSONAS',

@@ -128,7 +128,7 @@ class ReemplazosV2DDocumentoTest extends TestCase
 
         $this->actingAs($this->user)->get(route('gestion-personas.reemplazos.show', $tramite))
             ->assertOk()
-            ->assertSee('Volver a Reemplazos')
+            ->assertSee('Volver a Revisión de reemplazos')
             ->assertSee($tramite->codigo)
             ->assertSee($this->unidad->nombre)
             ->assertSee('Funcionario V2D')

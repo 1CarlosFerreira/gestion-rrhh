@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    /* Accessible interface derivatives of the institutional logo palette. */
+    --brand-primary: 0 109 143;
+    --brand-primary-dark: 0 83 109;
+    --brand-primary-soft: 235 248 252;
+    --brand-secondary: 88 120 29;
+    --brand-secondary-dark: 62 87 19;
+    --brand-secondary-soft: 244 248 234;
+    --brand-accent: 249 230 38;
+    --brand-warm: 251 175 60;
+    --brand-surface: 248 250 252;
+    --brand-text: 31 41 55;
+}
+
 [x-cloak] {
     display: none !important;
 }

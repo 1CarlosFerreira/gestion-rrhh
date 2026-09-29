@@ -23,7 +23,7 @@
 
         <div class="py-10">
             <div class="mx-auto max-w-7xl space-y-7 px-4 sm:px-6 lg:px-8">
-                <section class="rounded-xl border border-blue-100 bg-blue-50/70 px-5 py-4 sm:px-6 sm:py-5">
+                <section class="rounded-xl border border-brand-primary/20 bg-brand-primary-soft/70 px-5 py-4 sm:px-6 sm:py-5">
                     <h1 class="text-xl font-semibold text-gray-900">Bienvenido/a, {{ auth()->user()->name }}</h1>
                     <p class="mt-1 text-sm text-gray-600">Panel general de administración y configuración del sistema.</p>
                 </section>
@@ -32,16 +32,16 @@
                     <h3 id="resumen-title" class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Resumen</h3>
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         @can('personas.ver')
-                            <a href="{{ route('admin.personas.index') }}" class="rounded-xl border border-blue-100 bg-blue-50/60 p-4 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"><p class="text-sm font-medium text-blue-800">Personas</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-blue-950">{{ $resumen['personas']['total'] }}</strong><span class="text-xs text-blue-700">{{ $resumen['personas']['activas'] }} activas</span></div></a>
+                            <a href="{{ route('admin.personas.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-brand-primary/30 hover:bg-brand-primary-soft/40"><p class="text-sm font-medium text-brand-primary-dark">Personas</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-brand-text">{{ $resumen['personas']['total'] }}</strong><span class="text-xs text-gray-600">{{ $resumen['personas']['activas'] }} activas</span></div></a>
                         @endcan
                         @can('admin.usuarios')
-                            <a href="{{ route('admin.usuarios.index') }}" class="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"><p class="text-sm font-medium text-emerald-800">Usuarios</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-emerald-950">{{ $resumen['usuarios']['total'] }}</strong><span class="text-xs text-emerald-700">{{ $resumen['usuarios']['activos'] }} activos</span></div></a>
+                            <a href="{{ route('admin.usuarios.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-brand-primary/30 hover:bg-brand-primary-soft/40"><p class="text-sm font-medium text-brand-primary-dark">Usuarios</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-brand-text">{{ $resumen['usuarios']['total'] }}</strong><span class="text-xs text-gray-600">{{ $resumen['usuarios']['activos'] }} activos</span></div></a>
                         @endcan
                         @can('estructura_organizacional.ver')
-                            <a href="{{ route('admin.estructura.index') }}" class="rounded-xl border border-violet-100 bg-violet-50/60 p-4 shadow-sm transition hover:border-violet-200 hover:bg-violet-50"><p class="text-sm font-medium text-violet-800">Unidades organizacionales</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-violet-950">{{ $resumen['unidades']['total'] }}</strong><span class="text-xs text-violet-700">{{ $resumen['unidades']['activas'] }} activas</span></div></a>
+                            <a href="{{ route('admin.estructura.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-brand-primary/30 hover:bg-brand-primary-soft/40"><p class="text-sm font-medium text-brand-primary-dark">Unidades organizacionales</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-brand-text">{{ $resumen['unidades']['total'] }}</strong><span class="text-xs text-gray-600">{{ $resumen['unidades']['activas'] }} activas</span></div></a>
                         @endcan
                         @can('admin.roles_permisos')
-                            <a href="{{ route('admin.roles-permisos.index') }}" class="rounded-xl border border-amber-100 bg-amber-50/60 p-4 shadow-sm transition hover:border-amber-200 hover:bg-amber-50"><p class="text-sm font-medium text-amber-800">Roles</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-amber-950">{{ $resumen['roles']['total'] }}</strong><span class="text-xs text-amber-700">configurados</span></div></a>
+                            <a href="{{ route('admin.roles-permisos.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-brand-primary/30 hover:bg-brand-primary-soft/40"><p class="text-sm font-medium text-brand-primary-dark">Roles</p><div class="mt-2 flex items-end justify-between gap-3"><strong class="text-3xl font-semibold text-brand-text">{{ $resumen['roles']['total'] }}</strong><span class="text-xs text-gray-600">configurados</span></div></a>
                         @endcan
                     </div>
                 </section>
@@ -59,12 +59,12 @@
                                 <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $tituloGrupo }}</h4>
                                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                     @foreach ($modulosVisibles as $modulo)
-                                        <a href="{{ route($modulo['ruta']) }}" class="group flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40 hover:shadow-md">
+                                        <a href="{{ route($modulo['ruta']) }}" class="group flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm transition hover:border-brand-primary/30 hover:bg-brand-primary-soft/40 hover:shadow-md">
                                             <span class="min-w-0">
-                                                <span class="block text-sm font-semibold text-gray-900 group-hover:text-indigo-800">{{ $modulo['nombre'] }}</span>
+                                                <span class="block text-sm font-semibold text-gray-900 group-hover:text-brand-primary-dark">{{ $modulo['nombre'] }}</span>
                                                 <span class="mt-0.5 block text-xs text-gray-500">{{ $modulo['descripcion'] }}</span>
                                             </span>
-                                            <span class="shrink-0 text-indigo-500" aria-hidden="true">→</span>
+                                            <span class="shrink-0 text-brand-primary" aria-hidden="true">→</span>
                                         </a>
                                     @endforeach
                                 </div>
@@ -81,7 +81,7 @@
                 @if ($esGestionPersonas)
                     @include('dashboard.partials.gestion-personas')
                 @else
-                <section class="rounded-xl border border-indigo-100 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6">
+                <section class="rounded-xl border border-brand-primary/20 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6">
                     <div>
                         <h1 class="text-xl font-semibold text-slate-900">Hola, {{ auth()->user()->name }}</h1>
                         @if (auth()->user()->can('tramites.ver_unidades'))
@@ -93,7 +93,7 @@
                         @endif
                     </div>
                     @can('reemplazos.crear')
-                        <a href="{{ route('reemplazos.create') }}" class="mt-4 inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0">+ Nueva solicitud</a>
+                        <a href="{{ route('reemplazos.create') }}" class="mt-4 inline-flex items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 sm:mt-0">+ Nueva solicitud</a>
                     @endcan
                 </section>
                 @can('tramites.ver_unidades')
@@ -110,7 +110,7 @@
                                 @foreach($tramitesRequierenAtencion as $tramite)
                                     <article class="flex flex-col gap-3 rounded-xl border border-amber-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                                         <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="whitespace-nowrap font-mono text-sm font-semibold text-gray-900">{{ $tramite->codigo }}</span><span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{{ $tramite->estadoTramite->nombre }}</span></div><p class="mt-2 text-sm font-medium text-gray-800">{{ $tramite->tipoTramite->nombre }}</p><p class="mt-0.5 truncate text-xs text-gray-500">{{ $tramite->unidadOrganizacional->nombre }}</p></div>
-                                        <a href="{{ route('reemplazos.edit', $tramite) }}" class="inline-flex shrink-0 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">Continuar <span class="ml-1" aria-hidden="true">→</span></a>
+                                        <a href="{{ route('reemplazos.edit', $tramite) }}" class="inline-flex shrink-0 items-center justify-center rounded-md border border-brand-primary/30 bg-brand-primary-soft px-3 py-2 text-sm font-semibold text-brand-primary-dark transition hover:bg-brand-primary-soft">Continuar <span class="ml-1" aria-hidden="true">→</span></a>
                                     </article>
                                 @endforeach
                             </div>

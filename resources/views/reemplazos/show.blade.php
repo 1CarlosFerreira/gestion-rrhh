@@ -40,8 +40,8 @@
 
     <div class="py-8 sm:py-10">
         <div class="mx-auto max-w-6xl space-y-5 px-4 sm:px-6 lg:px-8">
-            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 transition hover:text-indigo-900">
-                <span aria-hidden="true">←</span> Volver al Inicio
+            <a href="{{ $retorno['href'] }}" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-primary-dark transition hover:text-brand-primary-dark">
+                <span aria-hidden="true">←</span> {{ $retorno['text'] }}
             </a>
 
             <header class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
@@ -73,11 +73,11 @@
                             $esActual = $codigo === $estadoActual;
                             $estaCompletado = $posicionActual !== false && $posicion < $posicionActual;
                         @endphp
-                        <li class="flex items-start gap-3 rounded-lg border px-3 py-3 {{ $esActual ? 'border-indigo-300 bg-indigo-50' : ($estaCompletado ? 'border-emerald-200 bg-emerald-50/60' : 'border-gray-200 bg-gray-50/60') }}">
-                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold {{ $esActual ? 'bg-indigo-700 text-white' : ($estaCompletado ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-600') }}">
+                        <li class="flex items-start gap-3 rounded-lg border px-3 py-3 {{ $esActual ? 'border-brand-primary/40 bg-brand-primary-soft' : ($estaCompletado ? 'border-emerald-200 bg-emerald-50/60' : 'border-gray-200 bg-gray-50/60') }}">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold {{ $esActual ? 'bg-brand-primary text-white' : ($estaCompletado ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-600') }}">
                                 {{ $estaCompletado ? '✓' : $loop->iteration }}
                             </span>
-                            <span class="text-xs font-semibold leading-5 {{ $esActual ? 'text-indigo-900' : ($estaCompletado ? 'text-emerald-900' : 'text-gray-500') }}">{{ $nombre }}</span>
+                            <span class="text-xs font-semibold leading-5 {{ $esActual ? 'text-brand-primary-dark' : ($estaCompletado ? 'text-emerald-900' : 'text-gray-500') }}">{{ $nombre }}</span>
                         </li>
                     @endforeach
                 </ol>
@@ -153,7 +153,7 @@
                         </dl>
 
                         <details class="group mt-4 rounded-lg border border-gray-200 bg-white">
-                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-indigo-700 marker:content-none">
+                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand-primary-dark marker:content-none">
                                 <span>Ver calendario</span>
                                 <span class="transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
                             </summary>
@@ -218,7 +218,7 @@
                                 <p class="mt-0.5 text-xs text-gray-500">{{ $adjunto->tipoDocumento?->nombre ?? 'Sin tipo documental' }} · versión {{ $adjunto->version }}</p>
                             </div>
                             @can('tramites.adjuntos.descargar')
-                                <a class="inline-flex shrink-0 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100" href="{{ route('reemplazos.adjuntos.download', [$tramite, $adjunto]) }}">Descargar</a>
+                                <a class="inline-flex shrink-0 items-center justify-center rounded-md border border-brand-primary/30 bg-brand-primary-soft px-3 py-1.5 text-sm font-semibold text-brand-primary-dark transition hover:bg-brand-primary-soft" href="{{ route('reemplazos.adjuntos.download', [$tramite, $adjunto]) }}">Descargar</a>
                             @endcan
                         </div>
                     @empty

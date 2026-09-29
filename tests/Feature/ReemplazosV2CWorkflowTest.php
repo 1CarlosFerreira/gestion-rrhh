@@ -185,7 +185,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
             ->assertDontSee('Ver/Revisar');
         $this->actingAs($this->revisor)->get(route('gestion-personas.reemplazos.show', $tramite))
             ->assertOk()
-            ->assertSee('Volver a Reemplazos')
+            ->assertSee('Volver a Revisión de reemplazos')
             ->assertSee('Fecha de envío')
             ->assertSee('Antecedentes de la solicitud')
             ->assertSee('Períodos y cobertura')
@@ -226,6 +226,35 @@ class ReemplazosV2CWorkflowTest extends TestCase
             ->assertOk()
             ->assertDontSee($tramite->codigo)
             ->assertSee('No hay solicitudes pendientes.');
+    }
+
+    public function test_reviewer_detail_preserves_inbox_context_in_return_link(): void
+    {
+        $tramite = $this->sendDraft();
+        $filters = [
+            'buscar' => $tramite->codigo,
+            'estado' => 'ENVIADA_GESTION_PERSONAS',
+            'unidad_id' => $this->unidad->id,
+            'pestana' => 'activos',
+            'activos_page' => 1,
+        ];
+        $detailUrl = route('gestion-personas.reemplazos.show', [
+            'tramite' => $tramite,
+            'from' => 'revision_reemplazos',
+            'return' => $filters,
+        ]);
+        $returnUrl = route('gestion-personas.reemplazos.index', $filters);
+
+        $this->actingAs($this->revisor)
+            ->get(route('gestion-personas.reemplazos.index', $filters))
+            ->assertOk()
+            ->assertSee($detailUrl);
+
+        $this->actingAs($this->revisor)
+            ->get($detailUrl)
+            ->assertOk()
+            ->assertSeeText('Volver a Revisión de reemplazos')
+            ->assertSee($returnUrl);
     }
 
     public function test_global_reviewer_lists_opens_and_starts_without_operational_access(): void

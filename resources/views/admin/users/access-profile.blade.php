@@ -31,7 +31,7 @@
             </section>
 
             <details class="group rounded-xl border border-gray-200 bg-white shadow-sm" @if ($errors->hasAny(['email', 'password', 'password_confirmation'])) open @endif>
-                <summary class="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:p-6 [&::-webkit-details-marker]:hidden">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 sm:p-6 [&::-webkit-details-marker]:hidden">
                     <span>
                         <span class="block text-base font-semibold text-gray-900">Credenciales</span>
                         <span class="mt-1 block text-sm text-gray-500">Cambiar correo o restablecer contraseña</span>
@@ -84,8 +84,8 @@
                         <p class="mt-1 text-sm text-gray-500">Define qué acciones puede realizar esta persona.</p>
                         <div class="mt-4 grid gap-3 sm:grid-cols-2">
                             @foreach ($roles as $role)
-                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 text-sm has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50">
-                                    <input type="checkbox" name="roles[]" value="{{ $role->name }}" @checked(in_array($role->name, old('roles', $user->getRoleNames()->all()), true)) class="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 text-sm has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-soft">
+                                    <input type="checkbox" name="roles[]" value="{{ $role->name }}" @checked(in_array($role->name, old('roles', $user->getRoleNames()->all()), true)) class="mt-0.5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary">
                                     <span>
                                         <span class="block font-medium text-gray-900">{{ $role->name }}</span>
                                         @if (isset($descripcionesRoles[$role->name]))
@@ -129,7 +129,7 @@
 
                     @can('create', App\Models\UserUnidadAcceso::class)
                         <div class="mt-4">
-                            <a href="{{ route('admin.accesos.create', ['user_id' => $user->id]) }}" class="text-sm font-medium text-indigo-700 hover:underline">+ Agregar autorización adicional</a>
+                            <a href="{{ route('admin.accesos.create', ['user_id' => $user->id]) }}" class="text-sm font-medium text-brand-primary-dark hover:underline">+ Agregar autorización adicional</a>
                         </div>
                     @endcan
                 </section>

@@ -15,7 +15,7 @@
                 <x-secondary-button type="submit" class="justify-center">Buscar</x-secondary-button>
             </form>
             @can('personas.gestionar')
-                <a href="{{ route('admin.personas.create') }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition duration-150 ease-in-out hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Registrar persona</a>
+                <a href="{{ route('admin.personas.create') }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-transparent bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition duration-150 ease-in-out hover:bg-brand-primary-dark focus:bg-brand-primary-dark focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2">Registrar persona</a>
             @endcan
         </div>
 
@@ -36,12 +36,12 @@
                     <td class="px-4 py-3">{{ $persona->nombre_completo }}</td>
                     <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $persona->active ? 'bg-green-50 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $persona->active ? 'Activo' : 'Inactivo' }}</span></td>
                     <td class="whitespace-nowrap px-4 py-3">
-                        <a href="{{ route('admin.personas.show', $persona) }}" class="text-indigo-700 hover:underline">Administrar</a>
+                        <a href="{{ route('admin.personas.show', $persona) }}" class="text-brand-primary-dark hover:underline">Administrar</a>
                         @can('personas.gestionar')
                             @if ($persona->active)
                                 <button
                                     type="button"
-                                    class="ml-3 text-indigo-700 hover:underline"
+                                    class="ml-3 text-brand-primary-dark hover:underline"
                                     x-data
                                     x-on:click.prevent="$dispatch('open-modal', 'inactivar-persona-{{ $persona->getKey() }}')"
                                 >Inactivar</button>
@@ -82,7 +82,7 @@
                             @else
                                 <button
                                     type="button"
-                                    class="ml-3 text-indigo-700 hover:underline"
+                                    class="ml-3 text-brand-primary-dark hover:underline"
                                     x-data
                                     x-on:click.prevent="$dispatch('open-modal', 'reactivar-persona-{{ $persona->getKey() }}')"
                                 >Reactivar</button>

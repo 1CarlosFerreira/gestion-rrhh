@@ -5,7 +5,7 @@
                 <h2 class="text-xl font-semibold text-gray-900">Tipos organizacionales</h2>
                 <p class="mt-1 text-sm text-gray-600">Define los tipos utilizados para clasificar las unidades de la estructura organizacional.</p>
             </div>
-            <button type="button" class="inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" x-data x-on:click="$dispatch('open-modal', 'agregar-tipo-organizacional')">+ Agregar tipo</button>
+            <button type="button" class="inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-brand-primary-dark focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2" x-data x-on:click="$dispatch('open-modal', 'agregar-tipo-organizacional')">+ Agregar tipo</button>
         </div>
     </x-slot>
 
@@ -35,7 +35,7 @@
                                     <td class="px-4 py-3 text-center text-gray-600">{{ $tipo->orden }}</td>
                                     <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $tipo->activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $tipo->activo ? 'Activo' : 'Inactivo' }}</span></td>
                                     <td class="px-4 py-3 text-right sm:px-5">
-                                        <button type="button" class="font-medium text-indigo-700 hover:underline" x-data x-on:click="$dispatch('open-modal', 'editar-tipo-{{ $tipo->id }}')">Editar</button>
+                                        <button type="button" class="font-medium text-brand-primary-dark hover:underline" x-data x-on:click="$dispatch('open-modal', 'editar-tipo-{{ $tipo->id }}')">Editar</button>
                                     </td>
                                 </tr>
                             @empty
@@ -46,7 +46,7 @@
                 </div>
             </div>
 
-            <a href="{{ route('admin.estructura.index') }}" class="inline-flex text-sm font-medium text-indigo-700 hover:underline">← Volver a la estructura</a>
+            <a href="{{ route('admin.estructura.index') }}" class="inline-flex text-sm font-medium text-brand-primary-dark hover:underline">← Volver a la estructura</a>
         </div>
     </div>
 
@@ -70,7 +70,7 @@
                 </div>
                 <div class="sm:col-span-2">
                     <x-input-label for="crear_descripcion_tipo" value="Descripción (opcional)" />
-                    <textarea id="crear_descripcion_tipo" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('_form_context') === 'crear' ? old('descripcion') : '' }}</textarea>
+                    <textarea id="crear_descripcion_tipo" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">{{ old('_form_context') === 'crear' ? old('descripcion') : '' }}</textarea>
                     <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
                 </div>
                 <div>
@@ -80,7 +80,7 @@
                 </div>
                 <label class="flex items-center gap-2 self-end py-2 text-sm text-gray-700">
                     <input type="hidden" name="activo" value="0">
-                    <input type="checkbox" name="activo" value="1" @checked(old('_form_context') === 'crear' ? old('activo', true) : true) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                    <input type="checkbox" name="activo" value="1" @checked(old('_form_context') === 'crear' ? old('activo', true) : true) class="rounded border-gray-300 text-brand-primary shadow-sm focus:ring-brand-primary">
                     Activo
                 </label>
             </div>
@@ -115,7 +115,7 @@
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-label for="editar_descripcion_tipo_{{ $tipo->id }}" value="Descripción (opcional)" />
-                        <textarea id="editar_descripcion_tipo_{{ $tipo->id }}" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ $esFormularioConError ? old('descripcion') : $tipo->descripcion }}</textarea>
+                        <textarea id="editar_descripcion_tipo_{{ $tipo->id }}" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">{{ $esFormularioConError ? old('descripcion') : $tipo->descripcion }}</textarea>
                         @if ($esFormularioConError)<x-input-error :messages="$errors->get('descripcion')" class="mt-2" />@endif
                     </div>
                     <div>
@@ -125,7 +125,7 @@
                     </div>
                     <label class="flex items-center gap-2 self-end py-2 text-sm text-gray-700">
                         <input type="hidden" name="activo" value="0">
-                        <input type="checkbox" name="activo" value="1" @checked($esFormularioConError ? old('activo') : $tipo->activo) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                        <input type="checkbox" name="activo" value="1" @checked($esFormularioConError ? old('activo') : $tipo->activo) class="rounded border-gray-300 text-brand-primary shadow-sm focus:ring-brand-primary">
                         Activo
                     </label>
                 </div>

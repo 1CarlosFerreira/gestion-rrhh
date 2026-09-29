@@ -20,8 +20,8 @@
             @endif
 
             @include('reemplazos.partials.ficha-base', [
-                'volverHref' => route('gestion-personas.reemplazos.index'),
-                'volverTexto' => 'Volver a Reemplazos',
+                'volverHref' => $retorno['href'],
+                'volverTexto' => $retorno['text'],
                 'fechaEtiqueta' => $formalizado ? 'Fecha de formalización' : 'Última actualización',
                 'fechaValor' => $formalizado ? $formalizacion?->formalizado_at : $tramite->updated_at,
                 'mostrarContenido' => !$listaParaGenerar && !$documentoGenerado && !$formalizado,
@@ -42,7 +42,7 @@
             @endif
 
             @if($listaParaGenerar)
-                <section aria-labelledby="resumen-generacion-title" class="rounded-xl border border-indigo-200 bg-white p-5 shadow-sm sm:p-6">
+                <section aria-labelledby="resumen-generacion-title" class="rounded-xl border border-brand-primary/30 bg-white p-5 shadow-sm sm:p-6">
                     <h2 id="resumen-generacion-title" class="text-base font-semibold text-gray-950">Resumen para generación</h2>
                     <dl class="mt-4 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                         <div>
@@ -77,7 +77,7 @@
                             <dd class="mt-1 font-medium text-gray-900">{{ $revision?->cumple_normativa === null ? 'No informado' : ($revision->cumple_normativa ? 'Sí' : 'No') }}</dd>
                         </div>
                     </dl>
-                    <p class="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">El documento se generará con los antecedentes aprobados que aparecen en esta ficha.</p>
+                    <p class="mt-4 rounded-lg border border-brand-primary/20 bg-brand-primary-soft px-4 py-3 text-sm text-brand-primary-dark">El documento se generará con los antecedentes aprobados que aparecen en esta ficha.</p>
                 </section>
 
                 <details class="group rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -103,7 +103,7 @@
                 @include('reemplazos.partials.adjuntos')
             @elseif($documentoGenerado)
                 @can('formalizar-reemplazo', $tramite)
-                    <section aria-labelledby="formalizar-reemplazo-title" class="rounded-xl border border-indigo-200 bg-white p-5 shadow-sm sm:p-6">
+                    <section aria-labelledby="formalizar-reemplazo-title" class="rounded-xl border border-brand-primary/30 bg-white p-5 shadow-sm sm:p-6">
                         <h2 id="formalizar-reemplazo-title" class="text-lg font-semibold text-gray-950">Formalizar reemplazo</h2>
                         <dl class="mt-4 grid gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                             <div><dt class="text-xs text-gray-500">Reemplazante</dt><dd class="mt-1 font-semibold text-gray-900">{{ $detalle->reemplazante->nombre_completo }}</dd></div>
@@ -165,7 +165,7 @@
                                     <label class="block text-sm md:col-span-2">Observación<textarea name="observacion" maxlength="5000" rows="3" class="mt-1 block w-full rounded-md border-slate-300">{{ old('observacion') }}</textarea></label>
                                 </fieldset>
 
-                                <p class="rounded bg-indigo-50 p-4 text-sm text-indigo-900">Al formalizar, el reemplazante será incorporado a la dotación de esta unidad por el período efectivo indicado.</p>
+                                <p class="rounded bg-brand-primary-soft p-4 text-sm text-brand-primary-dark">Al formalizar, el reemplazante será incorporado a la dotación de esta unidad por el período efectivo indicado.</p>
                                 <x-primary-button>Confirmar formalización</x-primary-button>
                             </form>
                         @endif
@@ -204,10 +204,10 @@
 
                 <section aria-labelledby="resumen-final-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
                     <h2 id="resumen-final-title" class="text-base font-semibold text-gray-950">Resumen del reemplazo</h2>
-                    <div class="mt-4 flex flex-col gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
-                        <div class="min-w-0 flex-1"><p class="text-xs text-indigo-600">Funcionario reemplazado</p><p class="truncate text-sm font-semibold text-indigo-950">{{ $detalle->funcionario->nombre_completo }}</p></div>
-                        <span class="text-lg text-indigo-400" aria-hidden="true">→</span>
-                        <div class="min-w-0 flex-1"><p class="text-xs text-indigo-600">Reemplazante</p><p class="truncate text-sm font-semibold text-indigo-950">{{ $detalle->reemplazante->nombre_completo }}</p></div>
+                    <div class="mt-4 flex flex-col gap-2 rounded-lg border border-brand-primary/20 bg-brand-primary-soft px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+                        <div class="min-w-0 flex-1"><p class="text-xs text-brand-primary">Funcionario reemplazado</p><p class="truncate text-sm font-semibold text-brand-text">{{ $detalle->funcionario->nombre_completo }}</p></div>
+                        <span class="text-lg text-brand-primary" aria-hidden="true">→</span>
+                        <div class="min-w-0 flex-1"><p class="text-xs text-brand-primary">Reemplazante</p><p class="truncate text-sm font-semibold text-brand-text">{{ $detalle->reemplazante->nombre_completo }}</p></div>
                     </div>
                     <dl class="mt-4 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                         <div><dt class="text-xs text-gray-500">Tipo de reemplazo</dt><dd class="mt-1 font-medium text-gray-900">{{ $detalle->tipoReemplazo->nombre }}</dd></div>
@@ -221,9 +221,9 @@
                     <h2 id="documentos-finales-title" class="text-base font-semibold text-gray-950">Documentos</h2>
                     <div class="mt-4 space-y-3">
                         @if($documento)
-                            <div class="flex flex-col gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Solicitud PDF generada por el sistema</p><p class="mt-1 truncate text-sm font-semibold text-gray-900">{{ $documento->adjunto->original_name }}</p><p class="mt-0.5 text-xs text-gray-500">Versión {{ $documento->version }} · {{ $documento->generated_at->format('d/m/Y H:i') }}</p></div>
-                                @can('generar-documento-reemplazo', $tramite)<a href="{{ route('reemplazos.documentos.download', [$tramite, $documento]) }}" class="inline-flex shrink-0 items-center justify-center rounded-md bg-indigo-700 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-600">Descargar</a>@endcan
+                            <div class="flex flex-col gap-3 rounded-lg border border-brand-primary/30 bg-brand-primary-soft px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-brand-primary">Solicitud PDF generada por el sistema</p><p class="mt-1 truncate text-sm font-semibold text-gray-900">{{ $documento->adjunto->original_name }}</p><p class="mt-0.5 text-xs text-gray-500">Versión {{ $documento->version }} · {{ $documento->generated_at->format('d/m/Y H:i') }}</p></div>
+                                @can('generar-documento-reemplazo', $tramite)<a href="{{ route('reemplazos.documentos.download', [$tramite, $documento]) }}" class="inline-flex shrink-0 items-center justify-center rounded-md bg-brand-primary px-3 py-2 text-sm font-semibold text-white hover:bg-brand-primary-dark">Descargar</a>@endcan
                             </div>
                         @endif
                         @if($formalizacion?->adjunto)
@@ -285,7 +285,7 @@
                             <p class="mt-1 text-xs text-gray-600">Generado el {{ $documento->generated_at->format('d/m/Y H:i') }} por {{ $documento->generadoPor->name }}</p>
                         </div>
                         @can('generar-documento-reemplazo', $tramite)
-                            <a href="{{ route('reemplazos.documentos.download', [$tramite, $documento]) }}" class="inline-flex shrink-0 items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600">Descargar PDF</a>
+                            <a href="{{ route('reemplazos.documentos.download', [$tramite, $documento]) }}" class="inline-flex shrink-0 items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-primary-dark">Descargar PDF</a>
                         @endcan
                     </div>
                 @endif

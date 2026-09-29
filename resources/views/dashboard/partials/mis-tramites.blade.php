@@ -23,7 +23,7 @@
                             <td class="whitespace-nowrap px-3 py-2.5 text-gray-600">{{ $tramite->created_at?->format('d/m/Y H:i') }}</td>
                             <td class="px-3 py-2.5 text-right">
                                 @if($tramite->tipoTramite?->codigo === 'REEMPLAZO')
-                                    <a class="inline-flex items-center whitespace-nowrap rounded-md px-3 py-1.5 font-semibold text-indigo-700 transition hover:bg-indigo-50" href="{{ $puedeContinuar ? route('reemplazos.edit', $tramite) : route('reemplazos.show', $tramite) }}">{{ $puedeContinuar ? 'Continuar' : 'Ver' }} <span class="ml-1" aria-hidden="true">→</span></a>
+                                    <a class="inline-flex items-center whitespace-nowrap rounded-md px-3 py-1.5 font-semibold text-brand-primary-dark transition hover:bg-brand-primary-soft" href="{{ $puedeContinuar ? route('reemplazos.edit', $tramite) : route('reemplazos.show', $tramite) }}">{{ $puedeContinuar ? 'Continuar' : 'Ver' }} <span class="ml-1" aria-hidden="true">→</span></a>
                                 @endif
                             </td>
                         </tr>

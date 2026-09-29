@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\EstructuraOrganizacionalController;
 use App\Http\Controllers\Admin\PersonaController;
 use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\TipoUnidadOrganizacionalController;
+use App\Http\Controllers\Admin\TramiteController;
 use App\Http\Controllers\Admin\UnidadResponsableController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserUnidadAccesoController;
@@ -71,6 +72,10 @@ Route::middleware('auth')->group(function (): void {
     });
 
     Route::prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('/tramites', [TramiteController::class, 'index'])
+            ->middleware('can:tramites.ver_todos')
+            ->name('tramites.index');
+
         Route::get('/estructura-organizacional', [EstructuraOrganizacionalController::class, 'index'])->name('estructura.index');
         Route::get('/estructura-organizacional/organigrama', [EstructuraOrganizacionalController::class, 'organigrama'])->name('estructura.organigrama');
         Route::get('/estructura-organizacional/crear', [EstructuraOrganizacionalController::class, 'create'])->name('estructura.create');

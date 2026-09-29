@@ -14,10 +14,14 @@
 
             @php
                 $filtrosPestana = request()->except(['pestana', 'estado', 'activos_page', 'finalizados_page']);
+                $contextoDetalle = [
+                    'from' => 'revision_reemplazos',
+                    'return' => request()->only(['buscar', 'estado', 'unidad_id', 'pestana', 'activos_page', 'finalizados_page']),
+                ];
             @endphp
             <nav class="flex gap-1 border-b border-gray-200" aria-label="Vista de reemplazos">
-                <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'activos']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'activos' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Activos</a>
-                <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'finalizados']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'finalizados' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Finalizados</a>
+                <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'activos']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'activos' ? 'border-brand-primary text-brand-primary-dark' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Activos</a>
+                <a href="{{ route('gestion-personas.reemplazos.index', [...$filtrosPestana, 'pestana' => 'finalizados']) }}" class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $pestana === 'finalizados' ? 'border-brand-primary text-brand-primary-dark' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">Finalizados</a>
             </nav>
 
             <form method="GET" action="{{ route('gestion-personas.reemplazos.index') }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -29,7 +33,7 @@
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Estado</span>
-                        <select name="estado" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select name="estado" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                             <option value="">Todos los estados</option>
                             @foreach($estados as $estado)
                                 <option value="{{ $estado->codigo }}" @selected(request('estado') === $estado->codigo)>{{ $estado->nombre }}</option>
@@ -38,7 +42,7 @@
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Unidad</span>
-                        <select name="unidad_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <select name="unidad_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                             <option value="">Todas las unidades</option>
                             @foreach($unidades as $unidad)
                                 <option value="{{ $unidad->id }}" @selected((string) request('unidad_id') === (string) $unidad->id)>{{ $unidad->nombre }}</option>
@@ -48,7 +52,7 @@
                     <div class="flex gap-2">
                         <x-primary-button>Buscar</x-primary-button>
                         @if(request()->filled('buscar') || request()->filled('estado') || request()->filled('unidad_id'))
-                            <a href="{{ route('gestion-personas.reemplazos.index', ['pestana' => $pestana]) }}" class="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50">Limpiar filtros</a>
+                            <a href="{{ route('gestion-personas.reemplazos.index', ['pestana' => $pestana]) }}" class="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold text-brand-primary-dark transition hover:bg-brand-primary-soft">Limpiar filtros</a>
                         @endif
                     </div>
                 </div>
@@ -81,7 +85,7 @@
                                     <td class="px-4 py-3 text-gray-800">{{ $tramite->reemplazo->reemplazante->nombre_completo }}</td>
                                     <td class="whitespace-nowrap px-4 py-3 text-gray-800">{{ $tramite->reemplazo->fecha_reemplazante_desde->format('d/m/Y') }} <span class="text-gray-400">al</span> {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }}</td>
                                     <td class="whitespace-nowrap px-4 py-3 text-gray-800">{{ $tramite->formalizacionReemplazo?->formalizado_at?->format('d/m/Y H:i') ?? $tramite->finalized_at?->format('d/m/Y H:i') ?? 'Sin fecha' }}</td>
-                                    <td class="px-4 py-3 text-right sm:pr-5"><a class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" href="{{ route('gestion-personas.reemplazos.show', $tramite) }}">Ver</a></td>
+                                    <td class="px-4 py-3 text-right sm:pr-5"><a class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" href="{{ route('gestion-personas.reemplazos.show', ['tramite' => $tramite, ...$contextoDetalle]) }}">Ver</a></td>
                                 </tr>
                             @empty
                                 <tr><td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">{{ $haySolicitudes ? 'No se encontraron resultados.' : 'No hay reemplazos formalizados.' }}</td></tr>
@@ -143,7 +147,7 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-right align-top sm:pr-5">
-                                        <a class="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold transition {{ $requiereRevision ? 'bg-indigo-700 text-white shadow-sm hover:bg-indigo-600' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}" href="{{ route('gestion-personas.reemplazos.show', $tramite) }}">
+                                        <a class="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold transition {{ $requiereRevision ? 'bg-brand-primary text-white shadow-sm hover:bg-brand-primary-dark' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}" href="{{ route('gestion-personas.reemplazos.show', ['tramite' => $tramite, ...$contextoDetalle]) }}">
                                             {{ $requiereRevision ? 'Revisar' : 'Ver' }}
                                         </a>
                                     </td>

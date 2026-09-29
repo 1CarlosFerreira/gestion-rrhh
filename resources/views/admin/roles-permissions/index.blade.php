@@ -8,7 +8,7 @@
 
             <div class="flex items-center justify-between gap-4">
                 <p class="text-sm text-gray-600">Administra los roles y sus permisos usando la configuración de Spatie.</p>
-                <a class="rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600" href="{{ route('admin.roles-permisos.create') }}">Crear rol</a>
+                <a class="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-dark" href="{{ route('admin.roles-permisos.create') }}">Crear rol</a>
             </div>
 
             <div class="overflow-hidden rounded-xl bg-white shadow-sm">
@@ -18,7 +18,7 @@
                             <h3 class="font-semibold text-gray-900">{{ $role->name }}</h3>
                             <p class="mt-1 text-sm text-gray-500">{{ $role->permissions_count }} {{ $role->permissions_count === 1 ? 'permiso' : 'permisos' }} · {{ $role->users_count }} {{ $role->users_count === 1 ? 'usuario' : 'usuarios' }}</p>
                         </div>
-                        <a class="text-sm font-medium text-indigo-700 hover:underline" href="{{ route('admin.roles-permisos.edit', $role) }}">Editar rol</a>
+                        <a class="text-sm font-medium text-brand-primary-dark hover:underline" href="{{ route('admin.roles-permisos.edit', $role) }}">Editar rol</a>
                     </div>
                 @empty
                     <p class="p-6 text-sm text-gray-600">No existen roles configurados.</p>

@@ -8,12 +8,12 @@
 
             <form method="GET" action="{{ route('admin.usuarios.index') }}" class="grid gap-3 rounded-xl bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_12rem_14rem_auto]">
                 <x-text-input name="buscar" value="{{ request('buscar') }}" placeholder="Nombre, RUT o correo" aria-label="Buscar usuarios" />
-                <select name="estado" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <select name="estado" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                     <option value="">Todos los estados</option>
                     <option value="activo" @selected(request('estado') === 'activo')>Activos</option>
                     <option value="inactivo" @selected(request('estado') === 'inactivo')>Inactivos</option>
                 </select>
-                <select name="rol" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <select name="rol" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">
                     <option value="">Todos los roles</option>
                     @foreach ($roles as $role)
                         <option value="{{ $role->name }}" @selected(request('rol') === $role->name)>{{ $role->name }}</option>
@@ -41,7 +41,7 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($users as $user)
-                                <tr id="usuario-{{ $user->id }}" class="{{ request()->integer('user_id') === $user->id ? 'bg-indigo-50' : '' }}">
+                                <tr id="usuario-{{ $user->id }}" class="{{ request()->integer('user_id') === $user->id ? 'bg-brand-primary-soft' : '' }}">
                                     <td class="px-4 py-3 font-medium text-gray-900">{{ $user->name }}</td>
                                     <td class="px-4 py-3 text-gray-600">
                                         <span class="block whitespace-nowrap">{{ $user->rut ?? 'Sin RUT' }}</span>
@@ -53,14 +53,14 @@
                                     <td class="px-4 py-3">
                                         <div class="flex flex-wrap gap-1.5">
                                             @forelse ($user->roles as $role)
-                                                <span class="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{{ $role->name }}</span>
+                                                <span class="inline-flex rounded-full bg-brand-primary-soft px-2.5 py-1 text-xs font-medium text-brand-primary-dark">{{ $role->name }}</span>
                                             @empty
                                                 <span class="text-gray-500">Sin roles</span>
                                             @endforelse
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-right">
-                                        <button type="button" class="text-sm font-medium text-indigo-700 hover:underline" x-data x-on:click.prevent="$dispatch('open-modal', 'gestionar-usuario-{{ $user->id }}')">Gestionar</button>
+                                        <button type="button" class="text-sm font-medium text-brand-primary-dark hover:underline" x-data x-on:click.prevent="$dispatch('open-modal', 'gestionar-usuario-{{ $user->id }}')">Gestionar</button>
 
                                         <x-modal name="gestionar-usuario-{{ $user->id }}" maxWidth="2xl" focusable>
                                     <div class="p-6">
@@ -82,7 +82,7 @@
                                                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                                                     @foreach ($roles as $role)
                                                         <label class="flex items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm">
-                                                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" @checked($user->hasRole($role)) class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" @checked($user->hasRole($role)) class="rounded border-gray-300 text-brand-primary focus:ring-brand-primary">
                                                             <span>{{ $role->name }}</span>
                                                         </label>
                                                     @endforeach
@@ -95,7 +95,7 @@
 
                                         <div class="mt-6 flex flex-wrap items-center gap-4 border-t border-gray-100 pt-5">
                                             @can('accesos_operativos.ver')
-                                                <a class="text-sm text-indigo-700 hover:underline" href="{{ route('admin.accesos.index', ['usuario' => $user->email]) }}">Accesos operativos</a>
+                                                <a class="text-sm text-brand-primary-dark hover:underline" href="{{ route('admin.accesos.index', ['usuario' => $user->email]) }}">Accesos operativos</a>
                                             @endcan
 
                                             @if (! $user->is(auth()->user()))

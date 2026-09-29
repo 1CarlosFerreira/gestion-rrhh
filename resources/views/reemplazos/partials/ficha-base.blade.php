@@ -13,7 +13,7 @@
 @endphp
 
 @if($mostrarCabecera)
-    <a href="{{ $volverHref }}" class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 transition hover:text-indigo-900">
+    <a href="{{ $volverHref }}" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-primary-dark transition hover:text-brand-primary-dark">
         <span aria-hidden="true">←</span> {{ $volverTexto }}
     </a>
 
@@ -38,7 +38,7 @@
                 @endif
                 @if(($documentoDescarga ?? null) && ($mostrarDescargarDocumento ?? false))
                     @can('generar-documento-reemplazo', $tramite)
-                        <a href="{{ route('reemplazos.documentos.download', [$tramite, $documentoDescarga]) }}" class="inline-flex items-center justify-center rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600">Descargar PDF</a>
+                        <a href="{{ route('reemplazos.documentos.download', [$tramite, $documentoDescarga]) }}" class="inline-flex items-center justify-center rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-primary-dark">Descargar PDF</a>
                     @endcan
                 @endif
                 @if($mostrarIniciarRevision ?? false)
@@ -92,13 +92,13 @@
             </dl>
         </div>
     </div>
-    <dl class="mt-3 grid gap-3 rounded-lg border border-indigo-100 bg-indigo-50/60 px-4 py-3 sm:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)]">
+    <dl class="mt-3 grid gap-3 rounded-lg border border-brand-primary/20 bg-brand-primary-soft/60 px-4 py-3 sm:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)]">
         <div>
-            <dt class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Tipo de reemplazo</dt>
-            <dd class="mt-1 text-sm font-semibold text-indigo-950">{{ $detalle->tipoReemplazo->nombre }}</dd>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-brand-primary">Tipo de reemplazo</dt>
+            <dd class="mt-1 text-sm font-semibold text-brand-text">{{ $detalle->tipoReemplazo->nombre }}</dd>
         </div>
         <div>
-            <dt class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Justificación</dt>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-brand-primary">Justificación</dt>
             <dd class="mt-1 whitespace-pre-line text-sm leading-5 text-gray-700">{{ $detalle->justificacion }}</dd>
         </div>
     </dl>

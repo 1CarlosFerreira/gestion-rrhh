@@ -12,7 +12,7 @@
                     <p class="mt-0.5 text-xs text-gray-500">{{ $adjunto->tipoDocumento?->nombre ?? 'Sin tipo documental' }} · versión {{ $adjunto->version }}</p>
                 </div>
                 @can('tramites.adjuntos.descargar')
-                    <a href="{{ route('reemplazos.adjuntos.download', [$tramite, $adjunto]) }}" class="inline-flex shrink-0 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">Descargar</a>
+                    <a href="{{ route('reemplazos.adjuntos.download', [$tramite, $adjunto]) }}" class="inline-flex shrink-0 items-center justify-center rounded-md border border-brand-primary/30 bg-brand-primary-soft px-3 py-1.5 text-sm font-semibold text-brand-primary-dark transition hover:bg-brand-primary-soft">Descargar</a>
                 @endcan
             </div>
         @empty

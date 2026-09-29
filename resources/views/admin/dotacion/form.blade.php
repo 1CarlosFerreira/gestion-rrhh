@@ -38,7 +38,7 @@
                         <h2 class="text-base font-semibold text-gray-900">Persona</h2>
                         @if ($personaDeterminada)
                             <input type="hidden" name="persona_id" value="{{ $personaDeterminada->id }}">
-                            <div class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50/50 px-4 py-3">
+                            <div class="mt-3 rounded-lg border border-brand-primary/20 bg-brand-primary-soft/50 px-4 py-3">
                                 <p class="font-semibold text-gray-900">{{ $personaDeterminada->nombre_completo }}</p>
                                 <p class="mt-1 text-sm text-gray-600">RUT {{ $personaDeterminada->rut }}</p>
                             </div>
@@ -46,7 +46,7 @@
                         @else
                             <div class="mt-4">
                                 <x-input-label for="persona_id" value="Persona" />
-                                <select id="persona_id" name="persona_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                <select id="persona_id" name="persona_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary" required>
                                     @foreach($personas as $persona)
                                         <option value="{{ $persona->id }}" @selected(old('persona_id', $vinculo?->persona_id) == $persona->id)>{{ $persona->nombre_completo }} · {{ $persona->rut }}</option>
                                     @endforeach
@@ -63,22 +63,22 @@
                         <div class="mt-5 grid gap-4 sm:grid-cols-2">
                             <div>
                                 <x-input-label for="unidad_organizacional_id" value="Unidad" />
-                                <select id="unidad_organizacional_id" name="unidad_organizacional_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>@foreach($unidades as $unidad)<option value="{{ $unidad['id'] }}" @selected(old('unidad_organizacional_id', $vinculo?->unidad_organizacional_id) == $unidad['id'])>{{ Illuminate\Support\Str::afterLast($unidad['ruta'], ' / ') }}</option>@endforeach</select>
+                                <select id="unidad_organizacional_id" name="unidad_organizacional_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary" required>@foreach($unidades as $unidad)<option value="{{ $unidad['id'] }}" @selected(old('unidad_organizacional_id', $vinculo?->unidad_organizacional_id) == $unidad['id'])>{{ Illuminate\Support\Str::afterLast($unidad['ruta'], ' / ') }}</option>@endforeach</select>
                                 <x-input-error :messages="$errors->get('unidad_organizacional_id')" class="mt-2" />
                             </div>
                             <div>
                                 <x-input-label for="estamento_id" value="Estamento" />
-                                <select id="estamento_id" name="estamento_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>@foreach($estamentos as $estamento)<option value="{{ $estamento->id }}" @selected(old('estamento_id', $vinculo?->estamento_id) == $estamento->id)>{{ $estamento->nombre }}</option>@endforeach</select>
+                                <select id="estamento_id" name="estamento_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary" required>@foreach($estamentos as $estamento)<option value="{{ $estamento->id }}" @selected(old('estamento_id', $vinculo?->estamento_id) == $estamento->id)>{{ $estamento->nombre }}</option>@endforeach</select>
                                 <x-input-error :messages="$errors->get('estamento_id')" class="mt-2" />
                             </div>
                             <div>
                                 <x-input-label for="profesion_id" value="Profesión" />
-                                <select id="profesion_id" name="profesion_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"><option value="">Sin profesión</option>@foreach($profesiones as $profesion)<option value="{{ $profesion->id }}" @selected(old('profesion_id', $vinculo?->profesion_id) == $profesion->id)>{{ $profesion->nombre }}</option>@endforeach</select>
+                                <select id="profesion_id" name="profesion_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary"><option value="">Sin profesión</option>@foreach($profesiones as $profesion)<option value="{{ $profesion->id }}" @selected(old('profesion_id', $vinculo?->profesion_id) == $profesion->id)>{{ $profesion->nombre }}</option>@endforeach</select>
                                 <x-input-error :messages="$errors->get('profesion_id')" class="mt-2" />
                             </div>
                             <div>
                                 <x-input-label for="calidad_contractual_id" value="Calidad contractual" />
-                                <select id="calidad_contractual_id" name="calidad_contractual_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>@foreach($calidades as $calidad)<option value="{{ $calidad->id }}" @selected(old('calidad_contractual_id', $vinculo?->calidad_contractual_id) == $calidad->id)>{{ $calidad->nombre }}</option>@endforeach</select>
+                                <select id="calidad_contractual_id" name="calidad_contractual_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary" required>@foreach($calidades as $calidad)<option value="{{ $calidad->id }}" @selected(old('calidad_contractual_id', $vinculo?->calidad_contractual_id) == $calidad->id)>{{ $calidad->nombre }}</option>@endforeach</select>
                                 <x-input-error :messages="$errors->get('calidad_contractual_id')" class="mt-2" />
                             </div>
                             <div>
@@ -93,7 +93,7 @@
                             </div>
                             <div>
                                 <x-input-label for="vigente_desde" value="Desde" />
-                                <input id="vigente_desde" type="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" name="vigente_desde" value="{{ old('vigente_desde', $vinculo?->vigente_desde?->toDateString()) }}" @if (! $vinculo) x-model="vinculoDesde" x-on:input="if (responsabilidadTipo !== 'FUNCIONARIO' && ! responsabilidadDesdeModificada) responsabilidadDesde = vinculoDesde" @endif required>
+                                <input id="vigente_desde" type="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary" name="vigente_desde" value="{{ old('vigente_desde', $vinculo?->vigente_desde?->toDateString()) }}" @if (! $vinculo) x-model="vinculoDesde" x-on:input="if (responsabilidadTipo !== 'FUNCIONARIO' && ! responsabilidadDesdeModificada) responsabilidadDesde = vinculoDesde" @endif required>
                                 <x-input-error :messages="$errors->get('vigente_desde')" class="mt-2" />
                             </div>
                             <div>
@@ -103,7 +103,7 @@
                             </div>
                             <div class="sm:col-span-2">
                                 <x-input-label for="observacion" value="Observación" />
-                                <textarea id="observacion" name="observacion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('observacion', $vinculo?->observacion) }}</textarea>
+                                <textarea id="observacion" name="observacion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary">{{ old('observacion', $vinculo?->observacion) }}</textarea>
                                 <x-input-error :messages="$errors->get('observacion')" class="mt-2" />
                             </div>
                         </div>
@@ -113,7 +113,7 @@
                         <h2 class="text-base font-semibold text-gray-900">Origen</h2>
                         <div class="mt-4 max-w-sm">
                             <x-input-label for="origen" value="Origen del vínculo" />
-                            <select id="origen" name="origen" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>@foreach($origenes as $origen)<option value="{{ $origen->value }}" @selected(old('origen', $vinculo?->origen?->value ?? 'MANUAL') === $origen->value)>{{ $origen->etiqueta() }}</option>@endforeach</select>
+                            <select id="origen" name="origen" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-brand-primary focus:ring-brand-primary" required>@foreach($origenes as $origen)<option value="{{ $origen->value }}" @selected(old('origen', $vinculo?->origen?->value ?? 'MANUAL') === $origen->value)>{{ $origen->etiqueta() }}</option>@endforeach</select>
                             <x-input-error :messages="$errors->get('origen')" class="mt-2" />
                         </div>
                     </section>
@@ -124,8 +124,8 @@
                                 <legend class="text-base font-semibold text-gray-900">Responsabilidad en la unidad</legend>
                                 <div class="mt-4 grid gap-3 sm:grid-cols-3">
                                     @foreach(['FUNCIONARIO' => 'Funcionario', 'TITULAR' => 'Titular', 'SUBROGANTE' => 'Subrogante'] as $valor => $etiqueta)
-                                        <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50">
-                                            <input type="radio" name="responsabilidad_tipo" value="{{ $valor }}" @checked(old('responsabilidad_tipo', 'FUNCIONARIO') === $valor) x-model="responsabilidadTipo" x-on:change="if (responsabilidadTipo !== 'FUNCIONARIO' && ! responsabilidadDesdeModificada) responsabilidadDesde = vinculoDesde" class="border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-soft">
+                                            <input type="radio" name="responsabilidad_tipo" value="{{ $valor }}" @checked(old('responsabilidad_tipo', 'FUNCIONARIO') === $valor) x-model="responsabilidadTipo" x-on:change="if (responsabilidadTipo !== 'FUNCIONARIO' && ! responsabilidadDesdeModificada) responsabilidadDesde = vinculoDesde" class="border-gray-300 text-brand-primary focus:ring-brand-primary">
                                             <span class="font-medium text-gray-800">{{ $etiqueta }}</span>
                                         </label>
                                     @endforeach
@@ -134,7 +134,7 @@
                             </fieldset>
 
                             <input type="hidden" name="responsabilidad_desde_editada" x-bind:value="responsabilidadDesdeModificada ? '1' : '0'">
-                            <div x-cloak x-show="responsabilidadTipo !== 'FUNCIONARIO'" class="mt-4 rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
+                            <div x-cloak x-show="responsabilidadTipo !== 'FUNCIONARIO'" class="mt-4 rounded-lg border border-brand-primary/20 bg-brand-primary-soft/40 p-4">
                                 <h3 class="text-sm font-semibold text-gray-900">Responsabilidad institucional</h3>
                                 <div class="mt-3 grid gap-4 sm:grid-cols-2">
                                     <div>

@@ -14,6 +14,7 @@ use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
 use App\Services\Reemplazos\BorradorReemplazoService;
+use App\Support\Tramites\ResolverRetornoTramite;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ class ReemplazoController extends Controller
         return $this->form($tramite->load(['reemplazo.funcionario', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']), $request, $alcance);
     }
 
-    public function show(Tramite $tramite): View
+    public function show(Request $request, Tramite $tramite, ResolverRetornoTramite $resolverRetorno): View
     {
         abort_unless($tramite->tipoTramite()->where('codigo', 'REEMPLAZO')->exists() && $tramite->reemplazo()->exists(), 404);
         Gate::authorize('view', $tramite);
@@ -67,6 +68,7 @@ class ReemplazoController extends Controller
                 'reemplazo.tipoReemplazo',
                 'adjuntos.tipoDocumento',
             ]),
+            'retorno' => $resolverRetorno->resolve($request),
         ]);
     }
 

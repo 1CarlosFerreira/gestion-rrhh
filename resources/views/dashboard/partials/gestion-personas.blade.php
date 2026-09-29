@@ -1,4 +1,4 @@
-<section class="rounded-xl border border-indigo-100 bg-white p-5 shadow-sm">
+<section class="rounded-xl border border-brand-primary/20 bg-white p-5 shadow-sm">
     <h1 class="text-xl font-semibold text-slate-900">Hola, {{ auth()->user()->name }}</h1>
     <p class="mt-1 text-sm text-slate-600">Revisa y gestiona los trámites que requieren atención de Gestión de Personas.</p>
 </section>
@@ -26,7 +26,7 @@
             <h2 id="gestion-personas-atencion-title" class="text-lg font-semibold text-gray-900">Requieren tu atención</h2>
             <p class="mt-0.5 text-sm text-gray-500">Próximas acciones operativas de Reemplazos.</p>
         </div>
-        <a href="{{ route('gestion-personas.reemplazos.index') }}" class="text-sm font-semibold text-indigo-700 hover:underline">Ver todos los reemplazos</a>
+        <a href="{{ route('gestion-personas.reemplazos.index') }}" class="text-sm font-semibold text-brand-primary-dark hover:underline">Ver todos los reemplazos</a>
     </header>
 
     <div class="divide-y divide-gray-200">
@@ -53,7 +53,7 @@
                     <p class="truncate font-medium text-gray-800">{{ $tramite->reemplazo->funcionario->nombre_completo }} → {{ $tramite->reemplazo->reemplazante?->nombre_completo ?? 'Sin reemplazante' }}</p>
                     <p class="mt-1 text-xs text-gray-500">{{ $fechaRelevante?->format('d/m/Y') ?? '-' }}</p>
                 </div>
-                <a href="{{ route('gestion-personas.reemplazos.show', $tramite) }}" class="inline-flex items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">{{ $accion }} <span class="ml-1" aria-hidden="true">→</span></a>
+                <a href="{{ route('gestion-personas.reemplazos.show', $tramite) }}" class="inline-flex items-center justify-center rounded-md border border-brand-primary/30 bg-brand-primary-soft px-3 py-2 text-sm font-semibold text-brand-primary-dark transition hover:bg-brand-primary-soft">{{ $accion }} <span class="ml-1" aria-hidden="true">→</span></a>
             </article>
         @empty
             <p class="px-5 py-8 text-center text-sm text-gray-600">No hay reemplazos que requieran atención.</p>

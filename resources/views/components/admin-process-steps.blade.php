@@ -25,7 +25,7 @@
                 <span @class([
                     'whitespace-nowrap font-medium',
                     'text-green-700' => $completed,
-                    'text-indigo-700' => $active,
+                    'text-brand-primary-dark' => $active,
                     'text-gray-400' => ! $completed && ! $active,
                 ])>
                     {{ $label }}@if ($completed) <span aria-hidden="true">✓</span>@endif

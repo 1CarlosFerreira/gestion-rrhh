@@ -7,7 +7,7 @@
             </div>
 
             @can('calidades_contractuales.gestionar')
-                <button type="button" class="inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" x-data x-on:click="$dispatch('open-modal', 'crear-calidad-contractual')">+ Agregar calidad contractual</button>
+                <button type="button" class="inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-brand-primary-dark focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2" x-data x-on:click="$dispatch('open-modal', 'crear-calidad-contractual')">+ Agregar calidad contractual</button>
             @endcan
         </div>
     </x-slot>
@@ -22,7 +22,7 @@
                 <x-text-input name="buscar" value="{{ request('buscar') }}" placeholder="Buscar por código o nombre" class="min-w-0 flex-1" />
                 <x-secondary-button type="submit" class="justify-center">Buscar</x-secondary-button>
                 @if (request()->filled('buscar'))
-                    <a href="{{ route('admin.calidades.index') }}" class="text-center text-sm font-medium text-indigo-700 hover:underline">Limpiar</a>
+                    <a href="{{ route('admin.calidades.index') }}" class="text-center text-sm font-medium text-brand-primary-dark hover:underline">Limpiar</a>
                 @endif
             </form>
 
@@ -49,7 +49,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-right sm:px-5">
                                         @can('calidades_contractuales.gestionar')
-                                            <button type="button" class="font-medium text-indigo-700 hover:underline" x-data x-on:click="$dispatch('open-modal', 'editar-calidad-{{ $calidad->id }}')">Editar</button>
+                                            <button type="button" class="font-medium text-brand-primary-dark hover:underline" x-data x-on:click="$dispatch('open-modal', 'editar-calidad-{{ $calidad->id }}')">Editar</button>
                                         @else
                                             <span class="text-gray-400">—</span>
                                         @endcan
@@ -88,7 +88,7 @@
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-label for="crear_descripcion" value="Descripción (opcional)" />
-                        <textarea id="crear_descripcion" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('_form_context') === 'crear' ? old('descripcion') : '' }}</textarea>
+                        <textarea id="crear_descripcion" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">{{ old('_form_context') === 'crear' ? old('descripcion') : '' }}</textarea>
                         <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
                     </div>
                     <div>
@@ -98,7 +98,7 @@
                     </div>
                     <label class="flex items-center gap-2 self-end py-2 text-sm text-gray-700">
                         <input type="hidden" name="activo" value="0">
-                        <input type="checkbox" name="activo" value="1" @checked(old('_form_context') === 'crear' ? old('activo', true) : true) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                        <input type="checkbox" name="activo" value="1" @checked(old('_form_context') === 'crear' ? old('activo', true) : true) class="rounded border-gray-300 text-brand-primary shadow-sm focus:ring-brand-primary">
                         Activa
                     </label>
                 </div>
@@ -133,7 +133,7 @@
                         </div>
                         <div class="sm:col-span-2">
                             <x-input-label for="editar_descripcion_{{ $calidad->id }}" value="Descripción (opcional)" />
-                            <textarea id="editar_descripcion_{{ $calidad->id }}" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ $esFormularioConError ? old('descripcion') : $calidad->descripcion }}</textarea>
+                            <textarea id="editar_descripcion_{{ $calidad->id }}" name="descripcion" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-primary focus:ring-brand-primary">{{ $esFormularioConError ? old('descripcion') : $calidad->descripcion }}</textarea>
                             @if ($esFormularioConError)<x-input-error :messages="$errors->get('descripcion')" class="mt-2" />@endif
                         </div>
                         <div>
@@ -143,7 +143,7 @@
                         </div>
                         <label class="flex items-center gap-2 self-end py-2 text-sm text-gray-700">
                             <input type="hidden" name="activo" value="0">
-                            <input type="checkbox" name="activo" value="1" @checked($esFormularioConError ? old('activo') : $calidad->activo) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                            <input type="checkbox" name="activo" value="1" @checked($esFormularioConError ? old('activo') : $calidad->activo) class="rounded border-gray-300 text-brand-primary shadow-sm focus:ring-brand-primary">
                             Activa
                         </label>
                     </div>
