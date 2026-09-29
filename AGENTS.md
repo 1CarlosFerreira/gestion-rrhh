@@ -4,11 +4,11 @@
 Proyecto interno del Hospital de Illapel para gestionar trámites administrativos de RRHH. El sistema es multiproceso y parte con Reemplazos y Horas Extraordinarias.
 
 ## Antes de modificar código
-1. Lee `MVP.md` y la documentación funcional/técnica vigente.
+1. Lee `README.md` como documento maestro y consulta las fuentes institucionales de `docs/` solo cuando el alcance lo requiera.
 2. Ejecuta `git status`, `git branch --show-current`, `git log -1 --oneline` y `git remote -v`.
 3. Confirma que estás trabajando desde WSL2 y no dentro de la distribución `docker-desktop`.
 4. No sobrescribas cambios existentes que no hayas creado.
-5. Trabaja solo en el alcance solicitado de la fase actual.
+5. Trabaja solo en el alcance solicitado de la entrega actual.
 
 ## Entorno
 - Todo el proyecto se ejecuta en Docker Compose.
@@ -69,7 +69,7 @@ Proyecto interno del Hospital de Illapel para gestionar trámites administrativo
 - Evitar consultas N+1; usar eager loading en bandejas/detalles.
 - No optimizar prematuramente ni crear abstracciones para procesos aún no definidos.
 
-## Pruebas mínimas por fase
+## Pruebas mínimas por cambio
 - Permisos/Policies afectados.
 - Transiciones válidas e inválidas.
 - Reglas críticas de la fase.
@@ -85,7 +85,7 @@ Proyecto interno del Hospital de Illapel para gestionar trámites administrativo
 - Integraciones automáticas con SIRH o DocDigital.
 - Firma electrónica interna.
 
-## Entrega al terminar una fase
+## Entrega al terminar una entrega
 Reporta:
 - qué implementaste,
 - archivos principales cambiados,
@@ -94,4 +94,4 @@ Reporta:
 - decisiones tomadas,
 - pendientes o bloqueos,
 - `git status` final.
-No avances a la fase siguiente sin una nueva instrucción.
+No avances a un alcance nuevo sin una nueva instrucción.
