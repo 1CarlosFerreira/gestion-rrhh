@@ -70,8 +70,15 @@ usuario.
 🟢 El usuario que opera el sistema no necesariamente es la autoridad
 institucional que solicita, representa o autoriza.
 
+🟢 La unidad solicitante representa el contexto institucional desde el
+cual se realiza la solicitud y debe seleccionarse únicamente dentro del
+acceso operativo vigente del usuario.
+
 🟢 La unidad de origen de una necesidad no necesariamente es la unidad
 donde desempeñará funciones la persona contratada.
+
+🟢 Unidad solicitante, unidad origen y unidad destino son contextos
+organizacionales independientes y deben validarse por separado.
 
 🟢 La dotación/destinación funcional y la cobertura contractual son
 conceptos diferentes.
@@ -133,6 +140,16 @@ RESPONSABILIDAD
 
 La responsabilidad puede tener vigencia temporal y, cuando corresponda,
 capacidad de aprobación.
+
+🟢 Las responsabilidades `TITULAR` y `SUBROGANTE` forman parte de la
+resolución de autoridades institucionales.
+
+🟢 No existe una regla universal según la cual el `SUBROGANTE` sustituya
+al `TITULAR` para todo acto administrativo. La autoridad aplicable puede
+depender del tipo de solicitud, actuación o documento.
+
+🟡 Las reglas específicas de precedencia entre titular y subrogante para
+cada acto deben confirmarse institucionalmente antes de implementarlas.
 
 🟢 Reemplazar contractualmente a una persona que ejerce una jefatura
 **no transmite automáticamente su titularidad, subrogancia, funciones o
@@ -255,14 +272,21 @@ AUTORIDAD REPRESENTADA
 Ejemplo:
 
 ``` text
-Secretaria
-   │
-   │ registra
-   ↓
+Secretaria de Subdirección Administrativa
+        │
+        │ registra
+        ↓
 Solicitud
-   │
-   └── Solicitante institucional:
-       Subdirector
+        │
+        ├── Registrador:
+        │   Secretaria
+        │
+        ├── Unidad solicitante:
+        │   Subdirección Administrativa
+        │
+        └── Autoridad institucional:
+            Subdirector Administrativo vigente
+            (resuelto automáticamente)
 ```
 
 El historial conserva:
@@ -281,6 +305,75 @@ Subdirector
 
 🟢 La identidad mostrada como solicitante, remitente o autoridad en un
 documento no debe derivarse automáticamente del usuario creador.
+
+🟢 La autoridad institucional no se selecciona manualmente. Una vez
+determinada la unidad solicitante, el sistema debe resolverla utilizando
+la estructura organizacional, las responsabilidades vigentes, la fecha o
+contexto del trámite y las reglas aplicables al acto.
+
+🟢 El usuario operador no puede atribuir una autoridad mediante datos
+enviados desde el formulario.
+
+🟢 La autoridad institucional puede corresponder a una Persona que no
+posea una cuenta User.
+
+🟢 El historial conserva siempre al usuario real que ejecutó la acción.
+La autoridad representada no sustituye ni altera la identidad del actor.
+
+## 5.2 Alcance organizacional de la solicitud
+
+🟢 El usuario que confecciona una solicitud selecciona la unidad
+solicitante únicamente entre las unidades comprendidas en su acceso
+operativo vigente.
+
+Los alcances existentes se aplican de la siguiente forma:
+
+``` text
+SOLO_UNIDAD
+→ únicamente la unidad autorizada
+
+UNIDAD_Y_DESCENDIENTES
+→ unidad autorizada + descendientes vigentes
+```
+
+🟢 Para un usuario operativo normal, la unidad solicitante, la unidad de
+origen y la unidad de destino deben estar cada una dentro de su alcance.
+La validez de una de ellas no autoriza automáticamente las demás.
+
+🟢 Cada Subdirección gestiona solicitudes de su propio ámbito
+organizacional. Sus usuarios operativos no pueden gestionar libremente
+personas o unidades pertenecientes a otra Subdirección.
+
+🟢 Este alcance debe aprovechar los accesos operativos, la jerarquía
+organizacional y los alcances `SOLO_UNIDAD` y
+`UNIDAD_Y_DESCENDIENTES`. No deben crearse roles específicos por unidad.
+
+🟢 Los selectores de unidades y personas deben mostrar normalmente solo
+alternativas permitidas para la operación. Este filtrado es una ayuda de
+interfaz y no reemplaza la autorización del backend.
+
+🟢 El backend debe validar nuevamente cada unidad y persona recibida. La
+manipulación de una petición HTTP no puede ampliar el alcance autorizado.
+
+## 5.3 Gestión de Personas y alcance transversal
+
+🟢 Gestión de Personas cumple una función transversal. Sus usuarios
+autorizados pueden consultar y gestionar solicitudes provenientes de
+todas las Subdirecciones cuando sus funciones lo requieren.
+
+``` text
+ALCANCE GLOBAL ≠ PERMISO GLOBAL
+```
+
+La visibilidad hospitalaria no concede automáticamente capacidad para
+editar, revisar, aprobar, generar documentos, formalizar, administrar
+usuarios o modificar la estructura organizacional.
+
+🟢 Cada acción continúa dependiendo de permiso, alcance, estado o
+contexto y reglas del proceso.
+
+🟢 `tramites.ver_todos` no constituye un bypass universal de las demás
+reglas de autorización.
 
 ------------------------------------------------------------------------
 
@@ -321,6 +414,20 @@ Unidad revisora
 
 No todos los trámites requieren todas ellas, pero cuando existan su
 significado debe ser explícito.
+
+🟢 La **unidad solicitante** es el contexto institucional desde el cual
+se realiza la solicitud. No equivale a la unidad origen, la unidad
+destino, el usuario registrador ni la autoridad institucional.
+
+🟢 La **unidad origen** identifica el contexto que sustenta la necesidad
+cuando el proceso lo requiere.
+
+🟢 La **unidad destino** identifica dónde se desempeñarán las funciones o
+se materializará el resultado correspondiente.
+
+La autoridad institucional se resuelve desde el contexto de la unidad
+solicitante y las reglas del acto; no se recibe como una selección libre
+del formulario.
 
 ## 6.3 Expediente
 
@@ -498,6 +605,21 @@ Informática
 El origen explica el respaldo administrativo.
 
 El destino explica dónde desempeñará funciones la persona contratada.
+
+🟢 Para un usuario operativo normal, origen y destino deben validarse
+independientemente contra su alcance vigente, además de validar la unidad
+solicitante.
+
+Ejemplo permitido dentro de un mismo ámbito autorizado:
+
+``` text
+Unidad solicitante: Subdirección Administrativa
+Unidad origen: Abastecimiento
+Unidad destino: Informática
+```
+
+Una unidad solicitante válida no habilita un destino perteneciente a una
+Subdirección fuera del alcance del usuario.
 
 ------------------------------------------------------------------------
 
@@ -846,6 +968,20 @@ Generado por:
 Usuario real que ejecutó la acción
 ```
 
+🟢 La autoridad documental se resuelve automáticamente utilizando el
+contexto organizacional, las responsabilidades vigentes, la fecha y las
+reglas aplicables a ese acto documental. No puede ser atribuida
+manualmente por el usuario operador.
+
+🟢 La autoridad de la solicitud no implica necesariamente que sea la
+autoridad de todos los documentos posteriores. Cada acto documental puede
+resolver su propia autoridad.
+
+🟢 La autoridad puede corresponder a una Persona sin cuenta User.
+
+🟡 La autoridad exacta y la precedencia titular/subrogante para cada tipo
+documental permanecen por confirmar.
+
 ## 10.6 Snapshot documental
 
 🟢 Al generar un documento debe congelarse la información administrativa
@@ -873,6 +1009,11 @@ SNAPSHOT
 
 Si posteriormente cambia la jefatura, unidad, grado u otro dato maestro,
 el documento histórico no cambia.
+
+🟢 La autoridad resuelta para una versión documental forma parte de su
+snapshot. Si posteriormente cambia el jefe, subdirector, titular,
+subrogante o la estructura organizacional, esa versión no recalcula su
+autoridad.
 
 ## 10.7 Momento del snapshot
 
@@ -1060,6 +1201,10 @@ integridad
 reglas de negocio
 ```
 
+🟢 Restringir visualmente un selector de unidad o persona no constituye
+autorización. El backend debe validar cada contexto organizacional de
+forma independiente antes de aceptar la operación.
+
 ## 12.6 Bloqueo ≠ advertencia
 
 Las reglas confirmadas que representan una contradicción deben bloquear
@@ -1168,7 +1313,21 @@ situación administrativa.
 ## 15.1 Transitoria con origen distinto del destino
 
 ``` text
-SOLICITUD TRANSITORIA
+Secretaria de Subdirección Administrativa
+        │
+        │ registra
+        ▼
+SOLICITUD DE CONTRATO TRANSITORIA
+
+Registrador:
+Secretaria
+
+Unidad solicitante:
+Subdirección Administrativa
+
+Autoridad institucional:
+Subdirector Administrativo vigente
+(resuelto automáticamente)
 
 Funcionario origen:
 Juan Pérez
@@ -1178,12 +1337,6 @@ Abastecimiento
 
 Período origen:
 01–30 octubre
-
-Solicitante institucional:
-Subdirector correspondiente
-
-Registrada por:
-Secretaria
 
 Reemplazante propuesto:
 Carlos Ferreira
@@ -1200,6 +1353,11 @@ Grado:
 Período contractual:
 01–20 octubre
 ```
+
+El ejemplo es válido siempre que Abastecimiento e Informática estén
+dentro del alcance operativo de quien confecciona la solicitud. Que la
+Subdirección Administrativa sea una unidad solicitante válida no autoriza
+por sí sola un origen o destino fuera de ese alcance.
 
 El sistema debe comprobar, entre otras reglas:
 
@@ -1291,7 +1449,17 @@ SOLICITUD B
 ## 15.6 Registrador distinto de autoridad
 
 ``` text
-Secretaria crea solicitud
+Secretaria de Subdirección Administrativa
+        │
+        │ registra
+        ▼
+Solicitud
+        │
+        ├── Registrador: Secretaria
+        ├── Unidad solicitante: Subdirección Administrativa
+        └── Autoridad institucional:
+            Subdirector Administrativo vigente
+            (resuelto automáticamente)
 ```
 
 Historial:
@@ -1307,7 +1475,9 @@ Solicitante / autoridad:
 Subdirector correspondiente
 ```
 
-No se falsea que el Subdirector operó el sistema.
+El documento puede representar institucionalmente al Subdirector,
+mientras la auditoría conserva que la acción fue realizada por la
+Secretaria. No se falsea que el Subdirector operó el sistema.
 
 ------------------------------------------------------------------------
 
@@ -1356,6 +1526,27 @@ posteriormente convertirse en pruebas automatizadas:
 29. DocDigital y SIRH permanecen como sistemas externos.
 30. El sistema no infiere deuda, trabajo impago u otros hechos
     administrativos a partir de vacíos de información.
+31. La unidad solicitante se selecciona únicamente dentro del acceso
+    operativo vigente del usuario.
+32. Unidad solicitante, unidad origen y unidad destino son contextos
+    independientes y se validan por separado.
+33. La autoridad institucional se resuelve automáticamente; el operador
+    no puede atribuirla mediante el formulario.
+34. La autoridad institucional puede ser una Persona sin cuenta User.
+35. Titular y subrogante participan en la resolución de autoridades, pero
+    el subrogante no sustituye universalmente al titular para todo acto.
+36. La auditoría conserva al usuario real aunque el acto represente a una
+    autoridad institucional distinta.
+37. La autoridad de cada versión documental queda congelada en su
+    snapshot histórico.
+38. La autoridad de la solicitud no determina necesariamente la autoridad
+    de todos los documentos posteriores.
+39. Los usuarios operativos de una Subdirección actúan dentro de su ámbito
+    organizacional, sin crear roles específicos por unidad.
+40. Alcance global y permiso global son conceptos distintos;
+    `tramites.ver_todos` no es un bypass universal.
+41. El filtrado de selectores no reemplaza la revalidación de alcance en
+    backend.
 
 ------------------------------------------------------------------------
 
@@ -1368,8 +1559,9 @@ anteriores:
     transitorio.
 -   Cómo separar físicamente destinación funcional y cobertura
     contractual.
--   Cómo representar solicitante institucional, registrador, origen y
-    destino.
+-   Cómo representar técnicamente la unidad solicitante, el registrador,
+    la autoridad institucional resuelta, el origen y el destino,
+    preservando sus significados independientes.
 -   Cómo modelar propuesta y resultado final.
 -   Cómo almacenar snapshots por documento/version.
 -   Cómo determinar la versión documental vigente.
@@ -1396,6 +1588,9 @@ reglas rígidas:
 -   Catálogo y reglas de calidad contractual.
 -   Autoridad que debe aparecer en cada tipo documental.
 -   Reglas específicas de titular/subrogante para cada acto.
+-   Identidad administrativa exacta del respaldo transitorio.
+-   Momento exacto en que debe reservarse contractualmente una persona
+    propuesta.
 -   Terminología formal para extensiones, continuidades o nuevos
     períodos.
 -   Procedimiento institucional exacto para rectificación, anulación o
@@ -1535,9 +1730,11 @@ siendo adecuados, conceptos ya existentes como:
 Las áreas que requieren especial revisión son:
 
 ``` text
-ORIGEN ≠ DESTINO
+UNIDAD SOLICITANTE ≠ ORIGEN ≠ DESTINO
 
 REGISTRADOR ≠ AUTORIDAD / SOLICITANTE
+
+ALCANCE GLOBAL ≠ PERMISO GLOBAL
 
 PROPUESTA ≠ RESULTADO FINAL
 
