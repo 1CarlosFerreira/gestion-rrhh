@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Reemplazos\FormalizarReemplazoAction;
 use App\Enums\AlcanceAccesoOperativo;
 use App\Models\CalidadContractual;
 use App\Models\DocumentoGenerado;
@@ -18,6 +19,7 @@ use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use App\Models\UserUnidadAcceso;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -310,6 +312,16 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $this->assertDatabaseCount('reemplazo_formalizaciones', 0);
     }
 
+    public function test_direct_formalization_action_enforces_organizational_scope(): void
+    {
+        $tramite = $this->tramiteConDocumento();
+        $sinAcceso = User::factory()->create(['active' => true]);
+        $sinAcceso->givePermissionTo('reemplazos.formalizar');
+
+        $this->expectException(AuthorizationException::class);
+        app(FormalizarReemplazoAction::class)->execute($tramite, $this->datosValidos(), $sinAcceso);
+    }
+
     public function test_gestion_personas_can_formalize_and_create_document_staffing_without_manual_write_permission(): void
     {
         $tramite = $this->tramiteConDocumento();
@@ -390,6 +402,50 @@ class ReemplazosV2EFormalizacionTest extends TestCase
         $this->assertDatabaseCount('reemplazo_formalizaciones', 0);
     }
 
+    public function test_formalization_rejects_inactive_missing_or_tampered_document_evidence(): void
+    {
+        $noVigente = $this->tramiteConDocumento();
+        $noVigente->documentosGenerados()->sole()->update(['status' => 'ANULADO']);
+        $this->actingAs($this->actor)
+            ->post(route('reemplazos.formalizaciones.store', $noVigente), $this->datosValidos())
+            ->assertSessionHasErrors('documento');
+
+        $anulado = $this->tramiteConDocumento();
+        $anulado->documentosGenerados()->sole()->adjunto()->update(['status' => 'ANULADO']);
+        $this->actingAs($this->actor)
+            ->post(route('reemplazos.formalizaciones.store', $anulado), $this->datosValidos())
+            ->assertSessionHasErrors('documento');
+
+        $incoherente = $this->tramiteConDocumento();
+        $incoherente->documentosGenerados()->sole()->update([
+            'tipo_documento_id' => TipoDocumento::query()->where('codigo', 'OTRO')->firstOrFail()->id,
+        ]);
+        $this->actingAs($this->actor)
+            ->post(route('reemplazos.formalizaciones.store', $incoherente), $this->datosValidos())
+            ->assertSessionHasErrors('documento');
+
+        $faltante = $this->tramiteConDocumento();
+        $adjuntoFaltante = $faltante->documentosGenerados()->sole()->adjunto;
+        Storage::disk('private')->delete($adjuntoFaltante->storage_path);
+        $this->actingAs($this->actor)
+            ->post(route('reemplazos.formalizaciones.store', $faltante), $this->datosValidos())
+            ->assertSessionHasErrors('documento');
+
+        $alterado = $this->tramiteConDocumento();
+        $adjuntoAlterado = $alterado->documentosGenerados()->sole()->adjunto;
+        Storage::disk('private')->put($adjuntoAlterado->storage_path, '%PDF alterado');
+        $this->actingAs($this->actor)
+            ->post(route('reemplazos.formalizaciones.store', $alterado), $this->datosValidos())
+            ->assertSessionHasErrors('documento');
+
+        $this->assertDatabaseCount('reemplazo_formalizaciones', 0);
+        $this->assertDatabaseCount('persona_unidad_vinculos', 0);
+        foreach ([$noVigente, $anulado, $incoherente, $faltante, $alterado] as $tramite) {
+            $this->assertSame('DOCUMENTO_GENERADO', $tramite->fresh()->estadoTramite->codigo);
+            $this->assertSame(0, $tramite->historial()->where('action_code', 'FORMALIZAR_REEMPLAZO')->count());
+        }
+    }
+
     private function datosValidos(): array
     {
         return ['estamento_id' => $this->estamento->id, 'calidad_contractual_id' => $this->calidad->id, 'cargo_funcion' => 'Cargo V2E'];
@@ -410,7 +466,7 @@ class ReemplazosV2EFormalizacionTest extends TestCase
             $path = 'tramites/'.$tramite->public_id.'/solicitud.pdf';
             Storage::disk('private')->put($path, '%PDF V2E');
             $tipoDocumento = TipoDocumento::query()->where('codigo', 'DOCUMENTO_GENERADO')->firstOrFail();
-            $adjunto = $tramite->adjuntos()->create(['tipo_documento_id' => $tipoDocumento->id, 'uploaded_by' => $this->actor->id, 'original_name' => 'solicitud.pdf', 'stored_name' => 'solicitud.pdf', 'storage_path' => $path, 'mime_type' => 'application/pdf', 'size_bytes' => 9, 'sha256' => hash('sha256', '%PDF V2E'), 'version' => 1, 'status' => 'ACTIVO']);
+            $adjunto = $tramite->adjuntos()->create(['tipo_documento_id' => $tipoDocumento->id, 'uploaded_by' => $this->actor->id, 'original_name' => 'solicitud.pdf', 'stored_name' => 'solicitud.pdf', 'storage_path' => $path, 'mime_type' => 'application/pdf', 'size_bytes' => strlen('%PDF V2E'), 'sha256' => hash('sha256', '%PDF V2E'), 'version' => 1, 'status' => 'ACTIVO']);
             DocumentoGenerado::query()->create(['tramite_id' => $tramite->id, 'documento_plantilla_id' => DocumentoPlantilla::query()->where('codigo', 'REEMPLAZO_SOLICITUD_PDF')->firstOrFail()->id, 'tipo_documento_id' => $tipoDocumento->id, 'adjunto_id' => $adjunto->id, 'version' => 1, 'generated_by' => $this->actor->id, 'generated_at' => now(), 'status' => 'VIGENTE']);
         }
 

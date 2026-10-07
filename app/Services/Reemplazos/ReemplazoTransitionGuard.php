@@ -3,13 +3,18 @@
 namespace App\Services\Reemplazos;
 
 use App\Contracts\Tramites\TramiteTransitionGuard;
+use App\Models\DocumentoGenerado;
 use App\Models\Persona;
+use App\Models\PersonaUnidadVinculo;
+use App\Models\ReemplazoFormalizacion;
 use App\Models\TipoReemplazo;
 use App\Models\Tramite;
 use App\Models\TransicionEstado;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ReemplazoTransitionGuard implements TramiteTransitionGuard
@@ -21,24 +26,101 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         if ($tramite->tipoTramite()->value('codigo') !== 'REEMPLAZO') {
             return;
         }
+        $this->autorizar($tramite, $transicion, $user);
+
         if (in_array($transicion->codigo_accion, ['ENVIAR_A_GESTION_PERSONAS', 'REENVIAR_A_GESTION_PERSONAS'], true)) {
             $this->validarEnvio($tramite);
         }
         if ($transicion->codigo_accion === 'APROBAR_ANTECEDENTES') {
-            $revision = $tramite->revisionReemplazo()->first();
-            $errors = [];
-            if (! $revision?->grado_eus) {
-                $errors['grado_eus'] = 'El grado E.U.S. es obligatorio.';
-            }
-            if (! $revision?->clasificacion_area_id) {
-                $errors['clasificacion_area_id'] = 'La clasificación de área es obligatoria.';
-            }
-            if ($revision?->cumple_normativa === null) {
-                $errors['cumple_normativa'] = 'Debe informar el cumplimiento de normativa.';
-            }
-            if ($errors) {
-                throw ValidationException::withMessages($errors);
-            }
+            $this->validarAprobacion($tramite, $user, $metadata);
+        }
+        if ($transicion->codigo_accion === 'GENERAR_DOCUMENTO') {
+            $this->validarDocumentoGenerado($tramite, $metadata);
+        }
+        if ($transicion->codigo_accion === 'FORMALIZAR_REEMPLAZO') {
+            $this->validarFormalizacion($tramite, $metadata);
+        }
+    }
+
+    private function autorizar(Tramite $tramite, TransicionEstado $transicion, User $user): void
+    {
+        $ability = match ($transicion->codigo_accion) {
+            'ENVIAR_A_GESTION_PERSONAS', 'REENVIAR_A_GESTION_PERSONAS' => 'editar-reemplazo',
+            'INICIAR_REVISION', 'DEVOLVER_PARA_CORRECCION', 'APROBAR_ANTECEDENTES' => 'revisar-reemplazo',
+            'GENERAR_DOCUMENTO' => 'generar-documento-reemplazo',
+            'FORMALIZAR_REEMPLAZO' => 'formalizar-reemplazo',
+            default => null,
+        };
+
+        if ($ability !== null) {
+            Gate::forUser($user)->authorize($ability, $tramite);
+        }
+    }
+
+    private function validarAprobacion(Tramite $tramite, User $user, array $metadata): void
+    {
+        $revision = $tramite->revisionReemplazo()->first();
+        $errors = [];
+        if (! $revision?->grado_eus) {
+            $errors['grado_eus'] = 'El grado E.U.S. es obligatorio.';
+        }
+        if (! $revision?->clasificacion_area_id) {
+            $errors['clasificacion_area_id'] = 'La clasificación de área es obligatoria.';
+        }
+        if ($revision?->cumple_normativa === null) {
+            $errors['cumple_normativa'] = 'Debe informar el cumplimiento de normativa.';
+        }
+        if ($revision === null
+            || (int) ($metadata['revision_id'] ?? 0) !== $revision->id
+            || $revision->revisado_por !== $user->id
+            || $revision->revisado_at === null) {
+            $errors['revision'] = 'La aprobación debe registrar su revisión administrativa dentro de la misma operación.';
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    private function validarDocumentoGenerado(Tramite $tramite, array $metadata): void
+    {
+        $documento = DocumentoGenerado::query()
+            ->with('adjunto')
+            ->whereKey((int) ($metadata['documento_generado_id'] ?? 0))
+            ->where('tramite_id', $tramite->id)
+            ->where('status', 'VIGENTE')
+            ->first();
+
+        if ($documento === null
+            || $documento->adjunto === null
+            || $documento->adjunto->tramite_id !== $tramite->id
+            || $documento->adjunto->status !== 'ACTIVO'
+            || ! Storage::disk('private')->exists($documento->adjunto->storage_path)) {
+            throw ValidationException::withMessages([
+                'documento' => 'La transición requiere un documento generado vigente con evidencia activa.',
+            ]);
+        }
+    }
+
+    private function validarFormalizacion(Tramite $tramite, array $metadata): void
+    {
+        $formalizacionId = (int) ($metadata['formalizacion_id'] ?? 0);
+        $documentoId = (int) ($metadata['documento_generado_id'] ?? 0);
+        $vinculoId = (int) ($metadata['vinculo_dotacion_id'] ?? 0);
+
+        $formalizacionValida = ReemplazoFormalizacion::query()
+            ->whereKey($formalizacionId)
+            ->where('tramite_id', $tramite->id)
+            ->where('documento_generado_id', $documentoId)
+            ->exists();
+        $vinculoValido = PersonaUnidadVinculo::query()
+            ->whereKey($vinculoId)
+            ->where('origen_tramite_id', $tramite->id)
+            ->exists();
+
+        if (! $formalizacionValida || ! $vinculoValido) {
+            throw ValidationException::withMessages([
+                'formalizacion' => 'La transición requiere una formalización y un vínculo de dotación coherentes.',
+            ]);
         }
     }
 

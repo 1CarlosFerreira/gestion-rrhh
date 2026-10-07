@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Reemplazos\AprobarAntecedentesReemplazoAction;
+use App\Actions\Reemplazos\GuardarRevisionReemplazoAction;
 use App\Actions\Tramites\TransicionarTramite;
 use App\Http\Requests\SaveRevisionReemplazoRequest;
 use App\Models\CalidadContractual;
@@ -15,7 +17,6 @@ use App\Services\Accesos\AccesoOperativoService;
 use App\Support\Tramites\ResolverRetornoTramite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -121,11 +122,9 @@ class GestionPersonasReemplazoController extends Controller
         return redirect()->route('gestion-personas.reemplazos.show', $tramite)->with('status', 'Revisión iniciada.');
     }
 
-    public function save(SaveRevisionReemplazoRequest $request, Tramite $tramite): RedirectResponse
+    public function save(SaveRevisionReemplazoRequest $request, Tramite $tramite, GuardarRevisionReemplazoAction $guardarRevision): RedirectResponse
     {
-        $this->authorizeReview($tramite);
-        abort_unless($tramite->estadoTramite?->codigo === 'EN_REVISION', 422);
-        $this->guardarRevision($tramite, $request->validated());
+        $guardarRevision->execute($tramite, $request->validated(), $request->user());
 
         return back()->with('status', 'Antecedentes administrativos guardados.');
     }
@@ -139,21 +138,11 @@ class GestionPersonasReemplazoController extends Controller
         return redirect()->route('gestion-personas.reemplazos.index')->with('status', 'Solicitud devuelta para corrección.');
     }
 
-    public function approve(SaveRevisionReemplazoRequest $request, Tramite $tramite, TransicionarTramite $transition): RedirectResponse
+    public function approve(SaveRevisionReemplazoRequest $request, Tramite $tramite, AprobarAntecedentesReemplazoAction $aprobar): RedirectResponse
     {
-        $this->authorizeReview($tramite);
-        DB::transaction(function () use ($request, $tramite, $transition): void {
-            $this->guardarRevision($tramite, $request->validated());
-            $transition->execute($tramite, 'APROBAR_ANTECEDENTES', $request->user());
-            $tramite->revisionReemplazo()->update(['revisado_por' => $request->user()->id, 'revisado_at' => now()]);
-        });
+        $aprobar->execute($tramite, $request->validated(), $request->user());
 
         return redirect()->route('gestion-personas.reemplazos.index')->with('status', 'Antecedentes aprobados.');
-    }
-
-    private function guardarRevision(Tramite $tramite, array $datos): void
-    {
-        $tramite->revisionReemplazo()->updateOrCreate([], $datos);
     }
 
     private function authorizeReview(Tramite $tramite): void

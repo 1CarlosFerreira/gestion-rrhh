@@ -28,6 +28,7 @@ class GenerarSolicitudReemplazoPdfAction
         try {
             return DB::transaction(function () use ($tramite, $user, &$storedPath): DocumentoGenerado {
                 $locked = Tramite::query()->lockForUpdate()->with(['tipoTramite', 'estadoTramite', 'unidadOrganizacional', 'creador', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.reemplazanteEstamento', 'reemplazo.reemplazanteProfesion', 'reemplazo.reemplazanteCalidadContractual', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea'])->findOrFail($tramite->id);
+                Gate::forUser($user)->authorize('generar-documento-reemplazo', $locked);
                 $this->validar($locked);
                 $tipo = TipoDocumento::query()->where('codigo', 'DOCUMENTO_GENERADO')->where('active', true)->firstOrFail();
                 if (DocumentoGenerado::query()->where('tramite_id', $locked->id)->where('tipo_documento_id', $tipo->id)->exists()) {

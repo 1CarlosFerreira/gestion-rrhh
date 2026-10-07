@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Tramites\Adjuntos\AnularAdjunto;
+use App\Actions\Tramites\Adjuntos\CargarAdjunto;
 use App\Enums\AlcanceAccesoOperativo;
 use App\Models\CalidadContractual;
 use App\Models\ClasificacionArea;
@@ -11,6 +13,7 @@ use App\Models\EstadoTramite;
 use App\Models\Estamento;
 use App\Models\Persona;
 use App\Models\PersonaUnidadVinculo;
+use App\Models\TipoDocumento;
 use App\Models\TipoReemplazo;
 use App\Models\TipoTramite;
 use App\Models\Tramite;
@@ -18,9 +21,11 @@ use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use App\Models\UserUnidadAcceso;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -39,9 +44,11 @@ class ReemplazosV2DDocumentoTest extends TestCase
         parent::setUp();
         $this->seed();
         Storage::fake('private');
-        Permission::findOrCreate('reemplazos.generar_documento');
+        foreach (['reemplazos.generar_documento', 'tramites.adjuntos.cargar', 'tramites.adjuntos.anular'] as $permiso) {
+            Permission::findOrCreate($permiso);
+        }
         $this->user = User::factory()->create(['active' => true]);
-        $this->user->givePermissionTo(['reemplazos.generar_documento', 'reemplazos.revisar']);
+        $this->user->givePermissionTo(['reemplazos.generar_documento', 'reemplazos.revisar', 'tramites.adjuntos.cargar', 'tramites.adjuntos.anular']);
         $this->unidad = UnidadOrganizacional::query()->where('codigo', 'SDGADM-INF')->firstOrFail();
         UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
     }
@@ -193,6 +200,65 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $withoutPermission = User::factory()->create(['active' => true]);
         UserUnidadAcceso::query()->create(['user_id' => $withoutPermission->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
         $this->actingAs($withoutPermission)->get(route('reemplazos.documentos.download', [$tramite, $documento]))->assertForbidden();
+    }
+
+    public function test_generated_document_attachment_cannot_be_annulled_or_versioned_by_generic_actions(): void
+    {
+        $tramite = $this->tramiteListo();
+        $this->actingAs($this->user)->post(route('reemplazos.documentos.store', $tramite))->assertRedirect();
+        $documento = DocumentoGenerado::query()->with('adjunto')->sole();
+        $adjunto = $documento->adjunto;
+        $archivosOriginales = Storage::disk('private')->allFiles();
+
+        foreach (['anular', 'versionar'] as $operacion) {
+            try {
+                if ($operacion === 'anular') {
+                    app(AnularAdjunto::class)->execute($tramite, $adjunto, $this->user);
+                } else {
+                    app(CargarAdjunto::class)->execute(
+                        $tramite,
+                        UploadedFile::fake()->create('documento-corregido.pdf', 20, 'application/pdf'),
+                        $this->user,
+                        replaces: $adjunto,
+                    );
+                }
+                $this->fail('La evidencia de un documento generado no debe alterarse por el flujo genérico.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('archivo', $exception->errors());
+            }
+        }
+
+        $this->assertSame('ACTIVO', $adjunto->fresh()->status);
+        $this->assertSame('VIGENTE', $documento->fresh()->status);
+        $this->assertSame($adjunto->id, $documento->fresh()->adjunto_id);
+        $this->assertSame(1, $tramite->adjuntos()->count());
+        $this->assertSame(0, $tramite->historial()->whereIn('action_code', ['ADJUNTO_ANULADO', 'ADJUNTO_VERSIONADO'])->count());
+        $this->assertSame($archivosOriginales, Storage::disk('private')->allFiles());
+    }
+
+    public function test_normal_attachment_can_still_be_versioned_and_annulled(): void
+    {
+        $tramite = $this->tramiteListo();
+        $tipo = TipoDocumento::query()->where('codigo', 'OTRO')->firstOrFail();
+        $original = app(CargarAdjunto::class)->execute(
+            $tramite,
+            UploadedFile::fake()->create('respaldo.pdf', 20, 'application/pdf'),
+            $this->user,
+            $tipo->id,
+        );
+        $version = app(CargarAdjunto::class)->execute(
+            $tramite,
+            UploadedFile::fake()->create('respaldo-corregido.pdf', 20, 'application/pdf'),
+            $this->user,
+            replaces: $original,
+        );
+        app(AnularAdjunto::class)->execute($tramite, $version, $this->user);
+
+        $this->assertSame('REEMPLAZADO', $original->fresh()->status);
+        $this->assertSame('ANULADO', $version->fresh()->status);
+        $this->assertSame(2, $version->version);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ADJUNTO_VERSIONADO']);
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ADJUNTO_ANULADO']);
     }
 
     private function tramiteListo(string $estado = 'LISTA_GENERAR_DOCUMENTO'): Tramite

@@ -13,7 +13,9 @@ use App\Models\TramiteReemplazo;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use App\Models\UserUnidadAcceso;
+use App\Services\Reemplazos\BorradorReemplazoService;
 use Database\Seeders\ReemplazosV2Seeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
@@ -53,6 +55,23 @@ class ReemplazosV2BBorradorTest extends TestCase
         $outsider = User::factory()->create(['active' => true]);
         $outsider->givePermissionTo('reemplazos.crear');
         $this->actingAs($outsider)->get(route('reemplazos.create'))->assertForbidden();
+    }
+
+    public function test_direct_draft_service_call_enforces_effective_authorization(): void
+    {
+        $sinAcceso = User::factory()->create(['active' => true]);
+        $sinAcceso->givePermissionTo('reemplazos.crear');
+
+        try {
+            app(BorradorReemplazoService::class)->crear($this->unidad, [], $sinAcceso);
+            $this->fail('La creación directa sin alcance debió ser rechazada.');
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $this->assertDatabaseCount('tramites', 0);
+        $this->assertDatabaseCount('tramite_reemplazos', 0);
+        $this->assertDatabaseCount('tramite_historial', 0);
     }
 
     public function test_exact_scope_rejects_other_unit_and_descendant_scope_allows_child(): void

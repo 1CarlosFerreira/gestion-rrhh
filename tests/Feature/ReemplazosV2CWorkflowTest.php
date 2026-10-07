@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Reemplazos\GuardarRevisionReemplazoAction;
+use App\Actions\Tramites\TransicionarTramite;
 use App\Enums\AlcanceAccesoOperativo;
 use App\Models\CalidadContractual;
 use App\Models\ClasificacionArea;
@@ -16,8 +18,10 @@ use App\Models\User;
 use App\Models\UserUnidadAcceso;
 use App\Services\Reemplazos\ReemplazoService;
 use App\Services\Reemplazos\ReemplazoWorkflow;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -369,6 +373,111 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->assertNull($tramite->vinculoDotacion);
         $this->actingAs($this->solicitante)->get(route('reemplazos.edit', $tramite))->assertForbidden();
         $this->actingAs($this->solicitante)->put(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $this->unidad->id])->assertForbidden();
+    }
+
+    public function test_stale_reviewer_cannot_save_after_another_user_approved_the_request(): void
+    {
+        $tramite = $this->startReview();
+        $staleTramite = Tramite::query()->with('estadoTramite')->findOrFail($tramite->id);
+        $clasificacion = ClasificacionArea::query()->where('codigo', 'AREA-CRITICA')->firstOrFail();
+        $datosAprobados = [
+            'grado_eus' => 12,
+            'clasificacion_area_id' => $clasificacion->id,
+            'cumple_normativa' => true,
+            'observacion_administrativa' => 'Revisión aprobada por el usuario A.',
+        ];
+
+        $this->actingAs($this->revisor)
+            ->put(route('gestion-personas.reemplazos.approve', $tramite), $datosAprobados)
+            ->assertRedirect();
+
+        $revisorB = User::factory()->create(['active' => true]);
+        $revisorB->givePermissionTo('reemplazos.revisar');
+        UserUnidadAcceso::query()->create([
+            'user_id' => $revisorB->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD,
+            'vigente_desde' => today(),
+            'created_by' => $this->revisor->id,
+        ]);
+
+        try {
+            app(GuardarRevisionReemplazoAction::class)->execute($staleTramite, [
+                'grado_eus' => 20,
+                'clasificacion_area_id' => $clasificacion->id,
+                'cumple_normativa' => false,
+                'observacion_administrativa' => 'Datos antiguos del usuario B.',
+            ], $revisorB);
+            $this->fail('El guardado tardío debió ser rechazado.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                'La solicitud cambió de estado y su revisión ya no puede modificarse.',
+                $exception->errors()['revision'][0],
+            );
+        }
+
+        $this->assertSame('LISTA_GENERAR_DOCUMENTO', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseHas('reemplazo_revisiones', [
+            'tramite_id' => $tramite->id,
+            ...$datosAprobados,
+            'revisado_por' => $this->revisor->id,
+        ]);
+        $this->assertDatabaseMissing('reemplazo_revisiones', [
+            'tramite_id' => $tramite->id,
+            'grado_eus' => 20,
+        ]);
+    }
+
+    public function test_direct_review_action_validates_and_filters_its_input(): void
+    {
+        $tramite = $this->startReview();
+        $clasificacion = ClasificacionArea::query()->where('codigo', 'AREA-CRITICA')->firstOrFail();
+
+        try {
+            app(GuardarRevisionReemplazoAction::class)->execute($tramite, [
+                'grado_eus' => 100,
+                'clasificacion_area_id' => $clasificacion->id,
+            ], $this->revisor);
+            $this->fail('La llamada directa debió aplicar las reglas de validación de la revisión.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('grado_eus', $exception->errors());
+        }
+
+        $this->assertDatabaseMissing('reemplazo_revisiones', ['tramite_id' => $tramite->id]);
+
+        $revision = app(GuardarRevisionReemplazoAction::class)->execute($tramite, [
+            'grado_eus' => 15,
+            'clasificacion_area_id' => $clasificacion->id,
+            'cumple_normativa' => true,
+            'revisado_por' => $this->solicitante->id,
+            'revisado_at' => now(),
+            'tramite_id' => PHP_INT_MAX,
+        ], $this->revisor);
+
+        $this->assertSame($tramite->id, $revision->tramite_id);
+        $this->assertNull($revision->revisado_por);
+        $this->assertNull($revision->revisado_at);
+    }
+
+    public function test_direct_transition_enforces_organizational_scope(): void
+    {
+        $tramite = $this->sendDraft();
+        $sinAcceso = User::factory()->create(['active' => true]);
+        $sinAcceso->givePermissionTo('reemplazos.revisar');
+
+        try {
+            app(TransicionarTramite::class)->execute($tramite, 'INICIAR_REVISION', $sinAcceso);
+            $this->fail('La transición directa sin alcance debió ser rechazada.');
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseMissing('tramite_historial', [
+            'tramite_id' => $tramite->id,
+            'user_id' => $sinAcceso->id,
+            'action_code' => 'INICIAR_REVISION',
+        ]);
     }
 
     public function test_failed_direct_approval_rolls_back_and_preserves_old_input(): void

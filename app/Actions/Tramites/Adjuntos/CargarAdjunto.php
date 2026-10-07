@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class CargarAdjunto
@@ -36,15 +37,26 @@ class CargarAdjunto
         }
         $storedName = Str::ulid().'.'.self::EXTENSIONS[$mime];
         $path = 'tramites/'.$tramite->public_id.'/'.$storedName;
-        Storage::disk('private')->putFileAs('tramites/'.$tramite->public_id, $file, $storedName);
 
         try {
-            return DB::transaction(function () use ($tramite, $file, $user, $tipoDocumentoId, $personaId, $replaces, $mime, $storedName, $path): TramiteAdjunto {
+            Storage::disk('private')->putFileAs('tramites/'.$tramite->public_id, $file, $storedName);
+
+            return DB::transaction(function () use ($tramite, $file, $user, $tipoDocumentoId, $personaId, $replaces, $permission, $mime, $storedName, $path): TramiteAdjunto {
+                $lockedTramite = Tramite::query()->lockForUpdate()->findOrFail($tramite->id);
+                $this->authorize($lockedTramite, $user, $permission);
                 $previous = $replaces ? TramiteAdjunto::query()->lockForUpdate()->findOrFail($replaces->id) : null;
                 if ($previous) {
+                    if ($previous->tramite_id !== $lockedTramite->id) {
+                        throw new AuthorizationException('El adjunto a versionar no pertenece al trámite.');
+                    }
+                    if ($previous->documentoGenerado()->exists()) {
+                        throw ValidationException::withMessages([
+                            'archivo' => 'Un documento generado no puede versionarse mediante el flujo general de adjuntos.',
+                        ]);
+                    }
                     $previous->update(['status' => 'REEMPLAZADO']);
                 }
-                $adjunto = $tramite->adjuntos()->create([
+                $adjunto = $lockedTramite->adjuntos()->create([
                     'tipo_documento_id' => $tipoDocumentoId ?? $previous?->tipo_documento_id,
                     'persona_id' => $personaId ?? $previous?->persona_id,
                     'uploaded_by' => $user->id,
@@ -58,7 +70,7 @@ class CargarAdjunto
                     'replaces_adjunto_id' => $previous?->id,
                     'status' => 'ACTIVO',
                 ]);
-                $tramite->historial()->create([
+                $lockedTramite->historial()->create([
                     'user_id' => $user->id,
                     'action_code' => $previous ? 'ADJUNTO_VERSIONADO' : 'ADJUNTO_CARGADO',
                     'metadata' => ['adjunto_id' => $adjunto->id, 'tipo_documento_id' => $adjunto->tipo_documento_id, 'version' => $adjunto->version, 'mime' => $mime, 'size_bytes' => $adjunto->size_bytes],

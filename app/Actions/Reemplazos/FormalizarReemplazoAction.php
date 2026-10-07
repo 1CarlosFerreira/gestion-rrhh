@@ -33,6 +33,7 @@ class FormalizarReemplazoAction
         try {
             return DB::transaction(function () use ($tramite, $datos, $actor, $documentoFinal, &$adjuntoCreado): ReemplazoFormalizacion {
                 $tramite = Tramite::query()->with(['estadoTramite', 'reemplazo', 'revisionReemplazo'])->lockForUpdate()->findOrFail($tramite->id);
+                Gate::forUser($actor)->authorize('formalizar-reemplazo', $tramite);
                 $existente = $tramite->formalizacionReemplazo()->first();
                 if ($existente !== null) {
                     if (! $tramite->vinculoDotacion()->exists()) {
@@ -44,10 +45,17 @@ class FormalizarReemplazoAction
                 if ($tramite->estadoTramite?->codigo !== 'DOCUMENTO_GENERADO') {
                     throw ValidationException::withMessages(['tramite' => 'El trámite debe tener su documento generado antes de formalizar.']);
                 }
-                $documento = DocumentoGenerado::query()->where('tramite_id', $tramite->id)->where('status', 'VIGENTE')->lockForUpdate()->first();
-                if ($documento === null) {
-                    throw ValidationException::withMessages(['documento' => 'No existe un documento generado vigente para formalizar.']);
+                $documentosVigentes = DocumentoGenerado::query()
+                    ->with(['adjunto', 'plantilla', 'tipoDocumento'])
+                    ->where('tramite_id', $tramite->id)
+                    ->where('status', 'VIGENTE')
+                    ->lockForUpdate()
+                    ->get();
+                if ($documentosVigentes->count() !== 1) {
+                    throw ValidationException::withMessages(['documento' => 'Debe existir un único documento generado vigente para formalizar.']);
                 }
+                $documento = $documentosVigentes->first();
+                $this->validarEvidenciaDocumental($tramite, $documento);
                 $detalle = $tramite->reemplazo;
                 if ($detalle === null || $detalle->reemplazante_id === null || $detalle->fecha_reemplazante_desde === null || $detalle->fecha_reemplazante_hasta === null) {
                     throw ValidationException::withMessages(['tramite' => 'El reemplazo no posee los datos efectivos necesarios para formalizar.']);
@@ -104,6 +112,33 @@ class FormalizarReemplazoAction
                 Storage::disk('private')->delete($adjuntoCreado->storage_path);
             }
             throw $exception;
+        }
+    }
+
+    private function validarEvidenciaDocumental(Tramite $tramite, DocumentoGenerado $documento): void
+    {
+        $adjunto = $documento->adjunto;
+        if ($documento->tramite_id !== $tramite->id
+            || $documento->plantilla?->codigo !== 'REEMPLAZO_SOLICITUD_PDF'
+            || $documento->plantilla->tipo_tramite_id !== $tramite->tipo_tramite_id
+            || $documento->tipoDocumento?->codigo !== 'DOCUMENTO_GENERADO'
+            || $documento->plantilla->tipo_documento_id !== $documento->tipo_documento_id
+            || $adjunto === null
+            || $adjunto->tramite_id !== $tramite->id
+            || $adjunto->tipo_documento_id !== $documento->tipo_documento_id
+            || $adjunto->status !== 'ACTIVO'
+            || $adjunto->mime_type !== 'application/pdf'
+            || ! Storage::disk('private')->exists($adjunto->storage_path)) {
+            throw ValidationException::withMessages([
+                'documento' => 'El documento vigente no corresponde a la solicitud PDF requerida o no posee una evidencia activa y disponible.',
+            ]);
+        }
+
+        $bytes = Storage::disk('private')->get($adjunto->storage_path);
+        if (strlen($bytes) !== $adjunto->size_bytes || hash('sha256', $bytes) !== $adjunto->sha256) {
+            throw ValidationException::withMessages([
+                'documento' => 'La evidencia del documento vigente no conserva su tamaño e integridad registrados.',
+            ]);
         }
     }
 }

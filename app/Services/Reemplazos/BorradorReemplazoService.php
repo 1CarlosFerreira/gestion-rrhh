@@ -10,17 +10,26 @@ use App\Models\TipoTramite;
 use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class BorradorReemplazoService
 {
-    public function __construct(private readonly ReemplazoService $reemplazos, private readonly GenerarCodigoTramite $codigo, private readonly ReemplazoWorkflow $workflow) {}
+    public function __construct(
+        private readonly ReemplazoService $reemplazos,
+        private readonly GenerarCodigoTramite $codigo,
+        private readonly ReemplazoWorkflow $workflow,
+        private readonly AlcanceSolicitudReemplazoService $alcance,
+    ) {}
 
     public function crear(UnidadOrganizacional $unidad, array $datos, User $actor): Tramite
     {
         return DB::transaction(function () use ($unidad, $datos, $actor): Tramite {
+            Gate::forUser($actor)->authorize('crear-reemplazo');
+            $this->autorizarUnidad($actor, $unidad);
             $tipo = TipoTramite::query()->where('codigo', 'REEMPLAZO')->where('activo', true)->firstOrFail();
             $estado = EstadoTramite::query()->where('tipo_tramite_id', $tipo->id)->where('codigo', 'BORRADOR')->where('activo', true)->firstOrFail();
             $this->validarDatos($unidad, $datos);
@@ -36,6 +45,8 @@ class BorradorReemplazoService
     {
         return DB::transaction(function () use ($tramite, $unidad, $datos, $actor): Tramite {
             $tramite = Tramite::query()->lockForUpdate()->with(['reemplazo', 'estadoTramite'])->findOrFail($tramite->id);
+            Gate::forUser($actor)->authorize('editar-reemplazo', $tramite);
+            $this->autorizarUnidad($actor, $unidad);
             if (! in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_PARA_CORRECCION'], true)) {
                 throw ValidationException::withMessages(['tramite' => 'La solicitud no se encuentra en un estado editable.']);
             }
@@ -66,6 +77,13 @@ class BorradorReemplazoService
         $this->reemplazos->validarBorrador($datos);
         if (! empty($datos['funcionario_id']) && ! empty($datos['fecha_funcionario_desde']) && ! empty($datos['fecha_funcionario_hasta']) && $this->reemplazos->existeSuperposicion($datos['funcionario_id'], $datos['fecha_funcionario_desde'], $datos['fecha_funcionario_hasta'], $exceptoId, fn ($q) => $this->workflow->filtrarActivos($q))) {
             throw ValidationException::withMessages(['fecha_funcionario_desde' => 'El funcionario ya posee otro reemplazo con un período superpuesto.']);
+        }
+    }
+
+    private function autorizarUnidad(User $actor, UnidadOrganizacional $unidad): void
+    {
+        if (! $this->alcance->tienePermisoYAlcance($actor, 'reemplazos.crear', $unidad, today())) {
+            throw new AuthorizationException('No está autorizado para gestionar reemplazos en esta unidad.');
         }
     }
 }
