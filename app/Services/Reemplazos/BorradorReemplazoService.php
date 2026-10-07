@@ -3,6 +3,7 @@
 namespace App\Services\Reemplazos;
 
 use App\Actions\Tramites\GenerarCodigoTramite;
+use App\Enums\ModalidadSolicitudContrato;
 use App\Models\EstadoTramite;
 use App\Models\Persona;
 use App\Models\TipoReemplazo;
@@ -10,7 +11,7 @@ use App\Models\TipoTramite;
 use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
+use App\Services\SolicitudesContrato\ContextoSolicitudContratoService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -22,40 +23,42 @@ class BorradorReemplazoService
         private readonly ReemplazoService $reemplazos,
         private readonly GenerarCodigoTramite $codigo,
         private readonly ReemplazoWorkflow $workflow,
-        private readonly AlcanceSolicitudReemplazoService $alcance,
+        private readonly ContextoSolicitudContratoService $contextoSolicitud,
     ) {}
 
-    public function crear(UnidadOrganizacional $unidad, array $datos, User $actor): Tramite
+    public function crear(array $contexto, array $datos, User $actor): Tramite
     {
-        return DB::transaction(function () use ($unidad, $datos, $actor): Tramite {
+        return DB::transaction(function () use ($contexto, $datos, $actor): Tramite {
             Gate::forUser($actor)->authorize('crear-reemplazo');
-            $this->autorizarUnidad($actor, $unidad);
+            $contexto = $this->contextoSolicitud->prepararTransitoria($contexto, $actor, now());
             $tipo = TipoTramite::query()->where('codigo', 'REEMPLAZO')->where('activo', true)->firstOrFail();
             $estado = EstadoTramite::query()->where('tipo_tramite_id', $tipo->id)->where('codigo', 'BORRADOR')->where('activo', true)->firstOrFail();
-            $this->validarDatos($unidad, $datos);
-            $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => $this->codigo->execute(), 'tipo_tramite_id' => $tipo->id, 'estado_tramite_id' => $estado->id, 'unidad_organizacional_id' => $unidad->id, 'created_by' => $actor->id]);
+            $this->validarDatos($contexto['unidad_origen'], $datos);
+            $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => $this->codigo->execute(), 'tipo_tramite_id' => $tipo->id, 'estado_tramite_id' => $estado->id, 'unidad_organizacional_id' => $contexto['unidad_solicitante']->id, 'created_by' => $actor->id]);
+            $this->guardarContexto($tramite, $contexto);
             $tramite->reemplazo()->create($datos);
-            $tramite->historial()->create(['user_id' => $actor->id, 'action_code' => 'TRAMITE_CREADO', 'to_estado_id' => $estado->id, 'occurred_at' => now()]);
+            $tramite->historial()->create(['user_id' => $actor->id, 'action_code' => 'TRAMITE_CREADO', 'to_estado_id' => $estado->id, 'metadata' => $this->metadataContexto($contexto), 'occurred_at' => now()]);
 
-            return $tramite->load('reemplazo');
+            return $tramite->load(['solicitudContrato', 'reemplazo']);
         });
     }
 
-    public function actualizar(Tramite $tramite, UnidadOrganizacional $unidad, array $datos, User $actor): Tramite
+    public function actualizar(Tramite $tramite, array $contexto, array $datos, User $actor): Tramite
     {
-        return DB::transaction(function () use ($tramite, $unidad, $datos, $actor): Tramite {
-            $tramite = Tramite::query()->lockForUpdate()->with(['reemplazo', 'estadoTramite'])->findOrFail($tramite->id);
+        return DB::transaction(function () use ($tramite, $contexto, $datos, $actor): Tramite {
+            $tramite = Tramite::query()->lockForUpdate()->with(['reemplazo', 'estadoTramite', 'solicitudContrato'])->findOrFail($tramite->id);
             Gate::forUser($actor)->authorize('editar-reemplazo', $tramite);
-            $this->autorizarUnidad($actor, $unidad);
             if (! in_array($tramite->estadoTramite->codigo, ['BORRADOR', 'DEVUELTA_PARA_CORRECCION'], true)) {
                 throw ValidationException::withMessages(['tramite' => 'La solicitud no se encuentra en un estado editable.']);
             }
-            $this->validarDatos($unidad, $datos, $tramite->reemplazo->id);
-            $tramite->update(['unidad_organizacional_id' => $unidad->id]);
+            $contexto = $this->contextoSolicitud->prepararTransitoria($contexto, $actor, now());
+            $this->validarDatos($contexto['unidad_origen'], $datos, $tramite->reemplazo->id);
+            $tramite->update(['unidad_organizacional_id' => $contexto['unidad_solicitante']->id]);
+            $this->guardarContexto($tramite, $contexto);
             $tramite->reemplazo->update($datos);
-            $tramite->historial()->create(['user_id' => $actor->id, 'action_code' => 'BORRADOR_ACTUALIZADO', 'metadata' => ['unidad_organizacional_id' => $unidad->id], 'occurred_at' => now()]);
+            $tramite->historial()->create(['user_id' => $actor->id, 'action_code' => 'BORRADOR_ACTUALIZADO', 'metadata' => $this->metadataContexto($contexto), 'occurred_at' => now()]);
 
-            return $tramite->refresh()->load('reemplazo');
+            return $tramite->refresh()->load(['solicitudContrato', 'reemplazo']);
         });
     }
 
@@ -80,10 +83,33 @@ class BorradorReemplazoService
         }
     }
 
-    private function autorizarUnidad(User $actor, UnidadOrganizacional $unidad): void
+    private function guardarContexto(Tramite $tramite, array $contexto): void
     {
-        if (! $this->alcance->tienePermisoYAlcance($actor, 'reemplazos.crear', $unidad, today())) {
-            throw new AuthorizationException('No está autorizado para gestionar reemplazos en esta unidad.');
-        }
+        $solicitud = $tramite->solicitudContrato()->firstOrNew();
+        $solicitud->fill([
+            'modalidad' => ModalidadSolicitudContrato::TRANSITORIA,
+            'unidad_solicitante_id' => $contexto['unidad_solicitante']->id,
+            'unidad_origen_id' => $contexto['unidad_origen']->id,
+            'unidad_destino_id' => $contexto['unidad_destino']->id,
+        ]);
+        $solicitud->forceFill([
+            'autoridad_persona_id' => $contexto['autoridad_responsabilidad']->persona_id,
+            'autoridad_responsabilidad_id' => $contexto['autoridad_responsabilidad']->id,
+            'autoridad_contexto' => $contexto['autoridad_contexto'],
+            'autoridad_resuelta_at' => now(),
+        ]);
+        $solicitud->save();
+    }
+
+    private function metadataContexto(array $contexto): array
+    {
+        return [
+            'modalidad' => ModalidadSolicitudContrato::TRANSITORIA->value,
+            'unidad_solicitante_id' => $contexto['unidad_solicitante']->id,
+            'autoridad_persona_id' => $contexto['autoridad_responsabilidad']->persona_id,
+            'autoridad_responsabilidad_id' => $contexto['autoridad_responsabilidad']->id,
+            'unidad_origen_id' => $contexto['unidad_origen']->id,
+            'unidad_destino_id' => $contexto['unidad_destino']->id,
+        ];
     }
 }

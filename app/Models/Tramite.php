@@ -41,6 +41,11 @@ class Tramite extends Model
         return $this->hasOne(TramiteReemplazo::class);
     }
 
+    public function solicitudContrato(): HasOne
+    {
+        return $this->hasOne(SolicitudContrato::class);
+    }
+
     public function revisionReemplazo(): HasOne
     {
         return $this->hasOne(ReemplazoRevision::class);
