@@ -6,12 +6,14 @@ use App\Models\Tramite;
 use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
 use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
+use App\Services\SolicitudesContrato\ContextoSolicitudContratoService;
 
 class TramitePolicy
 {
     public function __construct(
         private readonly AccesoOperativoService $accesos,
         private readonly AlcanceSolicitudReemplazoService $alcanceReemplazos,
+        private readonly ContextoSolicitudContratoService $contexto,
     ) {}
 
     public function viewAny(User $user): bool
@@ -34,6 +36,17 @@ class TramitePolicy
 
         if ($user->can('tramites.ver_todos')) {
             return true;
+        }
+
+        if ($tramite->solicitudContrato !== null) {
+            if ($tramite->tipoTramite?->codigo === 'REEMPLAZO'
+                && $user->can('reemplazos.alcance_global')
+                && $user->canAny(['reemplazos.revisar', 'reemplazos.generar_documento', 'reemplazos.formalizar'])) {
+                return true;
+            }
+
+            return $user->canAny(['tramites.ver_unidades', 'reemplazos.crear', 'reemplazos.revisar', 'reemplazos.generar_documento', 'reemplazos.formalizar'])
+                && $this->contexto->tieneAlcance($user, $tramite->solicitudContrato, today());
         }
 
         if ($tramite->tipoTramite?->codigo !== 'REEMPLAZO' || $tramite->unidadOrganizacional === null) {

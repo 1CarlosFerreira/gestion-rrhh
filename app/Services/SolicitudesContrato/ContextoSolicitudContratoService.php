@@ -3,10 +3,12 @@
 namespace App\Services\SolicitudesContrato;
 
 use App\Enums\ContextoAutoridadInstitucional;
+use App\Models\SolicitudContrato;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -24,6 +26,37 @@ class ContextoSolicitudContratoService
         }
 
         return $this->accesos->unidadesAccesibles($actor, $fecha);
+    }
+
+    public function tieneAlcance(User $actor, SolicitudContrato $solicitud, string|\DateTimeInterface $fecha): bool
+    {
+        return $actor->active
+            && $solicitud->unidadSolicitante !== null
+            && $solicitud->unidadOrigen !== null
+            && $solicitud->unidadDestino !== null
+            && $this->accesos->tieneAcceso($actor, $solicitud->unidadSolicitante, $fecha)
+            && $this->accesos->tieneAcceso($actor, $solicitud->unidadOrigen, $fecha)
+            && $this->accesos->tieneAcceso($actor, $solicitud->unidadDestino, $fecha);
+    }
+
+    public function filtrarVisibles(Builder $query, User $actor, string|\DateTimeInterface $fecha, Collection $unidadesV2): Builder
+    {
+        if (! $actor->active) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($actor->can('tramites.ver_todos')) {
+            return $query;
+        }
+
+        $idsV3 = $this->accesos->unidadesAccesibles($actor, $fecha)->pluck('id');
+
+        return $query->where(fn (Builder $q) => $q
+            ->where(fn (Builder $v2) => $v2->whereDoesntHave('solicitudContrato')->whereIn('unidad_organizacional_id', $unidadesV2))
+            ->orWhereHas('solicitudContrato', fn (Builder $v3) => $v3
+                ->whereIn('unidad_solicitante_id', $idsV3)
+                ->whereIn('unidad_origen_id', $idsV3)
+                ->whereIn('unidad_destino_id', $idsV3)));
     }
 
     public function prepararTransitoria(array $datos, User $actor, string|\DateTimeInterface $fecha): array
@@ -68,7 +101,7 @@ class ContextoSolicitudContratoService
             'unidad_solicitante' => $solicitante,
             'unidad_origen' => $unidades->get($ids['unidad_origen_id']),
             'unidad_destino' => $unidades->get($ids['unidad_destino_id']),
-            'autoridad_responsabilidad' => $responsabilidad,
+            'autoridad' => $responsabilidad,
             'autoridad_contexto' => ContextoAutoridadInstitucional::REGISTRO_SOLICITUD_CONTRATO,
         ];
     }

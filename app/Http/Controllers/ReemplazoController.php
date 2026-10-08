@@ -38,7 +38,7 @@ class ReemplazoController extends Controller
             $datos = $this->datos($request);
             $datos['reemplazante_id'] = $this->resolverReemplazante($request, $datos['reemplazante_id'] ?? null);
 
-            return $service->crear($this->contexto($request), $datos, $request->user());
+            return $service->crear($this->contextoV3($request), $datos, $request->user());
         });
 
         return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Borrador guardado. Ya puede adjuntar documentos.');
@@ -62,6 +62,10 @@ class ReemplazoController extends Controller
                 'estadoTramite',
                 'unidadOrganizacional',
                 'creador',
+                'solicitudContrato.unidadSolicitante',
+                'solicitudContrato.unidadOrigen',
+                'solicitudContrato.unidadDestino',
+                'solicitudContrato.autoridad',
                 'reemplazo.funcionario',
                 'reemplazo.reemplazante',
                 'reemplazo.tipoReemplazo',
@@ -98,12 +102,15 @@ class ReemplazoController extends Controller
         return redirect()->route('dashboard')->with('status', 'Solicitud enviada a Gestión de Personas.');
     }
 
-    public function funcionarios(Request $request, AlcanceSolicitudReemplazoService $alcance): JsonResponse
+    public function funcionarios(Request $request, ContextoSolicitudContratoService $contexto, AlcanceSolicitudReemplazoService $alcance): JsonResponse
     {
-        Gate::authorize('crear-reemplazo');
+        abort_unless($request->user()->active && $request->user()->can('reemplazos.crear'), 403);
         $unidadId = $request->integer('unidad_origen_id') ?: $request->integer('unidad_organizacional_id');
         $unidad = UnidadOrganizacional::query()->findOrFail($unidadId);
-        abort_unless(app(ContextoSolicitudContratoService::class)->unidadesAutorizadas($request->user(), today())->contains('id', $unidad->id), 403);
+        $autorizadas = $request->filled('unidad_origen_id')
+            ? $contexto->unidadesAutorizadas($request->user(), today())
+            : $alcance->unidadesAutorizadas($request->user(), today());
+        abort_unless($autorizadas->contains('id', $unidad->id), 403);
         $fecha = $request->date('fecha')?->toDateString() ?? today()->toDateString();
         $personas = Persona::query()
             ->with(['vinculosDotacion' => fn ($query) => $query
@@ -149,8 +156,10 @@ class ReemplazoController extends Controller
 
     private function form(?Tramite $tramite, Request $request, ContextoSolicitudContratoService $contexto): View
     {
-        $unidades = $contexto->unidadesAutorizadas($request->user(), today());
-        $seleccionada = (int) old('unidad_origen_id', $tramite?->solicitudContrato?->unidad_origen_id ?? $tramite?->unidad_organizacional_id ?? ($unidades->count() === 1 ? $unidades->first()->id : 0));
+        $unidadesOperativas = $contexto->unidadesAutorizadas($request->user(), today());
+        $legacy = $tramite !== null && $tramite->solicitudContrato === null;
+        $unidades = $legacy ? app(AlcanceSolicitudReemplazoService::class)->unidadesAutorizadas($request->user(), today()) : $unidadesOperativas;
+        $seleccionada = (int) old($legacy ? 'unidad_organizacional_id' : 'unidad_origen_id', $tramite?->solicitudContrato?->unidad_origen_id ?? $tramite?->unidad_organizacional_id ?? ($unidades->count() === 1 ? $unidades->first()->id : 0));
         $fechaFuncionario = old('fecha_funcionario_desde', $tramite?->reemplazo?->fecha_funcionario_desde?->toDateString() ?? today()->toDateString());
         $funcionarios = $seleccionada ? Persona::query()
             ->with(['vinculosDotacion' => fn ($query) => $query
@@ -165,10 +174,20 @@ class ReemplazoController extends Controller
 
         $personas = Persona::query()->with(['vinculosDotacion' => fn ($query) => $query->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->orderByDesc('vigente_desde')])->where('active', true)->orderBy('apellido_paterno')->limit(200)->get();
 
-        return view('reemplazos.form', ['tramite' => $tramite, 'solicitudContrato' => $tramite?->solicitudContrato, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => $personas, 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
+        return view('reemplazos.form', ['tramite' => $tramite, 'solicitudContrato' => $tramite?->solicitudContrato, 'legacy' => $legacy, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => $personas, 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
     }
 
-    private function contexto(SaveBorradorReemplazoRequest $request): array
+    private function contexto(SaveBorradorReemplazoRequest $request): array|UnidadOrganizacional
+    {
+        $validado = $request->validated();
+        if (isset($validado['unidad_organizacional_id'])) {
+            return UnidadOrganizacional::query()->findOrFail($validado['unidad_organizacional_id']);
+        }
+
+        return $this->contextoV3($request);
+    }
+
+    private function contextoV3(SaveBorradorReemplazoRequest $request): array
     {
         return collect($request->validated())->only([
             'unidad_solicitante_id',

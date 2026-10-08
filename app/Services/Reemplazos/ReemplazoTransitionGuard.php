@@ -83,6 +83,10 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
 
     private function validarDocumentoGenerado(Tramite $tramite, array $metadata): void
     {
+        if ($tramite->solicitudContrato()->exists()) {
+            throw ValidationException::withMessages(['documento' => 'La generación documental V3 requiere definir la autoridad de este acto.']);
+        }
+
         $documento = DocumentoGenerado::query()
             ->with('adjunto')
             ->whereKey((int) ($metadata['documento_generado_id'] ?? 0))
@@ -139,7 +143,8 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         if (! TipoReemplazo::query()->whereKey($detalle->tipo_reemplazo_id)->where('activo', true)->exists()) {
             throw ValidationException::withMessages(['tipo_reemplazo_id' => 'El tipo de reemplazo debe estar activo.']);
         }
-        $pertenece = Persona::query()->whereKey($detalle->funcionario_id)->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $tramite->unidad_organizacional_id)->vigentesEn($detalle->fecha_funcionario_desde))->exists();
+        $unidadOrigenId = $tramite->solicitudContrato?->unidad_origen_id ?? $tramite->unidad_organizacional_id;
+        $pertenece = Persona::query()->whereKey($detalle->funcionario_id)->where('active', true)->whereHas('vinculosDotacion', fn ($q) => $q->where('unidad_organizacional_id', $unidadOrigenId)->vigentesEn($detalle->fecha_funcionario_desde))->exists();
         if (! $pertenece) {
             throw ValidationException::withMessages(['funcionario_id' => 'El funcionario debe pertenecer a la dotación vigente de la unidad.']);
         }

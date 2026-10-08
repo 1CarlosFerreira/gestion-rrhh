@@ -9,13 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SolicitudContrato extends Model
 {
-    protected $fillable = [
-        'tramite_id',
-        'modalidad',
-        'unidad_solicitante_id',
-        'unidad_origen_id',
-        'unidad_destino_id',
-    ];
+    protected $table = 'solicitudes_contrato';
+
+    protected $guarded = ['*'];
 
     public function tramite(): BelongsTo
     {

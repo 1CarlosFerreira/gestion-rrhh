@@ -63,6 +63,9 @@ class GenerarSolicitudReemplazoPdfAction
 
     private function validar(Tramite $tramite): void
     {
+        if ($tramite->solicitudContrato !== null) {
+            throw ValidationException::withMessages(['documento' => 'La autoridad del documento V3 requiere una regla institucional específica para este acto.']);
+        }
         if ($tramite->tipoTramite?->codigo !== 'REEMPLAZO' || $tramite->estadoTramite?->codigo !== 'LISTA_GENERAR_DOCUMENTO') {
             throw ValidationException::withMessages(['tramite' => 'La solicitud debe estar lista para generar documento.']);
         }

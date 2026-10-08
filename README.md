@@ -264,19 +264,29 @@ Los adjuntos generales aceptan PDF, DOC, DOCX, XLS, XLSX, CSV, JPG y PNG hasta 1
 
 ## 10. Módulo de Reemplazos
 
-Cada Solicitud de Reemplazo tiene un único detalle `tramite_reemplazos` y, como máximo, un reemplazante. La unidad reside en el trámite raíz.
+### Contexto común de solicitud de contrato (Fase 2 V3)
+
+Las solicitudes nuevas del formulario V3 crean `solicitudes_contrato` con modalidad `TRANSITORIA`, unidad solicitante, unidad origen y unidad destino elegidas por separado. `PERMANENTE` está representada en el enum y la tabla, sin ruta ni workflow. `tramites.created_by` sigue siendo el registrador real. La autoridad de la solicitud se obtiene de responsabilidades vigentes de la unidad solicitante, no del registrador ni de campos enviados por el formulario. Cada una de las tres unidades requiere acceso operativo vigente y el permiso `reemplazos.crear`. `tramites.ver_todos` solo da visibilidad; las acciones de revisión, generación y formalización en V2/V3 requieren alcance operativo o el permiso funcional `reemplazos.alcance_global`.
+
+Para el acto de registro se admiten `TITULAR` y `SUBROGANTE`. Si las responsabilidades vigentes identifican a una sola Persona, esa Persona se guarda como autoridad, aunque no tenga cuenta. Cuando hay una única responsabilidad, se conserva su ID; si la misma Persona figura en ambas, el ID de responsabilidad queda nulo y el historial conserva ambos IDs sin escoger prioridad. Si no hay autoridad vigente o las responsabilidades apuntan a personas distintas, se informa un error controlado. La precedencia institucional entre titular y subrogante para este acto continúa por confirmar.
+
+La validación reutilizada de V2 para `funcionario_id` exige una Persona activa con vínculo de dotación vigente **en la unidad origen, en la fecha inicial del periodo origen**. Esto comprueba el vínculo que V2 conoce; no afirma que unidad solicitante y destino sean iguales al origen ni establece una semántica institucional adicional de dotación. El PDF V2 identifica al creador como remitente y usa una sola unidad. Por esa razón, la generación de ese PDF se bloquea para solicitudes con contexto V3 hasta definir la autoridad documental aplicable; las solicitudes V2 anteriores siguen usando su flujo documental vigente.
+
+Solo los trámites V2 históricos, identificados por la ausencia de fila `solicitudes_contrato`, conservan la edición y el envío con `unidad_organizacional_id`. Toda creación nueva exige las tres unidades V3; los parámetros legacy no pueden crear un trámite nuevo ni convertir una solicitud V3 en V2. No se deducen retrospectivamente solicitante, autoridad, origen ni destino ni se ejecuta un backfill. La revisión, documento y formalización V3 completa, así como las reglas de respaldo y contratación permanente, quedan para fases posteriores.
+
+Cada Solicitud de Reemplazo tiene un único detalle `tramite_reemplazos` y, como máximo, un reemplazante. La unidad del trámite raíz conserva el contexto principal V2 y representa la unidad solicitante cuando existe `solicitudes_contrato`.
 
 Los tipos sembrados actualmente son `LICENCIA_MEDICA`, `PERMISO`, `LICENCIA_MATERNAL` y `CARGO_VACANTE`. Son motivos del Reemplazo; no constituyen un módulo independiente de ausencias o licencias.
 
 ### Creación y borrador
 
-Crear requiere `reemplazos.crear`, cuenta activa y alcance funcional vigente sobre alguna unidad. El borrador se crea transaccionalmente con ULID, código correlativo, estado `BORRADOR`, detalle 1:1 e historial inicial.
+Crear requiere `reemplazos.crear`, cuenta activa y acceso operativo a las tres unidades explícitas. La edición y el envío de trámites V2 históricos conservan el alcance funcional sobre su unidad. El borrador se crea transaccionalmente con ULID, código correlativo, estado `BORRADOR`, detalle 1:1 e historial inicial.
 
 El borrador es progresivo. Puede dejar pendientes funcionario, tipo, reemplazante, antecedentes laborales propuestos, periodos y justificación, siempre que los datos parciales informados sean internamente consistentes. Una vez persistido admite adjuntos.
 
-El funcionario se elige entre Personas activas con dotación vigente en la unidad en la fecha inicial. El reemplazante puede ser una Persona existente o registrarse por RUT y nombre desde el formulario; esto no le crea cuenta, acceso ni vínculo de dotación.
+El funcionario se elige entre Personas activas con dotación vigente en la unidad V2 o en la unidad origen V3 en la fecha inicial. El reemplazante puede ser una Persona existente o registrarse por RUT y nombre desde el formulario; esto no le crea cuenta, acceso ni vínculo de dotación.
 
-El borrador puede editarse en `BORRADOR` y `DEVUELTA_PARA_CORRECCION`. Cambiar la unidad vuelve a validar alcance y dotación.
+El borrador puede editarse en `BORRADOR` y `DEVUELTA_PARA_CORRECCION`. Cambiar una unidad vuelve a validar su alcance; cambiar la unidad origen vuelve a validar la dotación del funcionario.
 
 ### Periodos y cobertura
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AlcanceAccesoOperativo;
 use App\Enums\TipoResponsabilidad;
 use App\Models\CalidadContractual;
+use App\Models\EstadoTramite;
 use App\Models\Estamento;
 use App\Models\Persona;
 use App\Models\PersonaUnidadVinculo;
@@ -16,6 +17,7 @@ use App\Models\UserUnidadAcceso;
 use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -68,7 +70,7 @@ class AlcanceSolicitudReemplazoTest extends TestCase
         $this->assertTrue($ids->contains($this->unidad->id));
         $this->assertTrue($ids->contains($this->otraUnidad->id));
         $this->assertFalse($ids->contains($descendiente->id));
-        $this->actingAs($this->user)->get(route('reemplazos.create'))->assertOk()->assertSee($this->unidad->nombre)->assertSee($this->otraUnidad->nombre);
+        $this->actingAs($this->user)->get(route('reemplazos.create'))->assertForbidden();
     }
 
     public function test_both_sources_are_deduplicated(): void
@@ -119,11 +121,10 @@ class AlcanceSolicitudReemplazoTest extends TestCase
     public function test_unit_outside_scope_is_denied_in_store_update_and_staff_endpoint(): void
     {
         $this->responsabilidad($this->unidad);
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id])->assertRedirect();
-        $tramite = Tramite::query()->firstOrFail();
+        $tramite = $this->historicalDraft();
 
         $this->assertTrue(Gate::forUser($this->user)->allows('view', $tramite));
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->otraUnidad->id])->assertForbidden();
+        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->otraUnidad->id])->assertSessionHasErrors('unidad_organizacional_id');
         $this->actingAs($this->user)->put(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $this->otraUnidad->id])->assertForbidden();
         $this->actingAs($this->user)->getJson(route('reemplazos.funcionarios', ['unidad_organizacional_id' => $this->otraUnidad->id]))->assertForbidden();
     }
@@ -141,8 +142,9 @@ class AlcanceSolicitudReemplazoTest extends TestCase
             ->assertOk()
             ->assertJsonFragment(['id' => $dentro->id])
             ->assertJsonMissing(['id' => $fuera->id]);
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $fuera->id])->assertSessionHasErrors('funcionario_id');
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $dentro->id])->assertRedirect();
+        $tramite = $this->historicalDraft();
+        $this->actingAs($this->user)->put(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $fuera->id])->assertSessionHasErrors('funcionario_id');
+        $this->actingAs($this->user)->put(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $dentro->id])->assertRedirect();
     }
 
     public function test_replacement_form_loads_staff_from_existing_endpoint_when_unit_changes(): void
@@ -150,7 +152,7 @@ class AlcanceSolicitudReemplazoTest extends TestCase
         $this->responsabilidad($this->unidad);
 
         $this->actingAs($this->user)
-            ->get(route('reemplazos.create'))
+            ->get(route('reemplazos.edit', $this->historicalDraft()))
             ->assertOk()
             ->assertSee('reemplazos\\/funcionarios', false)
             ->assertSee('x-on:change="cargarFuncionarios()"', false)
@@ -168,6 +170,15 @@ class AlcanceSolicitudReemplazoTest extends TestCase
             'vigente_desde' => today(),
             'created_by' => $this->user->id,
         ]);
+    }
+
+    private function historicalDraft(): Tramite
+    {
+        $estado = EstadoTramite::query()->where('codigo', 'BORRADOR')->firstOrFail();
+        $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => 'V2-'.Str::ulid(), 'tipo_tramite_id' => $estado->tipo_tramite_id, 'estado_tramite_id' => $estado->id, 'unidad_organizacional_id' => $this->unidad->id, 'created_by' => $this->user->id]);
+        $tramite->reemplazo()->create([]);
+
+        return $tramite;
     }
 
     private function responsabilidad(

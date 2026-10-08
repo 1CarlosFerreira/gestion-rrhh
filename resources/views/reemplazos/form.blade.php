@@ -2,7 +2,7 @@
 <div class="py-10"><div class="mx-auto max-w-7xl px-4">@if(session('status'))<div class="mb-4 rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</div>@endif @if($errors->any())<div class="mb-4 rounded bg-red-50 p-3 text-red-800"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif @if($tramite)<form id="adjunto-form" method="POST" enctype="multipart/form-data" action="{{ route('reemplazos.adjuntos.store',$tramite) }}">@csrf</form>@endif
 <form id="reemplazo-form" method="POST" action="{{ $tramite ? route('reemplazos.update',$tramite) : route('reemplazos.store') }}" class="grid gap-5 lg:grid-cols-2">@csrf @if($tramite)@method('PUT')@endif
 @php
-    $unidadInicial = (string) old('unidad_organizacional_id', $tramite?->unidad_organizacional_id ?? '');
+    $unidadInicial = (string) old($legacy ? 'unidad_organizacional_id' : 'unidad_origen_id', $solicitudContrato?->unidad_origen_id ?? $tramite?->unidad_organizacional_id ?? '');
     $funcionarioInicial = (string) old('funcionario_id', $detalle?->funcionario_id ?? '');
     $fechaFuncionarioInicial = old('fecha_funcionario_desde', $detalle?->fecha_funcionario_desde?->toDateString() ?? '');
     $funcionariosIniciales = $funcionarios->map(function ($persona) {
@@ -56,7 +56,7 @@
 
             this.cargando = true
             const url = new URL(@js(route('reemplazos.funcionarios')), window.location.origin)
-            url.searchParams.set('unidad_organizacional_id', this.unidadId)
+            url.searchParams.set(@js($legacy ? 'unidad_organizacional_id' : 'unidad_origen_id'), this.unidadId)
             if (this.fechaFuncionario) url.searchParams.set('fecha', this.fechaFuncionario)
 
             try {
@@ -81,16 +81,39 @@
     }"
     x-init="$nextTick(() => funcionarioId = @js($funcionarioInicial))"
 >
+    @unless($legacy)
+    <h3 class="font-semibold">Contexto de la solicitud</h3>
+    <label class="block">
+        Unidad solicitante
+        <select name="unidad_solicitante_id" class="mt-1 w-full rounded border-gray-300" required>
+            <option value="">Seleccione</option>
+            @foreach($unidades as $unidad)
+                <option value="{{ $unidad->id }}" @selected((string) old('unidad_solicitante_id', $solicitudContrato?->unidad_solicitante_id ?? '') === (string) $unidad->id)>{{ $unidad->nombre }}</option>
+            @endforeach
+        </select>
+        <x-input-error :messages="$errors->get('unidad_solicitante_id')" class="mt-1" />
+    </label>
+    <label class="block">
+        Unidad destino funcional
+        <select name="unidad_destino_id" class="mt-1 w-full rounded border-gray-300" required>
+            <option value="">Seleccione</option>
+            @foreach($unidades as $unidad)
+                <option value="{{ $unidad->id }}" @selected((string) old('unidad_destino_id', $solicitudContrato?->unidad_destino_id ?? '') === (string) $unidad->id)>{{ $unidad->nombre }}</option>
+            @endforeach
+        </select>
+        <x-input-error :messages="$errors->get('unidad_destino_id')" class="mt-1" />
+    </label>
+    @endunless
     <h3 class="font-semibold">Origen del reemplazo</h3>
     <label class="block">
-        Unidad
-        <select name="unidad_organizacional_id" x-model="unidadId" x-on:change="cargarFuncionarios()" class="mt-1 w-full rounded border-gray-300" required>
+        {{ $legacy ? 'Unidad' : 'Unidad origen' }}
+        <select name="{{ $legacy ? 'unidad_organizacional_id' : 'unidad_origen_id' }}" x-model="unidadId" x-on:change="cargarFuncionarios()" class="mt-1 w-full rounded border-gray-300" required>
             <option value="">Seleccione</option>
             @foreach($unidades as $unidad)
                 <option value="{{ $unidad->id }}">{{ $unidad->nombre }}</option>
             @endforeach
         </select>
-        <x-input-error :messages="$errors->get('unidad_organizacional_id')" class="mt-1" />
+        <x-input-error :messages="$errors->get($legacy ? 'unidad_organizacional_id' : 'unidad_origen_id')" class="mt-1" />
     </label>
 
     <template x-if="funcionarioSeleccionado()?.antecedente_laboral">

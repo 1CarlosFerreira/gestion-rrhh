@@ -47,6 +47,7 @@ class RoleConsolidationTest extends TestCase
             'dotacion.ver_todas',
             'personas.gestionar',
             'personas.ver',
+            'reemplazos.alcance_global',
             'reemplazos.formalizar',
             'reemplazos.generar_documento',
             'reemplazos.revisar',

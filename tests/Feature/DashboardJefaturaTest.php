@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AlcanceAccesoOperativo;
 use App\Enums\TipoResponsabilidad;
 use App\Models\CalidadContractual;
+use App\Models\EstadoTramite;
 use App\Models\Estamento;
 use App\Models\Persona;
 use App\Models\PersonaUnidadVinculo;
@@ -14,6 +15,7 @@ use App\Models\UnidadResponsable;
 use App\Models\User;
 use App\Models\UserUnidadAcceso;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class DashboardJefaturaTest extends TestCase
@@ -39,6 +41,7 @@ class DashboardJefaturaTest extends TestCase
 
         $this->responsabilidad($this->unidadTitular, TipoResponsabilidad::TITULAR);
         $this->responsabilidad($this->unidadSubrogante, TipoResponsabilidad::SUBROGANTE);
+        UserUnidadAcceso::query()->create(['user_id' => $this->jefatura->id, 'unidad_organizacional_id' => $this->unidadTitular->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->jefatura->id]);
     }
 
     public function test_jefatura_pura_recibe_dashboard_y_navegacion_coherentes_con_sus_permisos(): void
@@ -118,6 +121,7 @@ class DashboardJefaturaTest extends TestCase
             'puede_aprobar' => true,
             'created_by' => $solicitante->id,
         ]);
+        UserUnidadAcceso::query()->create(['user_id' => $solicitante->id, 'unidad_organizacional_id' => $this->unidadSubrogante->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $solicitante->id]);
 
         $this->actingAs($solicitante)
             ->get(route('dashboard'))
@@ -140,14 +144,12 @@ class DashboardJefaturaTest extends TestCase
             'created_by' => $this->jefatura->id,
         ]);
 
-        $this->actingAs($this->jefatura)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidadTitular->id])->assertRedirect();
-        $creadoPorJefatura = Tramite::query()->latest('id')->firstOrFail();
+        $creadoPorJefatura = $this->historicalDraft($this->jefatura);
         $this->actingAs($solicitante)->get(route('reemplazos.edit', $creadoPorJefatura))->assertOk();
         $this->actingAs($solicitante)->put(route('reemplazos.update', $creadoPorJefatura), ['unidad_organizacional_id' => $this->unidadTitular->id, 'justificacion' => 'Continuado por Solicitante.'])->assertRedirect();
         $this->assertSame($this->jefatura->id, $creadoPorJefatura->fresh()->created_by);
 
-        $this->actingAs($solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidadTitular->id])->assertRedirect();
-        $creadoPorSolicitante = Tramite::query()->latest('id')->firstOrFail();
+        $creadoPorSolicitante = $this->historicalDraft($solicitante);
         $this->actingAs($this->jefatura)->get(route('reemplazos.edit', $creadoPorSolicitante))->assertOk();
         $this->actingAs($this->jefatura)->put(route('reemplazos.update', $creadoPorSolicitante), ['unidad_organizacional_id' => $this->unidadTitular->id, 'justificacion' => 'Continuado por Jefatura.'])->assertRedirect();
         $this->assertSame($solicitante->id, $creadoPorSolicitante->fresh()->created_by);
@@ -163,6 +165,15 @@ class DashboardJefaturaTest extends TestCase
             'puede_aprobar' => true,
             'created_by' => $this->jefatura->id,
         ]);
+    }
+
+    private function historicalDraft(User $actor): Tramite
+    {
+        $estado = EstadoTramite::query()->where('codigo', 'BORRADOR')->firstOrFail();
+        $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => 'DASH-V2-'.Str::ulid(), 'tipo_tramite_id' => $estado->tipo_tramite_id, 'estado_tramite_id' => $estado->id, 'unidad_organizacional_id' => $this->unidadTitular->id, 'created_by' => $actor->id]);
+        $tramite->reemplazo()->create([]);
+
+        return $tramite;
     }
 
     private function vinculo(UnidadOrganizacional $unidad, string $cargo): void

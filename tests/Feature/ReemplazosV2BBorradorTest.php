@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AlcanceAccesoOperativo;
+use App\Enums\TipoResponsabilidad;
 use App\Models\CalidadContractual;
 use App\Models\Estamento;
 use App\Models\Persona;
@@ -11,6 +12,7 @@ use App\Models\TipoReemplazo;
 use App\Models\Tramite;
 use App\Models\TramiteReemplazo;
 use App\Models\UnidadOrganizacional;
+use App\Models\UnidadResponsable;
 use App\Models\User;
 use App\Models\UserUnidadAcceso;
 use App\Services\Reemplazos\BorradorReemplazoService;
@@ -21,6 +23,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -47,6 +50,8 @@ class ReemplazosV2BBorradorTest extends TestCase
         UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
         $this->funcionario = $this->persona('70000101-1', 'Funcionario Uno');
         $this->vincular($this->funcionario, $this->unidad);
+        $autoridad = $this->persona('70000999-9', 'Autoridad de prueba');
+        UnidadResponsable::query()->create(['persona_id' => $autoridad->id, 'unidad_organizacional_id' => $this->unidad->id, 'tipo' => TipoResponsabilidad::SUBROGANTE, 'vigente_desde' => today()->subDay(), 'puede_aprobar' => true, 'created_by' => $this->user->id]);
     }
 
     public function test_authorized_user_opens_creation_and_outsider_cannot(): void
@@ -63,7 +68,7 @@ class ReemplazosV2BBorradorTest extends TestCase
         $sinAcceso->givePermissionTo('reemplazos.crear');
 
         try {
-            app(BorradorReemplazoService::class)->crear($this->unidad, [], $sinAcceso);
+            app(BorradorReemplazoService::class)->crear($this->contextoV3(['unidad_organizacional_id' => $this->unidad->id]), [], $sinAcceso);
             $this->fail('La creación directa sin alcance debió ser rechazada.');
         } catch (AuthorizationException) {
             $this->assertTrue(true);
@@ -78,15 +83,15 @@ class ReemplazosV2BBorradorTest extends TestCase
     {
         $rama = UnidadOrganizacional::query()->where('codigo', 'SDGADM')->firstOrFail();
         $datos = ['unidad_organizacional_id' => $rama->id];
-        $this->actingAs($this->user)->post(route('reemplazos.store'), $datos)->assertForbidden();
+        $this->actingAs($this->user)->postBorrador($datos)->assertForbidden();
         $this->user->accesosOperativos()->update(['vigente_hasta' => today()->subDay()]);
         UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $rama->id, 'alcance' => AlcanceAccesoOperativo::UNIDAD_Y_DESCENDIENTES, 'vigente_desde' => today(), 'created_by' => $this->user->id]);
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id])->assertRedirect();
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id])->assertRedirect();
     }
 
     public function test_creates_incomplete_draft_with_correct_type_state_unit_and_single_detail(): void
     {
-        $response = $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
+        $response = $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id]);
         $tramite = Tramite::query()->firstOrFail();
         $response->assertRedirect(route('reemplazos.edit', $tramite));
         $this->assertSame('REEMPLAZO', $tramite->tipoTramite->codigo);
@@ -107,17 +112,17 @@ class ReemplazosV2BBorradorTest extends TestCase
             ->assertJsonPath('0.antecedente_laboral.cargo_funcion', 'Cargo prueba')
             ->assertJsonPath('0.antecedente_laboral.unidad', $this->unidad->nombre)
             ->assertJsonMissing(['id' => $fuera->id]);
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $fuera->id])->assertSessionHasErrors('funcionario_id');
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $fuera->id])->assertSessionHasErrors('funcionario_id');
     }
 
     public function test_existing_or_new_replacement_can_be_selected_without_creating_staff_link(): void
     {
         $reemplazante = $this->persona('70000103-3', 'Reemplazante');
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'reemplazante_id' => $reemplazante->id])->assertRedirect();
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id, 'reemplazante_id' => $reemplazante->id])->assertRedirect();
         $this->assertSame($reemplazante->id, TramiteReemplazo::query()->firstOrFail()->reemplazante_id);
         $this->assertSame(1, PersonaUnidadVinculo::count());
 
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'nuevo_reemplazante_rut' => '12.345.678-5', 'nuevo_reemplazante_nombres' => 'Nueva Persona'])->assertRedirect();
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id, 'nuevo_reemplazante_rut' => '12.345.678-5', 'nuevo_reemplazante_nombres' => 'Nueva Persona'])->assertRedirect();
         $this->assertDatabaseHas('personas', ['rut' => '12345678-5']);
         $this->assertSame(1, PersonaUnidadVinculo::count());
     }
@@ -162,17 +167,17 @@ class ReemplazosV2BBorradorTest extends TestCase
         $reemplazante = $this->persona('70000107-7', 'Reemplazante propuesta');
         $fecha = today()->toDateString();
         $base = ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $reemplazante->id, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => $fecha, 'fecha_funcionario_hasta' => $fecha, 'fecha_reemplazante_desde' => $fecha, 'fecha_reemplazante_hasta' => $fecha, 'justificacion' => 'Continuidad.'];
-        $this->actingAs($this->user)->post(route('reemplazos.store'), $base)->assertRedirect();
+        $this->actingAs($this->user)->postBorrador($base)->assertRedirect();
         $tramite = Tramite::query()->latest('id')->firstOrFail();
         $this->assertNull($tramite->reemplazo->reemplazante_estamento_id);
 
-        $this->actingAs($this->user)->put(route('reemplazos.send', $tramite), $base)
+        $this->actingAs($this->user)->putBorrador(route('reemplazos.send', $tramite), $base)
             ->assertSessionHasErrors(['reemplazante_estamento_id', 'reemplazante_calidad_contractual_id', 'reemplazante_cargo_funcion']);
         $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
         $this->assertSame(0, PersonaUnidadVinculo::query()->where('persona_id', $reemplazante->id)->count());
 
         $completa = [...$base, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => CalidadContractual::query()->firstOrFail()->id, 'reemplazante_cargo_funcion' => '  Función   propuesta  '];
-        $this->actingAs($this->user)->put(route('reemplazos.send', $tramite), $completa)->assertRedirect(route('dashboard'));
+        $this->actingAs($this->user)->putBorrador(route('reemplazos.send', $tramite), $completa)->assertRedirect(route('dashboard'));
         $this->assertSame('Función propuesta', $tramite->fresh()->reemplazo->reemplazante_cargo_funcion);
         $this->assertSame(0, PersonaUnidadVinculo::query()->where('persona_id', $reemplazante->id)->count());
     }
@@ -181,40 +186,40 @@ class ReemplazosV2BBorradorTest extends TestCase
     {
         $reemplazante = $this->persona('70000105-5', 'Cobertura');
         $base = ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $reemplazante->id, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25'];
-        $this->actingAs($this->user)->post(route('reemplazos.store'), $base)->assertRedirect();
+        $this->actingAs($this->user)->postBorrador($base)->assertRedirect();
         $detalle = TramiteReemplazo::query()->firstOrFail();
         $this->assertSame(21, $detalle->diasReemplazante());
         $this->assertSame(9, $detalle->diasSinCobertura());
         $this->actingAs($this->user)->get(route('reemplazos.edit', $detalle->tramite))->assertSee('Quedarán 9 días sin cobertura');
 
-        $this->actingAs($this->user)->put(route('reemplazos.update', $detalle->tramite), [...$base, 'reemplazante_id' => $this->funcionario->id])->assertSessionHasErrors('reemplazante_id');
-        $this->actingAs($this->user)->put(route('reemplazos.update', $detalle->tramite), [...$base, 'fecha_reemplazante_desde' => '2026-08-31'])->assertSessionHasErrors('fecha_reemplazante_desde');
+        $this->actingAs($this->user)->putBorrador(route('reemplazos.update', $detalle->tramite), [...$base, 'reemplazante_id' => $this->funcionario->id])->assertSessionHasErrors('reemplazante_id');
+        $this->actingAs($this->user)->putBorrador(route('reemplazos.update', $detalle->tramite), [...$base, 'fecha_reemplazante_desde' => '2026-08-31'])->assertSessionHasErrors('fecha_reemplazante_desde');
     }
 
     public function test_overlap_is_rejected_but_edit_does_not_collide_with_itself(): void
     {
         $datos = ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id, 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-15'];
-        $this->actingAs($this->user)->post(route('reemplazos.store'), $datos)->assertRedirect();
+        $this->actingAs($this->user)->postBorrador($datos)->assertRedirect();
         $tramite = Tramite::query()->firstOrFail();
-        $this->actingAs($this->user)->put(route('reemplazos.update', $tramite), $datos)->assertRedirect();
-        $this->actingAs($this->user)->post(route('reemplazos.store'), [...$datos, 'fecha_funcionario_desde' => '2026-09-10', 'fecha_funcionario_hasta' => '2026-09-20'])->assertSessionHasErrors('fecha_funcionario_desde');
+        $this->actingAs($this->user)->putBorrador(route('reemplazos.update', $tramite), $datos)->assertRedirect();
+        $this->actingAs($this->user)->postBorrador([...$datos, 'fecha_funcionario_desde' => '2026-09-10', 'fecha_funcionario_hasta' => '2026-09-20'])->assertSessionHasErrors('fecha_funcionario_desde');
     }
 
     public function test_out_of_scope_user_cannot_edit_or_change_to_an_unavailable_unit(): void
     {
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id])->assertRedirect();
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id])->assertRedirect();
         $tramite = Tramite::query()->firstOrFail();
         $other = User::factory()->create(['active' => true]);
         $other->givePermissionTo('reemplazos.crear');
         $this->actingAs($other)->get(route('reemplazos.edit', $tramite))->assertForbidden();
         $rama = UnidadOrganizacional::query()->where('codigo', 'SDGA')->firstOrFail();
-        $this->actingAs($this->user)->put(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $rama->id])->assertForbidden();
+        $this->actingAs($this->user)->putBorrador(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $rama->id])->assertForbidden();
     }
 
     public function test_existing_private_attachments_are_available_after_first_save(): void
     {
         Storage::fake('private');
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id]);
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id]);
         $tramite = Tramite::query()->firstOrFail();
         $this->actingAs($this->user)->get(route('reemplazos.edit', $tramite))
             ->assertOk()
@@ -235,7 +240,7 @@ class ReemplazosV2BBorradorTest extends TestCase
     public function test_attachments_follow_permissions_and_current_unit_scope_instead_of_creator(): void
     {
         Storage::fake('private');
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id]);
         $tramite = Tramite::query()->firstOrFail();
         $collaborator = User::factory()->create(['active' => true]);
         $collaborator->givePermissionTo(['tramites.ver_unidades', 'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar']);
@@ -273,7 +278,7 @@ class ReemplazosV2BBorradorTest extends TestCase
         $fechaFutura = today()->addMonth()->toDateString();
         $vinculo = $this->funcionario->vinculosDotacion()->firstOrFail();
         $vinculo->update(['vigente_desde' => $fechaFutura]);
-        $this->actingAs($this->user)->post(route('reemplazos.store'), [
+        $this->actingAs($this->user)->postBorrador([
             'unidad_organizacional_id' => $this->unidad->id,
             'funcionario_id' => $this->funcionario->id,
             'fecha_funcionario_desde' => $fechaFutura,
@@ -290,7 +295,7 @@ class ReemplazosV2BBorradorTest extends TestCase
 
     public function test_dynamic_staff_reload_preserves_only_a_still_valid_selection(): void
     {
-        $tramite = $this->actingAs($this->user)->post(route('reemplazos.store'), [
+        $tramite = $this->actingAs($this->user)->postBorrador([
             'unidad_organizacional_id' => $this->unidad->id,
             'funcionario_id' => $this->funcionario->id,
         ]);
@@ -319,7 +324,7 @@ class ReemplazosV2BBorradorTest extends TestCase
     {
         $reemplazante = $this->persona('70000106-6', 'Reemplazante Envío');
         $fecha = today()->toDateString();
-        $this->actingAs($this->user)->post(route('reemplazos.store'), [
+        $this->actingAs($this->user)->postBorrador([
             'unidad_organizacional_id' => $this->unidad->id,
             'funcionario_id' => $this->funcionario->id,
             'reemplazante_id' => $reemplazante->id,
@@ -333,7 +338,7 @@ class ReemplazosV2BBorradorTest extends TestCase
 
         $response = $this->actingAs($this->user)
             ->from(route('reemplazos.edit', $tramite))
-            ->put(route('reemplazos.send', $tramite), [
+            ->putBorrador(route('reemplazos.send', $tramite), [
                 'unidad_organizacional_id' => $this->unidad->id,
                 'funcionario_id' => $this->funcionario->id,
                 'reemplazante_id' => $reemplazante->id,
@@ -355,7 +360,7 @@ class ReemplazosV2BBorradorTest extends TestCase
     public function test_disallowed_attachment_is_rejected_and_error_is_shown_in_documents_section(): void
     {
         Storage::fake('private');
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
+        $this->actingAs($this->user)->postBorrador(['unidad_organizacional_id' => $this->unidad->id]);
         $tramite = Tramite::query()->firstOrFail();
 
         $response = $this->actingAs($this->user)
@@ -389,5 +394,28 @@ class ReemplazosV2BBorradorTest extends TestCase
         $estamento = Estamento::query()->firstOrFail();
         $calidad = CalidadContractual::query()->create(['codigo' => 'PLANTA_TEST', 'nombre' => 'Planta prueba', 'activo' => true]);
         PersonaUnidadVinculo::query()->create(['persona_id' => $persona->id, 'unidad_organizacional_id' => $unidad->id, 'estamento_id' => $estamento->id, 'calidad_contractual_id' => $calidad->id, 'cargo_funcion' => 'Cargo prueba', 'cargo_funcion_normalizado' => 'cargo prueba', 'vigente_desde' => today()->subYear(), 'origen' => 'MANUAL', 'created_by' => $this->user->id]);
+    }
+
+    private function postBorrador(array $datos): TestResponse
+    {
+        return $this->post(route('reemplazos.store'), $this->contextoV3($datos));
+    }
+
+    private function putBorrador(string $ruta, array $datos): TestResponse
+    {
+        return $this->put($ruta, $this->contextoV3($datos));
+    }
+
+    private function contextoV3(array $datos): array
+    {
+        $unidadId = $datos['unidad_organizacional_id'];
+        unset($datos['unidad_organizacional_id']);
+
+        return [
+            'unidad_solicitante_id' => $unidadId,
+            'unidad_origen_id' => $unidadId,
+            'unidad_destino_id' => $unidadId,
+            ...$datos,
+        ];
     }
 }

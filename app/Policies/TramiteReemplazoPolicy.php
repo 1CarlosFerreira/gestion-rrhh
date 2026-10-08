@@ -2,21 +2,24 @@
 
 namespace App\Policies;
 
+use App\Enums\ModalidadSolicitudContrato;
 use App\Models\Tramite;
 use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
 use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
+use App\Services\SolicitudesContrato\ContextoSolicitudContratoService;
 
 class TramiteReemplazoPolicy
 {
     public function __construct(
         private readonly AccesoOperativoService $accesos,
         private readonly AlcanceSolicitudReemplazoService $alcance,
+        private readonly ContextoSolicitudContratoService $contexto,
     ) {}
 
     public function create(User $user): bool
     {
-        return $user->active && $user->can('reemplazos.crear') && $this->alcance->unidadesAutorizadas($user, today())->isNotEmpty();
+        return $user->active && $user->can('reemplazos.crear') && $this->contexto->unidadesAutorizadas($user, today())->isNotEmpty();
     }
 
     public function view(User $user, Tramite $tramite): bool
@@ -33,29 +36,49 @@ class TramiteReemplazoPolicy
     {
         return $user->active
             && $user->can('reemplazos.revisar')
-            && $tramite->unidadOrganizacional !== null
-            && ($user->can('tramites.ver_todos') || $this->accesos->tieneAcceso($user, $tramite->unidadOrganizacional, today()));
+            && $this->puedeGestionar($user, $tramite);
     }
 
     public function generateDocument(User $user, Tramite $tramite): bool
     {
         return $user->active
             && $user->can('reemplazos.generar_documento')
-            && $tramite->unidadOrganizacional !== null
-            && ($user->can('tramites.ver_todos') || $this->accesos->tieneAcceso($user, $tramite->unidadOrganizacional, today()));
+            && $this->puedeGestionar($user, $tramite);
     }
 
     public function formalize(User $user, Tramite $tramite): bool
     {
         return $user->active
             && $user->can('reemplazos.formalizar')
-            && $tramite->unidadOrganizacional !== null
-            && ($user->can('tramites.ver_todos') || $this->accesos->tieneAcceso($user, $tramite->unidadOrganizacional, today()));
+            && $this->puedeGestionar($user, $tramite);
     }
 
     private function puedeOperar(User $user, Tramite $tramite): bool
     {
+        if ($tramite->solicitudContrato !== null) {
+            if ($tramite->solicitudContrato->modalidad !== ModalidadSolicitudContrato::TRANSITORIA) {
+                return false;
+            }
+
+            return $user->active && $user->can('reemplazos.crear')
+                && $this->contexto->tieneAlcance($user, $tramite->solicitudContrato, today());
+        }
+
         return $tramite->unidadOrganizacional !== null
             && $this->alcance->tienePermisoYAlcance($user, 'reemplazos.crear', $tramite->unidadOrganizacional, today());
+    }
+
+    private function puedeGestionar(User $user, Tramite $tramite): bool
+    {
+        if ($tramite->solicitudContrato !== null) {
+            if ($tramite->solicitudContrato->modalidad !== ModalidadSolicitudContrato::TRANSITORIA) {
+                return false;
+            }
+
+            return $user->can('reemplazos.alcance_global') || $this->contexto->tieneAlcance($user, $tramite->solicitudContrato, today());
+        }
+
+        return $tramite->unidadOrganizacional !== null
+            && ($user->can('reemplazos.alcance_global') || $this->accesos->tieneAcceso($user, $tramite->unidadOrganizacional, today()));
     }
 }

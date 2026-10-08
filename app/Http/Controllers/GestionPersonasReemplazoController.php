@@ -14,6 +14,7 @@ use App\Models\Profesion;
 use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Services\Accesos\AccesoOperativoService;
+use App\Services\SolicitudesContrato\ContextoSolicitudContratoService;
 use App\Support\Tramites\ResolverRetornoTramite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ use Illuminate\View\View;
 
 class GestionPersonasReemplazoController extends Controller
 {
-    public function index(Request $request, AccesoOperativoService $accesos): View
+    public function index(Request $request, AccesoOperativoService $accesos, ContextoSolicitudContratoService $contexto): View
     {
         abort_unless($request->user()->can('reemplazos.revisar'), 403);
         $ids = $accesos->unidadesAccesibles($request->user(), today())->pluck('id');
@@ -30,8 +31,10 @@ class GestionPersonasReemplazoController extends Controller
         $pestana = $request->query('pestana') === 'finalizados' ? 'finalizados' : 'activos';
         $estadosBandeja = $pestana === 'finalizados' ? ['FORMALIZADA'] : $estadosActivos;
         $consultaBase = Tramite::query()
-            ->whereHas('tipoTramite', fn ($q) => $q->where('codigo', 'REEMPLAZO'))
-            ->when(! $request->user()->can('tramites.ver_todos'), fn ($q) => $q->whereIn('unidad_organizacional_id', $ids));
+            ->whereHas('tipoTramite', fn ($q) => $q->where('codigo', 'REEMPLAZO'));
+        if (! $request->user()->can('reemplazos.alcance_global')) {
+            $contexto->filtrarVisibles($consultaBase, $request->user(), today(), $ids);
+        }
         $consultaAlcance = (clone $consultaBase)
             ->whereHas('estadoTramite', fn ($q) => $q->whereIn('codigo', $estadosBandeja));
         $estados = EstadoTramite::query()
@@ -90,7 +93,7 @@ class GestionPersonasReemplazoController extends Controller
         $tramite->reemplazo->funcionario->load([
             'vinculosDotacion' => fn ($query) => $query
                 ->with(['estamento', 'profesion'])
-                ->where('unidad_organizacional_id', $tramite->unidad_organizacional_id)
+                ->where('unidad_organizacional_id', $tramite->solicitudContrato?->unidad_origen_id ?? $tramite->unidad_organizacional_id)
                 ->vigentesEn($tramite->reemplazo->fecha_funcionario_desde)
                 ->orderByDesc('vigente_desde'),
         ]);

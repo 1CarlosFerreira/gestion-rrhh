@@ -34,6 +34,9 @@ class FormalizarReemplazoAction
             return DB::transaction(function () use ($tramite, $datos, $actor, $documentoFinal, &$adjuntoCreado): ReemplazoFormalizacion {
                 $tramite = Tramite::query()->with(['estadoTramite', 'reemplazo', 'revisionReemplazo'])->lockForUpdate()->findOrFail($tramite->id);
                 Gate::forUser($actor)->authorize('formalizar-reemplazo', $tramite);
+                if ($tramite->solicitudContrato()->exists()) {
+                    throw ValidationException::withMessages(['formalizacion' => 'La formalización V3 requiere definir primero su flujo documental.']);
+                }
                 $existente = $tramite->formalizacionReemplazo()->first();
                 if ($existente !== null) {
                     if (! $tramite->vinculoDotacion()->exists()) {

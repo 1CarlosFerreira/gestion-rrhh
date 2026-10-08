@@ -8,13 +8,14 @@ use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
 use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
+use App\Services\SolicitudesContrato\ContextoSolicitudContratoService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, AccesoOperativoService $accesos, AlcanceSolicitudReemplazoService $alcanceReemplazos): View
+    public function __invoke(Request $request, AccesoOperativoService $accesos, AlcanceSolicitudReemplazoService $alcanceReemplazos, ContextoSolicitudContratoService $contexto): View
     {
         $user = $request->user();
         $esAdministrador = $user->hasRole('Administrador');
@@ -25,8 +26,8 @@ class DashboardController extends Controller
         if ($user->active && $user->can('tramites.ver_unidades')) {
             $unidadesAutorizadas = $alcanceReemplazos->unidadesAutorizadas($user, today())->pluck('id');
             $tramitesAbiertos = Tramite::query()
-                ->whereIn('unidad_organizacional_id', $unidadesAutorizadas)
                 ->whereNull('finalized_at');
+            $contexto->filtrarVisibles($tramitesAbiertos, $user, today(), $unidadesAutorizadas);
             $requierenAtencion = fn ($query) => $query
                 ->whereHas('estadoTramite', fn ($estado) => $estado->whereIn('codigo', ['BORRADOR', 'DEVUELTA_PARA_CORRECCION']))
                 ->when(! $user->can('reemplazos.crear'), fn ($query) => $query->whereRaw('1 = 0'));
@@ -49,8 +50,10 @@ class DashboardController extends Controller
         if (! $esAdministrador && $user->can('reemplazos.revisar')) {
             $unidadesAccesibles = $accesos->unidadesAccesibles($user, today())->pluck('id');
             $consultaReemplazos = Tramite::query()
-                ->whereHas('tipoTramite', fn ($query) => $query->where('codigo', 'REEMPLAZO'))
-                ->when(! $user->can('tramites.ver_todos'), fn ($query) => $query->whereIn('unidad_organizacional_id', $unidadesAccesibles));
+                ->whereHas('tipoTramite', fn ($query) => $query->where('codigo', 'REEMPLAZO'));
+            if (! $user->can('reemplazos.alcance_global')) {
+                $contexto->filtrarVisibles($consultaReemplazos, $user, today(), $unidadesAccesibles);
+            }
             $estadosIndicadores = [
                 'pendientes' => 'ENVIADA_GESTION_PERSONAS',
                 'en_revision' => 'EN_REVISION',

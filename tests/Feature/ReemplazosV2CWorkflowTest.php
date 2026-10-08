@@ -46,6 +46,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
         Permission::findOrCreate('reemplazos.crear');
         Permission::findOrCreate('reemplazos.revisar');
         Permission::findOrCreate('tramites.ver_todos');
+        Permission::findOrCreate('reemplazos.alcance_global');
         $this->solicitante = User::factory()->create(['active' => true]);
         $this->solicitante->givePermissionTo('reemplazos.crear');
         $this->revisor = User::factory()->create(['active' => true]);
@@ -121,8 +122,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
 
     public function test_incomplete_send_stays_draft_rolls_back_and_preserves_old_input(): void
     {
-        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
-        $tramite = Tramite::query()->latest('id')->firstOrFail();
+        $tramite = $this->historicalDraft();
         $datos = [
             'unidad_organizacional_id' => $this->unidad->id,
             'funcionario_id' => $this->funcionario->id,
@@ -147,8 +147,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
 
     public function test_save_draft_still_accepts_partial_data_without_sending(): void
     {
-        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
-        $tramite = Tramite::query()->latest('id')->firstOrFail();
+        $tramite = $this->historicalDraft();
 
         $this->actingAs($this->solicitante)->put(route('reemplazos.update', $tramite), [
             'unidad_organizacional_id' => $this->unidad->id,
@@ -161,8 +160,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
 
     public function test_incomplete_draft_and_unauthorized_or_out_of_scope_users_cannot_send(): void
     {
-        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id]);
-        $tramite = Tramite::query()->latest('id')->firstOrFail();
+        $tramite = $this->historicalDraft();
         $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), ['unidad_organizacional_id' => $this->unidad->id])->assertSessionHasErrors(['funcionario_id', 'reemplazante_id', 'justificacion']);
         $withoutPermission = User::factory()->create(['active' => true]);
         $this->actingAs($withoutPermission)->put(route('reemplazos.send', $tramite), ['unidad_organizacional_id' => $this->unidad->id])->assertForbidden();
@@ -271,6 +269,8 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->actingAs($global)->get(route('gestion-personas.reemplazos.index'))
             ->assertOk()
             ->assertSee($tramite->codigo);
+        $this->actingAs($global)->post(route('gestion-personas.reemplazos.start', $tramite))->assertForbidden();
+        $global->givePermissionTo('reemplazos.alcance_global');
         $this->actingAs($global)->get(route('gestion-personas.reemplazos.show', $tramite))->assertOk();
         $this->actingAs($global)->post(route('gestion-personas.reemplazos.start', $tramite))->assertRedirect(route('gestion-personas.reemplazos.show', $tramite));
         $this->assertSame('EN_REVISION', $tramite->fresh()->estadoTramite->codigo);
@@ -525,9 +525,17 @@ class ReemplazosV2CWorkflowTest extends TestCase
 
     private function draft(): Tramite
     {
-        $this->actingAs($this->solicitante)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->unidad->id, 'funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $this->reemplazante->id, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => CalidadContractual::query()->firstOrFail()->id, 'reemplazante_cargo_funcion' => 'Cargo propuesto', 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad del servicio.']);
+        return $this->historicalDraft(['funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $this->reemplazante->id, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => CalidadContractual::query()->firstOrFail()->id, 'reemplazante_cargo_funcion' => 'Cargo propuesto', 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => '2026-09-01', 'fecha_funcionario_hasta' => '2026-09-30', 'fecha_reemplazante_desde' => '2026-09-05', 'fecha_reemplazante_hasta' => '2026-09-25', 'justificacion' => 'Continuidad del servicio.']);
+    }
 
-        return Tramite::query()->latest('id')->firstOrFail();
+    private function historicalDraft(array $detalle = []): Tramite
+    {
+        $estado = EstadoTramite::query()->where('codigo', 'BORRADOR')->firstOrFail();
+        $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => 'V2C-'.Str::ulid(), 'tipo_tramite_id' => $estado->tipo_tramite_id, 'estado_tramite_id' => $estado->id, 'unidad_organizacional_id' => $this->unidad->id, 'created_by' => $this->solicitante->id]);
+        $tramite->reemplazo()->create($detalle);
+        $tramite->historial()->create(['user_id' => $this->solicitante->id, 'action_code' => 'TRAMITE_CREADO', 'metadata' => ['unidad_organizacional_id' => $this->unidad->id], 'occurred_at' => now()]);
+
+        return $tramite;
     }
 
     private function sendDraft(): Tramite

@@ -101,11 +101,16 @@
                         <dd class="mt-1 text-sm font-medium text-gray-900">{{ $detalle->tipoReemplazo?->nombre ?? 'No informado' }}</dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Unidad</dt>
-                        <dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->unidadOrganizacional->nombre }}</dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Unidad solicitante</dt>
+                        <dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->solicitudContrato?->unidadSolicitante?->nombre ?? $tramite->unidadOrganizacional->nombre }}</dd>
                     </div>
+                    @if($tramite->solicitudContrato)
+                    <div><dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Unidad origen</dt><dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->solicitudContrato->unidadOrigen?->nombre ?? 'No informada' }}</dd></div>
+                    <div><dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Destino funcional</dt><dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->solicitudContrato->unidadDestino?->nombre ?? 'No informado' }}</dd></div>
+                    <div><dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Autoridad institucional de la solicitud</dt><dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->solicitudContrato->autoridad?->nombre_completo ?? 'No resuelta' }}</dd></div>
+                    @endif
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Creado por</dt>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Registrado por</dt>
                         <dd class="mt-1 text-sm font-medium text-gray-900">{{ $tramite->creador?->name ?? 'No informado' }}</dd>
                     </div>
                 </dl>

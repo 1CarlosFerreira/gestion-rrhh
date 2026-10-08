@@ -119,6 +119,8 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $global->givePermissionTo(['reemplazos.generar_documento', 'tramites.ver_todos']);
 
         $this->assertCount(0, $global->accesosOperativos);
+        $this->actingAs($global)->post(route('reemplazos.documentos.store', $tramite))->assertForbidden();
+        $global->givePermissionTo('reemplazos.alcance_global');
         $this->actingAs($global)->post(route('reemplazos.documentos.store', $tramite))
             ->assertRedirect(route('gestion-personas.reemplazos.show', $tramite));
 
