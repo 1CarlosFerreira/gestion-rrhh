@@ -82,8 +82,8 @@
                                     <td class="whitespace-nowrap px-4 py-3 font-mono font-semibold text-gray-950 sm:pl-5">{{ $tramite->codigo }}</td>
                                     <td class="max-w-56 px-4 py-3 font-medium text-gray-800">{{ $tramite->unidadOrganizacional->nombre }}</td>
                                     <td class="px-4 py-3 text-gray-800">{{ $tramite->reemplazo->funcionario->nombre_completo }}</td>
-                                    <td class="px-4 py-3 text-gray-800">{{ $tramite->reemplazo->reemplazante->nombre_completo }}</td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-gray-800">{{ $tramite->reemplazo->fecha_reemplazante_desde->format('d/m/Y') }} <span class="text-gray-400">al</span> {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }}</td>
+                                    <td class="px-4 py-3 text-gray-800">{{ $tramite->reemplazo->reemplazante?->nombre_completo ?? 'Pendiente' }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-gray-800">{{ $tramite->reemplazo->fecha_reemplazante_desde?->format('d/m/Y') ?? 'Pendiente' }} @if($tramite->reemplazo->fecha_reemplazante_hasta)<span class="text-gray-400">al</span> {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }}@endif</td>
                                     <td class="whitespace-nowrap px-4 py-3 text-gray-800">{{ $tramite->formalizacionReemplazo?->formalizado_at?->format('d/m/Y H:i') ?? $tramite->finalized_at?->format('d/m/Y H:i') ?? 'Sin fecha' }}</td>
                                     <td class="px-4 py-3 text-right sm:pr-5"><a class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" href="{{ route('gestion-personas.reemplazos.show', ['tramite' => $tramite, ...$contextoDetalle]) }}">Ver</a></td>
                                 </tr>
@@ -111,7 +111,7 @@
                                     $requiereRevision = in_array($tramite->estadoTramite->codigo, ['ENVIADA_GESTION_PERSONAS', 'EN_REVISION'], true);
                                 @endphp
                                 <tr class="transition hover:bg-gray-50 {{ $requiereRevision ? 'bg-amber-50/50' : 'bg-white' }}">
-                                    <td class="whitespace-nowrap px-4 py-3 align-top font-mono text-sm font-semibold text-gray-950 sm:pl-5">{{ $tramite->codigo }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3 align-top font-mono text-sm font-semibold text-gray-950 sm:pl-5">{{ $tramite->codigo }}<span class="mt-1 block font-sans text-[10px] font-medium text-gray-500">{{ $tramite->solicitudContrato ? 'Transitoria V3' : 'Histórica V2' }}</span></td>
                                     <td class="max-w-52 px-4 py-3 align-top font-medium leading-5 text-gray-800">{{ $tramite->unidadOrganizacional->nombre }}</td>
                                     <td class="px-4 py-3 align-top">
                                         <dl class="space-y-2">
@@ -121,7 +121,7 @@
                                             </div>
                                             <div>
                                                 <dt class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Reemplazante</dt>
-                                                <dd class="mt-0.5 font-medium leading-5 text-gray-800">{{ $tramite->reemplazo->reemplazante->nombre_completo }}</dd>
+                                                <dd class="mt-0.5 font-medium leading-5 text-gray-800">{{ $tramite->reemplazo->reemplazante?->nombre_completo ?? 'Pendiente de incorporar' }}</dd>
                                             </div>
                                         </dl>
                                     </td>
@@ -133,7 +133,7 @@
                                             </div>
                                             <div>
                                                 <dt class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Cobertura del reemplazante</dt>
-                                                <dd class="mt-0.5 text-gray-800">{{ $tramite->reemplazo->fecha_reemplazante_desde->format('d/m/Y') }} <span class="text-gray-400">al</span> {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }}</dd>
+                                                <dd class="mt-0.5 text-gray-800">@if($tramite->reemplazo->fecha_reemplazante_desde && $tramite->reemplazo->fecha_reemplazante_hasta){{ $tramite->reemplazo->fecha_reemplazante_desde->format('d/m/Y') }} <span class="text-gray-400">al</span> {{ $tramite->reemplazo->fecha_reemplazante_hasta->format('d/m/Y') }}@else Pendiente de incorporar persona @endif</dd>
                                             </div>
                                         </dl>
                                     </td>

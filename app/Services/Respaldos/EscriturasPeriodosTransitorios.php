@@ -10,7 +10,9 @@ use App\Models\RespaldoTransitorioVersion;
 use App\Models\SolicitudContrato;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use LogicException;
 
 class EscriturasPeriodosTransitorios
 {
@@ -24,27 +26,36 @@ class EscriturasPeriodosTransitorios
     {
         $this->periodos->validar($datos['fecha_desde'], $datos['fecha_hasta']);
 
-        return $this->transaccion->ejecutar([$datos['funcionario_origen_id']], function () use ($solicitud, $actor, $datos): RespaldoTransitorio {
-            $solicitud = SolicitudContrato::query()->lockForUpdate()->findOrFail($solicitud->id);
-            if ($solicitud->modalidad !== ModalidadSolicitudContrato::TRANSITORIA || $solicitud->unidad_origen_id !== (int) $datos['unidad_origen_id']) {
-                throw ValidationException::withMessages(['unidad_origen_id' => 'El respaldo requiere una solicitud transitoria y su unidad origen.']);
-            }
-            $this->validarRespaldoLibre((int) $datos['funcionario_origen_id'], $datos['fecha_desde'], $datos['fecha_hasta']);
+        return $this->transaccion->ejecutar([$datos['funcionario_origen_id']], fn (): RespaldoTransitorio => $this->registrarRespaldoBajoBloqueo($solicitud, $actor, $datos));
+    }
 
-            $respaldo = RespaldoTransitorio::query()->create(['solicitud_origen_id' => $solicitud->id, 'created_by' => $actor->id]);
-            $respaldo->versiones()->create([
-                'version' => 1,
-                'funcionario_origen_id' => $datos['funcionario_origen_id'],
-                'unidad_origen_id' => $datos['unidad_origen_id'],
-                'motivo' => $datos['motivo'],
-                'fecha_desde' => $datos['fecha_desde'],
-                'fecha_hasta' => $datos['fecha_hasta'],
-                'referencia_externa' => $datos['referencia_externa'] ?? null,
-                'registrado_por' => $actor->id,
-            ]);
+    /** La transacción llamadora debe haber bloqueado antes la fila del funcionario. */
+    public function registrarRespaldoBajoBloqueo(SolicitudContrato $solicitud, User $actor, array $datos): RespaldoTransitorio
+    {
+        if (DB::transactionLevel() === 0) {
+            throw new LogicException('El respaldo bajo bloqueo requiere una transacción activa y el funcionario bloqueado.');
+        }
 
-            return $respaldo->load('versionActual');
-        });
+        $this->periodos->validar($datos['fecha_desde'], $datos['fecha_hasta']);
+        $solicitud = SolicitudContrato::query()->lockForUpdate()->findOrFail($solicitud->id);
+        if ($solicitud->modalidad !== ModalidadSolicitudContrato::TRANSITORIA || $solicitud->unidad_origen_id !== (int) $datos['unidad_origen_id']) {
+            throw ValidationException::withMessages(['unidad_origen_id' => 'El respaldo requiere una solicitud transitoria y su unidad origen.']);
+        }
+        $this->validarRespaldoLibre((int) $datos['funcionario_origen_id'], $datos['fecha_desde'], $datos['fecha_hasta']);
+
+        $respaldo = RespaldoTransitorio::query()->create(['solicitud_origen_id' => $solicitud->id, 'created_by' => $actor->id]);
+        $respaldo->versiones()->create([
+            'version' => 1,
+            'funcionario_origen_id' => $datos['funcionario_origen_id'],
+            'unidad_origen_id' => $datos['unidad_origen_id'],
+            'motivo' => $datos['motivo'],
+            'fecha_desde' => $datos['fecha_desde'],
+            'fecha_hasta' => $datos['fecha_hasta'],
+            'referencia_externa' => $datos['referencia_externa'] ?? null,
+            'registrado_por' => $actor->id,
+        ]);
+
+        return $respaldo->load('versionActual');
     }
 
     public function rectificarPeriodoRespaldo(RespaldoTransitorio $respaldo, User $actor, string $desde, string $hasta, string $motivo): RespaldoTransitorioVersion
@@ -86,30 +97,7 @@ class EscriturasPeriodosTransitorios
         $this->periodos->validar($desde, $hasta);
 
         try {
-            return $this->transaccion->ejecutar([$personaId], function () use ($afectacion, $actor, $personaId, $desde, $hasta): ReservaPersonaPeriodo {
-                $idRespaldo = RespaldoAfectacion::query()->whereKey($afectacion->id)->value('respaldo_id');
-                RespaldoTransitorio::query()->lockForUpdate()->findOrFail($idRespaldo);
-                $afectacion = RespaldoAfectacion::query()->lockForUpdate()->findOrFail($afectacion->id);
-                if ($afectacion->liberado_at !== null) {
-                    throw ValidationException::withMessages(['afectacion' => 'La afectación ya fue liberada.']);
-                }
-                $version = $afectacion->versionRespaldo;
-                if (! $this->periodos->contiene($version->fecha_desde->toDateString(), $version->fecha_hasta->toDateString(), $desde, $hasta)) {
-                    throw ValidationException::withMessages(['fecha_desde' => 'La reserva debe quedar contenida en el período del respaldo.']);
-                }
-                if ($this->conflictos->reservaBajoBloqueo($personaId, $desde, $hasta)) {
-                    throw ValidationException::withMessages(['fecha_desde' => 'La persona ya posee una reserva vigente superpuesta.']);
-                }
-
-                return ReservaPersonaPeriodo::query()->create([
-                    'afectacion_id' => $afectacion->id,
-                    'persona_id' => $personaId,
-                    'fecha_desde' => $desde,
-                    'fecha_hasta' => $hasta,
-                    'reservado_at' => now(),
-                    'reservado_por' => $actor->id,
-                ]);
-            });
+            return $this->transaccion->ejecutar([$personaId], fn (): ReservaPersonaPeriodo => $this->registrarReservaBajoBloqueo($afectacion, $actor, $personaId, $desde, $hasta));
         } catch (QueryException $exception) {
             if ($this->esConflictoPersistente($exception)) {
                 throw ValidationException::withMessages(['reserva' => 'La disponibilidad cambió durante la reserva; reintente la operación.']);
@@ -117,6 +105,38 @@ class EscriturasPeriodosTransitorios
 
             throw $exception;
         }
+    }
+
+    /** La transacción llamadora debe haber bloqueado antes la fila de la persona. */
+    public function registrarReservaBajoBloqueo(RespaldoAfectacion $afectacion, User $actor, int $personaId, string $desde, string $hasta): ReservaPersonaPeriodo
+    {
+        if (DB::transactionLevel() === 0) {
+            throw new LogicException('La reserva bajo bloqueo requiere una transacción activa y la persona bloqueada.');
+        }
+
+        $this->periodos->validar($desde, $hasta);
+        $idRespaldo = RespaldoAfectacion::query()->whereKey($afectacion->id)->value('respaldo_id');
+        RespaldoTransitorio::query()->lockForUpdate()->findOrFail($idRespaldo);
+        $afectacion = RespaldoAfectacion::query()->lockForUpdate()->findOrFail($afectacion->id);
+        if ($afectacion->liberado_at !== null) {
+            throw ValidationException::withMessages(['afectacion' => 'La afectación ya fue liberada.']);
+        }
+        $version = $afectacion->versionRespaldo;
+        if (! $this->periodos->contiene($version->fecha_desde->toDateString(), $version->fecha_hasta->toDateString(), $desde, $hasta)) {
+            throw ValidationException::withMessages(['fecha_desde' => 'La reserva debe quedar contenida en el período del respaldo.']);
+        }
+        if ($this->conflictos->reservaBajoBloqueo($personaId, $desde, $hasta)) {
+            throw ValidationException::withMessages(['fecha_desde' => 'La persona ya posee una reserva vigente superpuesta.']);
+        }
+
+        return ReservaPersonaPeriodo::query()->create([
+            'afectacion_id' => $afectacion->id,
+            'persona_id' => $personaId,
+            'fecha_desde' => $desde,
+            'fecha_hasta' => $hasta,
+            'reservado_at' => now(),
+            'reservado_por' => $actor->id,
+        ]);
     }
 
     private function validarRespaldoLibre(int $funcionarioId, string $desde, string $hasta, ?int $excluirRespaldoId = null): void

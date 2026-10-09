@@ -47,7 +47,7 @@
             <header class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $tramite->tipoTramite->nombre }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $tramite->tipoTramite->nombre }} · {{ $tramite->solicitudContrato ? 'Transitoria V3' : 'Histórica V2' }}</p>
                         <div class="mt-1 flex flex-wrap items-center gap-2.5">
                             <h1 class="whitespace-nowrap font-mono text-xl font-semibold text-gray-950 sm:text-2xl">{{ $tramite->codigo }}</h1>
                             <x-status-badge :estado="$tramite->estadoTramite" />

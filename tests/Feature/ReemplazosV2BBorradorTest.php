@@ -176,6 +176,13 @@ class ReemplazosV2BBorradorTest extends TestCase
         $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
         $this->assertSame(0, PersonaUnidadVinculo::query()->where('persona_id', $reemplazante->id)->count());
 
+        // El helper crea una solicitud nueva V3: requiere respaldo antes de enviar.
+        $this->actingAs($this->user)->post(route('reemplazos.respaldo-transitorio.store', $tramite), [
+            'motivo' => 'Ausencia ficticia',
+            'fecha_desde' => $fecha,
+            'fecha_hasta' => $fecha,
+        ])->assertRedirect(route('reemplazos.edit', $tramite));
+
         $completa = [...$base, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => CalidadContractual::query()->firstOrFail()->id, 'reemplazante_cargo_funcion' => '  Función   propuesta  '];
         $this->actingAs($this->user)->putBorrador(route('reemplazos.send', $tramite), $completa)->assertRedirect(route('dashboard'));
         $this->assertSame('Función propuesta', $tramite->fresh()->reemplazo->reemplazante_cargo_funcion);

@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reemplazos/{tramite}/editar', [ReemplazoController::class, 'edit'])->name('reemplazos.edit');
     Route::put('/reemplazos/{tramite}', [ReemplazoController::class, 'update'])->name('reemplazos.update');
     Route::put('/reemplazos/{tramite}/enviar', [ReemplazoController::class, 'send'])->name('reemplazos.send');
+    Route::post('/reemplazos/{tramite}/respaldo-transitorio', [ReemplazoController::class, 'registrarRespaldo'])->name('reemplazos.respaldo-transitorio.store');
     Route::post('/reemplazos/{tramite}/documento', [ReemplazoDocumentoController::class, 'store'])->name('reemplazos.documentos.store');
     Route::get('/reemplazos/{tramite}/documentos/{documento}/descargar', [ReemplazoDocumentoController::class, 'download'])->name('reemplazos.documentos.download');
     Route::post('/reemplazos/{tramite}/formalizar', [ReemplazoFormalizacionController::class, 'store'])->name('reemplazos.formalizaciones.store');

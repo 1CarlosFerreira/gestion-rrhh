@@ -20,7 +20,7 @@
     <header class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Solicitud de Reemplazo</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Solicitud de Reemplazo · {{ $tramite->solicitudContrato ? 'Transitoria V3' : 'Histórica V2' }}</p>
                 <div class="mt-1 flex flex-wrap items-center gap-2.5">
                     <h1 class="whitespace-nowrap font-mono text-xl font-semibold text-gray-950 sm:text-2xl">{{ $tramite->codigo }}</h1>
                     <x-status-badge :estado="$tramite->estadoTramite" />
@@ -56,7 +56,7 @@
         @if($cabeceraCompacta)
             <dl class="mt-4 grid gap-3 border-t border-gray-200 pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div><dt class="text-xs text-gray-500">Funcionario</dt><dd class="mt-0.5 font-semibold text-gray-900">{{ $detalle->funcionario->nombre_completo }}</dd></div>
-                <div><dt class="text-xs text-gray-500">Reemplazante</dt><dd class="mt-0.5 font-semibold text-gray-900">{{ $detalle->reemplazante->nombre_completo }}</dd></div>
+                <div><dt class="text-xs text-gray-500">Reemplazante</dt><dd class="mt-0.5 font-semibold text-gray-900">{{ $detalle->reemplazante?->nombre_completo ?? 'Pendiente de incorporar' }}</dd></div>
                 <div><dt class="text-xs text-gray-500">Período total</dt><dd class="mt-0.5 font-medium text-gray-800">{{ $detalle->fecha_funcionario_desde->format('d/m/Y') }} al {{ $detalle->fecha_funcionario_hasta->format('d/m/Y') }}</dd></div>
                 <div><dt class="text-xs text-gray-500">Cobertura</dt><dd class="mt-0.5 font-medium text-gray-800">{{ $diasCubiertos }} de {{ $diasTotales }} días · {{ number_format($porcentajeCubierto, $porcentajeCubierto == floor($porcentajeCubierto) ? 0 : 1, ',', '.') }}%</dd></div>
             </dl>
@@ -82,8 +82,8 @@
         </div>
         <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Antecedentes propuestos del reemplazante</p>
-            <p class="mt-2 text-base font-semibold text-gray-950">{{ $detalle->reemplazante->nombre_completo }}</p>
-            <p class="mt-0.5 font-mono text-sm font-medium text-gray-600">{{ $detalle->reemplazante->rut }}</p>
+            <p class="mt-2 text-base font-semibold text-gray-950">{{ $detalle->reemplazante?->nombre_completo ?? 'Pendiente de incorporar' }}</p>
+            @if($detalle->reemplazante)<p class="mt-0.5 font-mono text-sm font-medium text-gray-600">{{ $detalle->reemplazante->rut }}</p>@endif
             <dl class="mt-4 grid gap-3 border-t border-gray-200 pt-3 text-xs sm:grid-cols-2">
                 <div><dt class="font-medium text-gray-400">Estamento</dt><dd class="mt-0.5 text-gray-700">{{ $detalle->reemplazanteEstamento?->nombre ?? 'No informado' }}</dd></div>
                 <div><dt class="font-medium text-gray-400">Profesión</dt><dd class="mt-0.5 text-gray-700">{{ $detalle->reemplazanteProfesion?->nombre ?? 'No corresponde / no informada' }}</dd></div>
@@ -113,7 +113,7 @@
         </div>
         <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Período efectivo del reemplazante</p>
-            <p class="mt-1 text-sm font-medium text-gray-900">{{ $detalle->fecha_reemplazante_desde->format('d/m/Y') }} <span class="text-gray-400">al</span> {{ $detalle->fecha_reemplazante_hasta->format('d/m/Y') }}</p>
+            <p class="mt-1 text-sm font-medium text-gray-900">@if($detalle->fecha_reemplazante_desde && $detalle->fecha_reemplazante_hasta){{ $detalle->fecha_reemplazante_desde->format('d/m/Y') }} <span class="text-gray-400">al</span> {{ $detalle->fecha_reemplazante_hasta->format('d/m/Y') }}@else Pendiente de incorporar persona @endif</p>
         </div>
     </div>
     <div class="mt-4 flex items-center justify-between gap-4 text-xs font-medium text-gray-600">

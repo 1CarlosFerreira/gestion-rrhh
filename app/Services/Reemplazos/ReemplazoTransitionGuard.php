@@ -3,14 +3,18 @@
 namespace App\Services\Reemplazos;
 
 use App\Contracts\Tramites\TramiteTransitionGuard;
+use App\Enums\ModalidadSolicitudContrato;
 use App\Models\DocumentoGenerado;
 use App\Models\Persona;
 use App\Models\PersonaUnidadVinculo;
 use App\Models\ReemplazoFormalizacion;
+use App\Models\ReservaPersonaPeriodo;
+use App\Models\RespaldoAfectacion;
 use App\Models\TipoReemplazo;
 use App\Models\Tramite;
 use App\Models\TransicionEstado;
 use App\Models\User;
+use App\Services\Respaldos\RespaldosAptosSolicitudTransitoria;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -19,7 +23,7 @@ use Illuminate\Validation\ValidationException;
 
 class ReemplazoTransitionGuard implements TramiteTransitionGuard
 {
-    public function __construct(private readonly ReemplazoService $reemplazos, private readonly ReemplazoWorkflow $workflow) {}
+    public function __construct(private readonly ReemplazoService $reemplazos, private readonly ReemplazoWorkflow $workflow, private readonly RespaldosAptosSolicitudTransitoria $respaldosAptos) {}
 
     public function validate(Tramite $tramite, TransicionEstado $transicion, User $user, ?string $observation, array $metadata): void
     {
@@ -29,6 +33,9 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         $this->autorizar($tramite, $transicion, $user);
 
         if (in_array($transicion->codigo_accion, ['ENVIAR_A_GESTION_PERSONAS', 'REENVIAR_A_GESTION_PERSONAS'], true)) {
+            $this->validarEnvio($tramite);
+        }
+        if ($transicion->codigo_accion === 'INICIAR_REVISION' && $tramite->solicitudContrato()->exists()) {
             $this->validarEnvio($tramite);
         }
         if ($transicion->codigo_accion === 'APROBAR_ANTECEDENTES') {
@@ -78,6 +85,51 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         }
         if ($errors) {
             throw ValidationException::withMessages($errors);
+        }
+
+        if ($tramite->solicitudContrato()->exists()) {
+            $this->validarCompromisoTransitorio($tramite, $user, $metadata);
+        }
+    }
+
+    private function validarCompromisoTransitorio(Tramite $tramite, User $user, array $metadata): void
+    {
+        $solicitud = $tramite->solicitudContrato()->first();
+        $detalle = $tramite->reemplazo()->first();
+        if ($solicitud?->modalidad !== ModalidadSolicitudContrato::TRANSITORIA) {
+            throw ValidationException::withMessages(['solicitud' => 'La aprobación V3 requiere modalidad transitoria.']);
+        }
+        $afectacion = RespaldoAfectacion::query()
+            ->whereKey((int) ($metadata['afectacion_id'] ?? 0))
+            ->where('solicitud_contrato_id', $solicitud->id)
+            ->where('respaldo_id', (int) ($metadata['respaldo_id'] ?? 0))
+            ->where('respaldo_version_id', (int) ($metadata['respaldo_version_id'] ?? 0))
+            ->where('comprometido_por', $user->id)
+            ->whereNull('liberado_at')
+            ->first();
+        if ($afectacion === null) {
+            throw ValidationException::withMessages(['respaldo' => 'La aprobación V3 requiere un compromiso vigente en la misma operación.']);
+        }
+
+        if ($detalle?->reemplazante_id === null) {
+            if (array_key_exists('reserva_id', $metadata) || $afectacion->reservas()->whereNull('liberado_at')->exists()) {
+                throw ValidationException::withMessages(['reserva' => 'Una solicitud sin candidato no debe crear una reserva.']);
+            }
+
+            return;
+        }
+
+        $reserva = ReservaPersonaPeriodo::query()
+            ->whereKey((int) ($metadata['reserva_id'] ?? 0))
+            ->where('afectacion_id', $afectacion->id)
+            ->where('persona_id', $detalle->reemplazante_id)
+            ->where('reservado_por', $user->id)
+            ->whereNull('liberado_at')
+            ->first();
+        if ($reserva === null || $reserva->persona_id !== ($metadata['persona_reservada_id'] ?? null)
+            || $reserva->fecha_desde->toDateString() !== ($metadata['periodo_reserva_desde'] ?? null)
+            || $reserva->fecha_hasta->toDateString() !== ($metadata['periodo_reserva_hasta'] ?? null)) {
+            throw ValidationException::withMessages(['reserva' => 'La aprobación V3 requiere una reserva vigente de la persona propuesta.']);
         }
     }
 
@@ -131,14 +183,34 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
     private function validarEnvio(Tramite $tramite): void
     {
         $detalle = $tramite->reemplazo;
+        $solicitud = $tramite->solicitudContrato;
+        $esV3 = $solicitud !== null;
         $errors = [];
-        foreach (['funcionario_id', 'tipo_reemplazo_id', 'fecha_funcionario_desde', 'fecha_funcionario_hasta', 'reemplazante_id', 'reemplazante_estamento_id', 'reemplazante_calidad_contractual_id', 'reemplazante_cargo_funcion', 'fecha_reemplazante_desde', 'fecha_reemplazante_hasta', 'justificacion'] as $field) {
+        $campos = ['funcionario_id', 'tipo_reemplazo_id', 'fecha_funcionario_desde', 'fecha_funcionario_hasta', 'justificacion'];
+        if (! $esV3 || $detalle?->reemplazante_id !== null) {
+            $campos = [...$campos, 'reemplazante_id', 'reemplazante_estamento_id', 'reemplazante_calidad_contractual_id', 'reemplazante_cargo_funcion', 'fecha_reemplazante_desde', 'fecha_reemplazante_hasta'];
+        }
+        foreach ($campos as $field) {
             if (blank($detalle?->{$field})) {
                 $errors[$field] = 'Este campo es obligatorio para enviar.';
             }
         }
+        if ($esV3 && ($solicitud->modalidad !== ModalidadSolicitudContrato::TRANSITORIA
+            || $solicitud->unidad_solicitante_id !== $tramite->unidad_organizacional_id
+            || $solicitud->unidad_origen_id === null || $solicitud->unidad_destino_id === null)) {
+            $errors['solicitud'] = 'El contexto transitorio está incompleto o no corresponde al trámite.';
+        }
+        if ($esV3 && $detalle?->reemplazante_id !== null && ! Persona::query()->whereKey($detalle->reemplazante_id)->where('active', true)->exists()) {
+            $errors['reemplazante_id'] = 'La persona propuesta debe estar activa.';
+        }
+        if ($esV3 && $detalle?->reemplazante_id === null && collect(['reemplazante_estamento_id', 'reemplazante_profesion_id', 'reemplazante_calidad_contractual_id', 'reemplazante_cargo_funcion', 'fecha_reemplazante_desde', 'fecha_reemplazante_hasta'])->contains(fn ($campo) => filled($detalle?->{$campo}))) {
+            $errors['reemplazante_id'] = 'Quite los antecedentes de cobertura si aún no hay persona propuesta.';
+        }
         if ($errors) {
             throw ValidationException::withMessages($errors);
+        }
+        if ($esV3 && $this->respaldosAptos->obtener($solicitud, $detalle)->isEmpty()) {
+            throw ValidationException::withMessages(['respaldo' => 'Registre un respaldo vigente que cubra al funcionario y su período antes de enviar.']);
         }
         if (! TipoReemplazo::query()->whereKey($detalle->tipo_reemplazo_id)->where('activo', true)->exists()) {
             throw ValidationException::withMessages(['tipo_reemplazo_id' => 'El tipo de reemplazo debe estar activo.']);

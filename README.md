@@ -272,11 +272,13 @@ Para el acto de registro se admiten `TITULAR` y `SUBROGANTE`. Si las responsabil
 
 La validación reutilizada de V2 para `funcionario_id` exige una Persona activa con vínculo de dotación vigente **en la unidad origen, en la fecha inicial del periodo origen**. Esto comprueba el vínculo que V2 conoce; no afirma que unidad solicitante y destino sean iguales al origen ni establece una semántica institucional adicional de dotación. El PDF V2 identifica al creador como remitente y usa una sola unidad. Por esa razón, la generación de ese PDF se bloquea para solicitudes con contexto V3 hasta definir la autoridad documental aplicable; las solicitudes V2 anteriores siguen usando su flujo documental vigente.
 
-Solo los trámites V2 históricos, identificados por la ausencia de fila `solicitudes_contrato`, conservan la edición y el envío con `unidad_organizacional_id`. Toda creación nueva exige las tres unidades V3; los parámetros legacy no pueden crear un trámite nuevo ni convertir una solicitud V3 en V2. No se deducen retrospectivamente solicitante, autoridad, origen ni destino ni se ejecuta un backfill. La revisión, documento y formalización V3 completa, así como las reglas de respaldo y contratación permanente, quedan para fases posteriores.
+Solo los trámites V2 históricos, identificados por la ausencia de fila `solicitudes_contrato`, conservan la edición y el envío con `unidad_organizacional_id`. Toda creación nueva exige las tres unidades V3; los parámetros legacy no pueden crear un trámite nuevo ni convertir una solicitud V3 en V2. No se deducen retrospectivamente solicitante, autoridad, origen ni destino ni se ejecuta un backfill. La generación documental y formalización V3, las operaciones posteriores sobre respaldos y la contratación permanente quedan para fases posteriores.
 
 La Fase 3A V3 agrega únicamente las tablas y modelos de respaldos transitorios versionados, afectaciones y reservas históricas. No activa aún compromiso, reserva o liberación automática en los flujos de Reemplazos. El diseño y sus límites se describen en [`docs/FASE_3A_RESPALDOS_TRANSITORIOS.md`](docs/FASE_3A_RESPALDOS_TRANSITORIOS.md).
 
 La Fase 3B V3 incorpora servicios internos de validación de períodos inclusivos y escrituras estructurales protegidas con transacciones y bloqueos por persona. Todavía no los conecta a los flujos administrativos. Su contrato de concurrencia y pruebas se documentan en [`docs/FASE_3B_PERIODOS_CONCURRENCIA.md`](docs/FASE_3B_PERIODOS_CONCURRENCIA.md).
+
+La Fase 3C.1B V3 integra el alta de respaldo en borrador, envío e inicio de revisión con o sin candidato, y aprobación pública mediante el caso de uso transaccional. Solo al aprobar se compromete el respaldo y, si hay candidato, se crea su reserva; el estado final es `LISTA_GENERAR_DOCUMENTO`. La generación documental V3 está bloqueada en interfaz, policy, servicio y transición; V2 conserva su flujo. Véase [`docs/FASE_3C1_APROBACION_TRANSITORIA.md`](docs/FASE_3C1_APROBACION_TRANSITORIA.md).
 
 Cada Solicitud de Reemplazo tiene un único detalle `tramite_reemplazos` y, como máximo, un reemplazante. La unidad del trámite raíz conserva el contexto principal V2 y representa la unidad solicitante cuando existe `solicitudes_contrato`.
 
@@ -314,7 +316,7 @@ Al guardar un borrador se comprueba, según los campos presentes:
 - profesión compatible con el estamento;
 - ausencia de otro Reemplazo activo superpuesto para el mismo funcionario.
 
-Para enviar o reenviar también son obligatorios:
+Para enviar o reenviar V2 también son obligatorios:
 
 - unidad y funcionario;
 - tipo de reemplazo;
@@ -323,6 +325,8 @@ Para enviar o reenviar también son obligatorios:
 - cargo o función del reemplazante;
 - los dos periodos completos;
 - justificación.
+
+En V3 transitoria, el funcionario, el tipo, el período origen, la justificación, el contexto de tres unidades y un respaldo transitorio apto son obligatorios. El candidato puede faltar; si se informa, se exigen sus antecedentes laborales y período efectivo. El respaldo se registra desde el borrador antes de enviar y no se compromete hasta aprobar.
 
 La profesión del reemplazante sigue siendo opcional. Los estados que bloquean superposición son `BORRADOR`, `ENVIADA_GESTION_PERSONAS`, `EN_REVISION`, `DEVUELTA_PARA_CORRECCION` y `LISTA_GENERAR_DOCUMENTO`.
 

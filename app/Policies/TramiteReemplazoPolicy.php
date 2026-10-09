@@ -43,6 +43,7 @@ class TramiteReemplazoPolicy
     {
         return $user->active
             && $user->can('reemplazos.generar_documento')
+            && $tramite->solicitudContrato === null
             && $this->puedeGestionar($user, $tramite);
     }
 

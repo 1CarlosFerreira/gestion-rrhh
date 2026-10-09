@@ -238,7 +238,7 @@ class SolicitudContratoContextoV3Test extends TestCase
         Permission::findOrCreate('reemplazos.alcance_global');
         $this->operador->givePermissionTo(['reemplazos.generar_documento', 'reemplazos.alcance_global']);
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(AuthorizationException::class);
         app(GenerarSolicitudReemplazoPdfAction::class)->execute(Tramite::query()->firstOrFail(), $this->operador);
     }
 
@@ -256,7 +256,7 @@ class SolicitudContratoContextoV3Test extends TestCase
             try {
                 $intento();
                 $this->fail('La generación V3 debió quedar bloqueada.');
-            } catch (ValidationException) {
+            } catch (ValidationException|AuthorizationException) {
                 $this->assertSame($lista->id, $tramite->fresh()->estado_tramite_id);
                 $this->assertDatabaseCount('documentos_generados', 0);
                 $this->assertDatabaseMissing('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'GENERAR_DOCUMENTO']);
@@ -270,6 +270,7 @@ class SolicitudContratoContextoV3Test extends TestCase
         $datos = [...$this->contexto(), 'funcionario_id' => $this->funcionario->id, 'reemplazante_id' => $reemplazante->id, 'reemplazante_estamento_id' => Estamento::query()->firstOrFail()->id, 'reemplazante_calidad_contractual_id' => CalidadContractual::query()->firstOrFail()->id, 'reemplazante_cargo_funcion' => 'Cargo de prueba', 'tipo_reemplazo_id' => TipoReemplazo::query()->firstOrFail()->id, 'fecha_funcionario_desde' => today()->toDateString(), 'fecha_funcionario_hasta' => today()->addDays(4)->toDateString(), 'fecha_reemplazante_desde' => today()->toDateString(), 'fecha_reemplazante_hasta' => today()->addDays(4)->toDateString(), 'justificacion' => 'Continuidad del servicio.'];
         $this->actingAs($this->operador)->post(route('reemplazos.store'), $datos)->assertRedirect();
         $tramite = Tramite::query()->firstOrFail();
+        $this->actingAs($this->operador)->post(route('reemplazos.respaldo-transitorio.store', $tramite), ['motivo' => 'Respaldo ficticio', 'fecha_desde' => today()->toDateString(), 'fecha_hasta' => today()->addDays(4)->toDateString()])->assertRedirect();
         $this->actingAs($this->operador)->put(route('reemplazos.send', $tramite), $datos)->assertRedirect(route('dashboard'));
         $this->assertSame('ENVIADA_GESTION_PERSONAS', $tramite->fresh()->estadoTramite->codigo);
 

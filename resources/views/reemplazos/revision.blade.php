@@ -69,9 +69,24 @@
                             <x-input-error :messages="$errors->get('observacion_administrativa')" class="mt-1" />
                         </label>
 
+                        @if($tramite->solicitudContrato)
+                            <fieldset class="space-y-2 lg:col-span-2">
+                                <legend class="text-sm font-semibold text-gray-800">Respaldo transitorio que se comprometerá al aprobar</legend>
+                                @forelse($respaldosAptos as $respaldo)
+                                    <label class="flex gap-2 rounded border border-gray-200 bg-gray-50 p-3 text-sm">
+                                        <input type="radio" name="respaldo_version_id" value="{{ $respaldo->versionActual->id }}" @checked((string) old('respaldo_version_id', $respaldosAptos->count() === 1 ? $respaldo->versionActual->id : '') === (string) $respaldo->versionActual->id)>
+                                        <span>{{ $respaldo->public_id }} · Versión {{ $respaldo->versionActual->version }} · {{ $respaldo->versionActual->fecha_desde->format('d/m/Y') }} al {{ $respaldo->versionActual->fecha_hasta->format('d/m/Y') }} · {{ $respaldo->versionActual->motivo }}</span>
+                                    </label>
+                                @empty
+                                    <p class="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">No hay un respaldo vigente que cubra esta solicitud. Devuélvala para corrección.</p>
+                                @endforelse
+                                <x-input-error :messages="$errors->get('respaldo_version_id')" class="mt-1" />
+                            </fieldset>
+                        @endif
+
                         <div class="flex flex-wrap gap-3 lg:col-span-2">
                             <x-primary-button>Guardar antecedentes</x-primary-button>
-                            <x-primary-button formaction="{{ route('gestion-personas.reemplazos.approve', $tramite) }}">Aprobar antecedentes</x-primary-button>
+                            @if(!$tramite->solicitudContrato || $respaldosAptos->isNotEmpty())<x-primary-button formaction="{{ route('gestion-personas.reemplazos.approve', $tramite) }}">Aprobar antecedentes</x-primary-button>@endif
                         </div>
                     </form>
                 </section>

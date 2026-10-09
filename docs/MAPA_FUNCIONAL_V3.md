@@ -920,6 +920,13 @@ de solicitud.
 La existencia de candidato no puede ser una condición transversal de
 envío.
 
+**Implementación Fase 3C.1B:** las solicitudes de Reemplazo con fila
+`solicitudes_contrato` son V3; las históricas sin esa fila conservan las
+reglas V2. El formulario V3 registra el respaldo transitorio en borrador y
+permite enviar con o sin candidato. El envío exige respaldo apto, contexto
+organizacional y períodos válidos, registra historial y no crea afectación
+ni reserva. El inicio de revisión vuelve a comprobar esos antecedentes.
+
 ## 9.5 Revisión y devolución
 
 La revisión corresponde a una etapa de trabajo de Gestión de Personas
@@ -969,6 +976,15 @@ diseñar; no se debe interpretar el estado V2
 
 La conformidad o aprobación de antecedentes no equivale automáticamente
 a formalizar el resultado contractual.
+
+**Implementación Fase 3C.1B:** Gestión de Personas aprueba la solicitud
+transitoria V3 desde la ruta autorizada mediante una operación atómica que
+compromete el respaldo, reserva a la persona propuesta si existe, guarda la
+revisión y el historial, y llega a `LISTA_GENERAR_DOCUMENTO`. La
+generación documental V3 sigue bloqueada en interfaz y backend; el flujo
+documental V2 histórico conserva su comportamiento. Las operaciones de
+anulación, liberación, rectificación y devolución posterior a aprobación
+siguen pendientes.
 
 ## 9.7 Documento generado ≠ proceso terminado
 

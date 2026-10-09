@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Reemplazos\RegistrarRespaldoSolicitudTransitoriaAction;
 use App\Actions\Tramites\TransicionarTramite;
+use App\Http\Requests\RegistrarRespaldoTransitorioRequest;
 use App\Http\Requests\SaveBorradorReemplazoRequest;
 use App\Models\CalidadContractual;
 use App\Models\Estamento;
@@ -102,6 +104,13 @@ class ReemplazoController extends Controller
         return redirect()->route('dashboard')->with('status', 'Solicitud enviada a Gestión de Personas.');
     }
 
+    public function registrarRespaldo(RegistrarRespaldoTransitorioRequest $request, Tramite $tramite, RegistrarRespaldoSolicitudTransitoriaAction $registrar): RedirectResponse
+    {
+        $registrar->execute($tramite, $request->user(), $request->validated());
+
+        return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Respaldo transitorio registrado.');
+    }
+
     public function funcionarios(Request $request, ContextoSolicitudContratoService $contexto, AlcanceSolicitudReemplazoService $alcance): JsonResponse
     {
         abort_unless($request->user()->active && $request->user()->can('reemplazos.crear'), 403);
@@ -174,7 +183,7 @@ class ReemplazoController extends Controller
 
         $personas = Persona::query()->with(['vinculosDotacion' => fn ($query) => $query->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->orderByDesc('vigente_desde')])->where('active', true)->orderBy('apellido_paterno')->limit(200)->get();
 
-        return view('reemplazos.form', ['tramite' => $tramite, 'solicitudContrato' => $tramite?->solicitudContrato, 'legacy' => $legacy, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => $personas, 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
+        return view('reemplazos.form', ['tramite' => $tramite, 'solicitudContrato' => $tramite?->solicitudContrato, 'respaldos' => $tramite?->solicitudContrato?->respaldosRegistrados()->with('versionActual')->get() ?? collect(), 'legacy' => $legacy, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => $personas, 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
     }
 
     private function contexto(SaveBorradorReemplazoRequest $request): array|UnidadOrganizacional
