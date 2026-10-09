@@ -6,6 +6,8 @@ use App\Enums\ContextoAutoridadInstitucional;
 use App\Enums\ModalidadSolicitudContrato;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class SolicitudContrato extends Model
 {
@@ -41,6 +43,21 @@ class SolicitudContrato extends Model
     public function unidadDestino(): BelongsTo
     {
         return $this->belongsTo(UnidadOrganizacional::class, 'unidad_destino_id');
+    }
+
+    public function respaldosRegistrados(): HasMany
+    {
+        return $this->hasMany(RespaldoTransitorio::class, 'solicitud_origen_id');
+    }
+
+    public function afectacionesRespaldo(): HasMany
+    {
+        return $this->hasMany(RespaldoAfectacion::class);
+    }
+
+    public function reservasPersona(): HasManyThrough
+    {
+        return $this->hasManyThrough(ReservaPersonaPeriodo::class, RespaldoAfectacion::class, 'solicitud_contrato_id', 'afectacion_id');
     }
 
     public function getRegistradorAttribute(): ?User

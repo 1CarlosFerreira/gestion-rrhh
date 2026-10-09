@@ -37,6 +37,16 @@ class Persona extends Model
         return $this->hasMany(TramiteReemplazo::class, 'reemplazante_id');
     }
 
+    public function versionesRespaldoComoOrigen(): HasMany
+    {
+        return $this->hasMany(RespaldoTransitorioVersion::class, 'funcionario_origen_id');
+    }
+
+    public function reservasPropuestas(): HasMany
+    {
+        return $this->hasMany(ReservaPersonaPeriodo::class);
+    }
+
     public function scopeBuscar(Builder $query, string $term): Builder
     {
         $term = trim($term);

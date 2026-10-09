@@ -274,6 +274,8 @@ La validación reutilizada de V2 para `funcionario_id` exige una Persona activa 
 
 Solo los trámites V2 históricos, identificados por la ausencia de fila `solicitudes_contrato`, conservan la edición y el envío con `unidad_organizacional_id`. Toda creación nueva exige las tres unidades V3; los parámetros legacy no pueden crear un trámite nuevo ni convertir una solicitud V3 en V2. No se deducen retrospectivamente solicitante, autoridad, origen ni destino ni se ejecuta un backfill. La revisión, documento y formalización V3 completa, así como las reglas de respaldo y contratación permanente, quedan para fases posteriores.
 
+La Fase 3A V3 agrega únicamente las tablas y modelos de respaldos transitorios versionados, afectaciones y reservas históricas. No activa aún compromiso, reserva o liberación automática en los flujos de Reemplazos. El diseño y sus límites se describen en [`docs/FASE_3A_RESPALDOS_TRANSITORIOS.md`](docs/FASE_3A_RESPALDOS_TRANSITORIOS.md).
+
 Cada Solicitud de Reemplazo tiene un único detalle `tramite_reemplazos` y, como máximo, un reemplazante. La unidad del trámite raíz conserva el contexto principal V2 y representa la unidad solicitante cuando existe `solicitudes_contrato`.
 
 Los tipos sembrados actualmente son `LICENCIA_MEDICA`, `PERMISO`, `LICENCIA_MATERNAL` y `CARGO_VACANTE`. Son motivos del Reemplazo; no constituyen un módulo independiente de ausencias o licencias.
