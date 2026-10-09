@@ -276,6 +276,8 @@ Solo los trámites V2 históricos, identificados por la ausencia de fila `solici
 
 La Fase 3A V3 agrega únicamente las tablas y modelos de respaldos transitorios versionados, afectaciones y reservas históricas. No activa aún compromiso, reserva o liberación automática en los flujos de Reemplazos. El diseño y sus límites se describen en [`docs/FASE_3A_RESPALDOS_TRANSITORIOS.md`](docs/FASE_3A_RESPALDOS_TRANSITORIOS.md).
 
+La Fase 3B V3 incorpora servicios internos de validación de períodos inclusivos y escrituras estructurales protegidas con transacciones y bloqueos por persona. Todavía no los conecta a los flujos administrativos. Su contrato de concurrencia y pruebas se documentan en [`docs/FASE_3B_PERIODOS_CONCURRENCIA.md`](docs/FASE_3B_PERIODOS_CONCURRENCIA.md).
+
 Cada Solicitud de Reemplazo tiene un único detalle `tramite_reemplazos` y, como máximo, un reemplazante. La unidad del trámite raíz conserva el contexto principal V2 y representa la unidad solicitante cuando existe `solicitudes_contrato`.
 
 Los tipos sembrados actualmente son `LICENCIA_MEDICA`, `PERMISO`, `LICENCIA_MATERNAL` y `CARGO_VACANTE`. Son motivos del Reemplazo; no constituyen un módulo independiente de ausencias o licencias.
