@@ -517,6 +517,11 @@ SOLICITUD TRANSITORIA
 Ausencias". La situación temporal del funcionario origen forma parte de
 la propia solicitud.
 
+🟢 **RF-15 — Registro inicial:** la jefatura o el administrativo
+autorizado registra el respaldo al crear la solicitud, sujeto a permisos
+y alcance organizacional efectivos. Gestión de Personas revisa, corrige
+y valida los antecedentes antes de comprometerlo (véase 8.7).
+
 ## 7.3 Transitoria con reemplazante propuesto
 
 La solicitud puede incluir una persona propuesta.
@@ -566,6 +571,9 @@ NINGUNO
 
 Posteriormente podrá determinarse una persona si las reglas
 institucionales lo permiten.
+
+🟢 El envío sin persona propuesta y su eventual incorporación posterior
+siguen las reglas de compromiso y disponibilidad de 8.7 y 8.8.
 
 ## 7.5 Funcionario origen ≠ persona contratada
 
@@ -662,8 +670,11 @@ Contrato:
 
 ## 8.2 Sin solapamiento del funcionario origen
 
-🟢 Un funcionario origen no puede mantener solicitudes transitorias
-cuyos períodos se superpongan.
+🟢 **RF-11 — Superposición de respaldos:** se bloquea el registro de
+respaldos transitorios con períodos superpuestos para un mismo
+funcionario origen, aunque los motivos sean distintos. Se usan días
+calendario y ambos extremos son inclusivos. La validación debe resistir
+la concurrencia entre solicitudes distintas (véase 12.8).
 
 ``` text
 Juan
@@ -675,9 +686,12 @@ Solicitud A: 01–20 octubre
 Solicitud B: 21–31 octubre  ✓
 ```
 
-Esta regla corresponde a un **bloqueo**, no a una advertencia.
+Esta regla corresponde a un **bloqueo**, no a una advertencia. La
+reutilización del *mismo* respaldo liberado se rige por 8.7: no equivale
+a registrar otro respaldo superpuesto. La identidad administrativa
+verificable de antecedentes externos duplicados sigue pendiente (18).
 
-## 8.3 Sin solapamiento de la persona contratada
+## 8.3 Sin solapamiento de la persona contratada o reservada
 
 🟢 Una persona no puede mantener contratos transitorios cuyos períodos
 se superpongan, aunque provengan de respaldos distintos.
@@ -697,10 +711,19 @@ Pedro → Carlos 21–31   ✓
 🟢 Una persona puede encadenar contratos provenientes de distintos
 respaldos, pero no mantener contratos transitorios simultáneos.
 
+🟢 Desde la aprobación, la persona propuesta, si existe, tiene una
+reserva de fechas. Su disponibilidad debe comprobarse frente a reservas
+vigentes y coberturas contractuales superpuestas de esa persona. La
+reserva de propuesta no demuestra por sí sola una contratación
+finalmente formalizada (véanse 8.8 y 11).
+
 ## 8.4 Exclusividad del respaldo
 
-🟢 Un mismo antecedente/respaldo transitorio puede asociarse como máximo
-a **una persona**.
+🟢 Un respaldo transitorio comprometido puede cubrir como máximo a
+**una persona a la vez**. No se distribuye entre personas ni solicitudes
+simultáneas. El cambio controlado de persona antes del documento y la
+liberación formal de una reserva después de este se rigen por 8.6 y 8.8;
+deben conservar todo el historial.
 
 ``` text
 RESPALDO A
@@ -708,11 +731,13 @@ RESPALDO A
    Carlos
 ```
 
-implica que ese mismo respaldo no puede utilizarse para Pedro, María u
-otra persona.
+impide asignar ese respaldo simultáneamente a Pedro, María u otra
+persona.
 
 🔵 V3 deberá representar una identidad persistente del
-antecedente/respaldo que permita garantizar esta regla.
+antecedente/respaldo que permita garantizar esta regla, sin equiparar
+un identificador interno nuevo con un antecedente administrativo
+externo diferente.
 
 ## 8.5 El respaldo no es divisible
 
@@ -740,11 +765,21 @@ ni un mecanismo de consumos parciales reutilizables.
 
 ## 8.6 Cambio de persona
 
-Antes del punto documental definitivo, la persona propuesta puede
-cambiar según las acciones permitidas.
+🟢 **RF-06 — Antes del documento:** Gestión de Personas puede cambiar
+la persona propuesta, manteniendo comprometido el respaldo de origen.
+Debe comprobar la disponibilidad de la nueva persona, liberar la reserva
+anterior, registrar la nueva y conservar el historial del cambio. Todo
+ocurre atómicamente: si falla la nueva reserva, permanece la anterior.
 
 🟢 Una vez generado el documento, no se sustituye a la persona editando
-la solicitud existente.
+silenciosamente la solicitud ni la versión documental existente.
+**RF-07:** una anulación formal posterior puede liberar su reserva,
+manteniendo comprometido el respaldo y conservando íntegro el documento.
+Esto no termina automáticamente una contratación ya formalizada.
+**RF-08:** solo Gestión de Personas ejecuta esa anulación formal; la
+jefatura puede solicitarla. Se registran solicitante, ejecutor, motivo
+y fecha. El procedimiento para modificar o terminar un contrato ya
+formalizado continúa pendiente (18).
 
 Si posteriormente Pedro debe cubrir un nuevo período:
 
@@ -761,7 +796,9 @@ SOLICITUD A
 → Pedro   ❌
 ```
 
-Debe existir una nueva solicitud que respalde específicamente a Pedro:
+Después del documento, Pedro requiere una nueva solicitud y un respaldo
+válido propio; no puede consumir días sobrantes del respaldo A todavía
+comprometido:
 
 ``` text
 SOLICITUD B
@@ -769,7 +806,66 @@ SOLICITUD B
 → Documento Pedro
 ```
 
-🟢 Nueva persona = nueva solicitud/respaldo administrativo.
+La antigua regla «nueva persona = nueva solicitud/respaldo
+administrativo» queda **reemplazada para el período anterior al
+documento** por RF-06. Después del documento sigue prohibida la
+sustitución silenciosa; una rectificación documental se rige por 10.11.
+
+## 8.7 Identidad, compromiso y liberación del respaldo
+
+🟢 **RF-10 — Identificación:** cada respaldo transitorio tiene un
+identificador interno obligatorio y generado automáticamente, una
+referencia administrativa externa opcional cuando exista, funcionario
+origen, motivo, fechas desde/hasta e historial de modificaciones,
+afectaciones y liberaciones. El identificador interno no prueba que dos
+registros correspondan a antecedentes administrativos distintos. No se
+presupone una referencia externa ni un formato institucional universal.
+
+🟢 **RF-01 — Compromiso:** el respaldo se compromete exclusivamente con
+una solicitud **al aprobar Gestión de Personas los antecedentes**. Crear,
+guardar, enviar o iniciar revisión no lo compromete. Aprobación y
+compromiso son una operación transaccional.
+
+🟢 **RF-02 — Devolución posterior:** si una solicitud aprobada se
+devuelve para corrección, el respaldo continúa comprometido. La
+devolución no libera automáticamente reservas (véase 9.5).
+
+🟢 **RF-03 — Anulación:** si la solicitud se anula antes de generar el
+documento institucional, se libera el respaldo comprometido. Si el
+documento ya se generó, el respaldo continúa comprometido aun cuando se
+anule la solicitud. Ambos resultados conservan historial.
+
+🟢 **RF-04 — Reutilización:** el respaldo liberado válidamente por una
+anulación anterior al documento puede usarse en una solicitud nueva,
+tras verificar que no haya compromisos vigentes ni conflictos de
+períodos. Esto no habilita a reutilizar días sobrantes de un respaldo
+todavía comprometido (8.5).
+
+## 8.8 Reserva de persona propuesta
+
+🟢 **RF-05 — Reserva:** al aprobar antecedentes, Gestión de Personas
+reserva las fechas de la persona propuesta, cuando existe, junto con el
+compromiso del respaldo. Si aún no existe persona, solo se compromete el
+respaldo. Una incorporación posterior exige comprobar disponibilidad
+antes de crear la reserva. Los cambios y liberaciones se rigen por 8.6.
+
+🟢 La reserva debe respetar la cobertura contenida en el respaldo y la
+ausencia de solapamientos de 8.1 y 8.3. Propuesta, reserva y persona
+finalmente contratada son hechos distintos.
+
+## 8.9 Rectificación de fechas
+
+🟢 **RF-12 — Fechas del respaldo:** un respaldo libre puede corregirse.
+Si está comprometido, la rectificación requiere intervención controlada
+de Gestión de Personas, historial de valores anteriores y nuevos,
+responsable, motivo, validación de conflictos y coherencia con la
+cobertura.
+
+🟢 **RF-14 — Cobertura contenida:** si las nuevas fechas del respaldo
+dejan la cobertura fuera de su período, se bloquea la operación hasta
+que Gestión de Personas ajuste explícitamente ambos períodos. No se
+ajustan fechas contractuales automáticamente. Si ya existe documento,
+se aplica además 10.11.
 
 ------------------------------------------------------------------------
 
@@ -844,6 +940,31 @@ estado posterior
 🟢 Pueden existir múltiples ciclos de devolución/corrección utilizando
 el historial, sin columnas específicas para cada devolución.
 
+🟢 **RF-16 — Corrección antes de aprobación:** cuando se devuelve la
+solicitud, la jefatura o el administrativo autorizado puede corregir el
+respaldo; Gestión de Personas puede corregirlo directamente durante su
+revisión. Cada operación depende de estado, permisos y alcance.
+
+🟢 **RF-17 — Devolución después de aprobación:** la jefatura o el
+administrativo autorizado solo puede modificar los antecedentes que
+Gestión de Personas habilite expresamente. Cambiar el respaldo, sus
+fechas, la persona reservada o su período exige intervención de Gestión
+de Personas. El respaldo y las reservas vigentes permanecen
+comprometidos salvo una operación institucional autorizada (8.6–8.9).
+El backend debe aplicar esta protección incluso si la interfaz ofrece
+un campo editable.
+
+🟢 **RF-18 — Habilitación mixta:** Gestión de Personas puede habilitar
+secciones completas o campos específicos de una sección para una
+devolución concreta. Se registra qué se habilitó, quién lo hizo y para
+qué devolución. Integridad, permisos y reservas prevalecen sobre esa
+habilitación.
+
+El flujo V2 actualmente solo devuelve desde `EN_REVISION`, antes de
+aprobar. La devolución posterior a aprobación es una capacidad V3 por
+diseñar; no se debe interpretar el estado V2
+`DEVUELTA_PARA_CORRECCION` como liberación automática.
+
 ## 9.6 Aprobación ≠ formalización
 
 La conformidad o aprobación de antecedentes no equivale automáticamente
@@ -894,6 +1015,35 @@ completada si nunca ocurrió.
 
 🔵 Puede utilizarse un stepper para el camino principal y una línea de
 tiempo separada para eventos opcionales/repetibles.
+
+## 9.10 Anulación y matriz resumida de efectos
+
+🟢 **RF-09 — Responsable:** antes del primer envío, la jefatura
+autorizada puede anular directamente su solicitud. Después del envío,
+solo Gestión de Personas puede ejecutar la anulación; la jefatura puede
+solicitarla. Se respetan permiso, alcance organizacional y estado. La
+anulación de la solicitud se distingue de la anulación formal de una
+reserva de persona posterior al documento (RF-07/RF-08, 8.6).
+
+La matriz resume efectos funcionales V3; los nombres de estados y las
+transiciones técnicas adicionales quedan por diseñar. «Reserva» se
+refiere a una persona propuesta existente.
+
+| Momento / actuación | Respaldo transitorio | Reserva de persona | Responsable de ejecución |
+|---|---|---|---|
+| Borrador, guardado, envío o revisión inicial | Libre; sin compromiso | Ninguna | Jefatura o administrativo autorizado registra/envía; Gestión de Personas revisa. |
+| Aprobación de antecedentes | Comprometido con una solicitud, atómicamente | Se crea si hay persona; si no, ninguna | Gestión de Personas. |
+| Devolución posterior a aprobación | Permanece comprometido | Permanece vigente; edición protegida | Gestión de Personas devuelve y habilita correcciones. |
+| Anulación de solicitud antes del primer envío | Libre | Ninguna | Jefatura autorizada. |
+| Anulación de solicitud después del envío y antes del documento | Se libera si estaba comprometido | Se libera la reserva vigente si existía | Gestión de Personas; la jefatura puede solicitar. |
+| Cambio de persona antes del documento | Permanece comprometido | Sustitución atómica tras validar disponibilidad | Gestión de Personas. |
+| Documento generado | Permanece comprometido | Permanece vigente | Generación sujeta a autoridad documental pendiente. |
+| Anulación de solicitud después del documento | Permanece comprometido | Puede liberarse mediante anulación formal separada | Gestión de Personas; la jefatura puede solicitar. |
+| Rectificación posterior al documento que afecta su contenido | Permanece comprometido | Se revalida si cambian fechas; no autoriza sustituir persona | Gestión de Personas; nueva versión documental, procedimiento pendiente. |
+
+La formalización no libera el respaldo (12.3). La liberación de una
+reserva posterior al documento no extingue por sí sola un contrato
+formalizado (8.6 y 11).
 
 ------------------------------------------------------------------------
 
@@ -1081,6 +1231,20 @@ fecha
 versión
 ```
 
+## 10.11 Rectificación posterior a la generación
+
+🟢 **RF-13 — Versiones rectificadas:** cuando una rectificación
+posterior al documento afecta su contenido, Gestión de Personas genera
+una nueva versión rectificada y conserva íntegra la original. Cada
+versión conserva fecha, responsable y datos correspondientes, además
+de una relación trazable con la anterior. No se sobrescriben archivos,
+snapshots ni reservas históricas. Esta regla de versionado no autoriza
+por sí sola a sustituir la persona tras el documento (8.6).
+
+⚪ El versionado documental completo corresponde a Fase 5. Hasta que
+exista el flujo autorizado, esta regla no habilita la regeneración del
+PDF V3. Continúa el bloqueo descrito en 10.5 y en el README.
+
 ------------------------------------------------------------------------
 
 # 11. Formalización
@@ -1222,6 +1386,49 @@ La arquitectura determinará posteriormente qué reglas requieren
 constraints, índices únicos, transacciones, locks, servicios de dominio
 u otros mecanismos.
 
+## 12.8 Impacto técnico de respaldos y reservas 🔵
+
+El diseño de Fase 3 debe resolver, sin convertir estas opciones en reglas
+funcionales nuevas:
+
+-   La identidad persistente del respaldo, su exclusividad y la
+    referencia externa opcional, sin deducir identidad administrativa
+    desde un ID generado (RF-10 y 18).
+-   Un historial inmutable de afectaciones, liberaciones, cambios de
+    persona y reutilización posterior de un respaldo liberado; la
+    consulta actual puede cambiar, pero no deben reescribirse eventos
+    pasados (8.7, 8.8 y 13).
+-   La representación de reservas de fechas de personas propuestas y su
+    liberación, separada de la persona finalmente contratada y de la
+    cobertura contractual formalizada (8.3, 8.8 y 11).
+-   La atomicidad de aprobación/compromiso, cambio de persona y
+    anulación; en MySQL 8.4, definir una estrategia de transacciones y
+    bloqueos que serialice la competencia por funcionario origen,
+    respaldo y persona, incluso cuando todavía no hay fila de reserva.
+    Una consulta de solapamiento sin protección de concurrencia no basta.
+-   La validación de intervalos inclusivos: dos períodos se solapan si
+    `inicio_a <= fin_b` y `inicio_b <= fin_a`; períodos consecutivos sin
+    día común son válidos. Revalidar al registrar, aprobar, reservar,
+    cambiar, reutilizar o rectificar, según corresponda.
+-   La habilitación de secciones o campos por devolución concreta, con
+    autorización y validación backend de cada modificación (RF-17 y
+    RF-18). Una habilitación no suspende invariantes.
+-   Operaciones distintas para anulación de solicitud, anulación formal
+    de reserva y rectificación documental; cada una requiere efectos,
+    responsable e historial propios (8.6, 9.10 y 10.11).
+-   Compatibilidad con trámites V2 históricos: `solicitudes_contrato`
+    identifica el contexto V3, mientras los V2 carecen de esa fila. No
+    se inventan respaldos, reservas, autoridades ni equivalencias
+    contractuales mediante backfill.
+
+El esquema `solicitudes_contrato` de Fase 2 conserva modalidad,
+solicitante, autoridad, origen y destino; por sí solo no representa la
+identidad, compromiso, liberación ni historial del respaldo. El flujo
+V2 actual exige reemplazante al enviar, valida superposición del origen
+incluso en borrador, aprueba sin reservar persona y no ofrece anulación
+ni devolución posterior a aprobación. Son brechas de implementación
+respecto de V3, no excepciones a estas reglas funcionales.
+
 ------------------------------------------------------------------------
 
 # 13. Historial y trazabilidad
@@ -1247,6 +1454,9 @@ Documento regenerado
 Documento anulado
 Observación registrada
 Formalización registrada
+Respaldo comprometido o liberado
+Reserva de persona creada, cambiada o liberada
+Corrección habilitada para una devolución
 ```
 
 sin que todos impliquen una transición principal.
@@ -1260,6 +1470,11 @@ desaparecer por desactivación.
 
 🟢 Los cambios posteriores de nombre, unidad, autoridad u otros datos
 actuales no deben modificar snapshots documentales históricos.
+
+🟢 Las modificaciones y rectificaciones conservan valores anteriores y
+nuevos, responsable, fecha y motivo cuando corresponda. La reutilización
+de un respaldo liberado enlaza su compromiso anterior con el nuevo sin
+sobrescribir afectaciones, reservas ni documentos históricos.
 
 ------------------------------------------------------------------------
 
@@ -1496,15 +1711,19 @@ posteriormente convertirse en pruebas automatizadas:
 8.  Una solicitud transitoria puede enviarse sin candidato.
 9.  El período contractual debe estar contenido dentro del período
     origen.
-10. No puede existir solapamiento temporal del funcionario origen.
-11. No puede existir solapamiento temporal de la persona
-    contratada/reemplazante.
+10. No pueden registrarse respaldos transitorios superpuestos del mismo
+    funcionario origen, aunque tengan motivos distintos.
+11. No puede existir solapamiento temporal de reservas vigentes de una
+    persona propuesta ni de contratos transitorios de una misma persona.
 12. Una persona puede tener contratos transitorios consecutivos, pero no
     simultáneos.
-13. Un respaldo transitorio puede asociarse como máximo a una persona.
+13. Un respaldo transitorio comprometido se asocia a una sola solicitud
+    y cubre como máximo a una persona a la vez.
 14. Un respaldo no puede dividirse entre varias personas.
 15. El uso parcial de un respaldo no genera saldo reutilizable.
-16. Una nueva persona requiere una nueva solicitud que la respalde.
+16. Antes del documento, Gestión de Personas puede cambiar atómicamente
+    la persona reservada; después, no se sustituye silenciosamente y una
+    nueva cobertura requiere solicitud y respaldo válidos propios.
 17. Una vez generado el documento, la persona y los datos de esa versión
     no se sustituyen mediante edición silenciosa.
 18. Los documentos históricos conservan snapshot y versión.
@@ -1547,6 +1766,17 @@ posteriormente convertirse en pruebas automatizadas:
     `tramites.ver_todos` no es un bypass universal.
 41. El filtrado de selectores no reemplaza la revalidación de alcance en
     backend.
+42. Solo la aprobación de antecedentes compromete el respaldo y, si
+    existe persona propuesta, reserva sus fechas en la misma operación.
+43. Una devolución posterior a aprobación mantiene respaldo y reservas;
+    las ediciones se limitan a lo habilitado por Gestión de Personas.
+44. La anulación previa al documento libera el respaldo comprometido;
+    después del documento este permanece comprometido.
+45. Un respaldo liberado válidamente puede reutilizarse tras verificar
+    compromisos y períodos; nunca se reutiliza un saldo de días de un
+    respaldo comprometido.
+46. Las anulaciones y rectificaciones conservan historial, y un
+    documento rectificado crea una nueva versión íntegra.
 
 ------------------------------------------------------------------------
 
@@ -1556,7 +1786,7 @@ La arquitectura V3 deberá proponer, sin alterar las reglas funcionales
 anteriores:
 
 -   Cómo representar una identidad persistente del antecedente/respaldo
-    transitorio.
+    transitorio, sus compromisos, liberaciones y reutilizaciones.
 -   Cómo separar físicamente destinación funcional y cobertura
     contractual.
 -   Cómo representar técnicamente la unidad solicitante, el registrador,
@@ -1565,8 +1795,14 @@ anteriores:
 -   Cómo modelar propuesta y resultado final.
 -   Cómo almacenar snapshots por documento/version.
 -   Cómo determinar la versión documental vigente.
--   Cómo proteger técnicamente solapamientos y exclusividad.
--   Cómo representar cancelaciones, rectificaciones o anulaciones.
+-   Cómo proteger técnicamente solapamientos y exclusividad bajo
+    concurrencia en MySQL 8.4, también cuando aún no hay reserva.
+-   Cómo representar reservas de persona propuesta y liberaciones sin
+    sobrescribir su historial.
+-   Cómo representar anulaciones de solicitud, anulaciones formales de
+    reserva y rectificaciones documentales como actuaciones distintas.
+-   Cómo persistir habilitaciones de edición por devolución, sección o
+    campo, y aplicarlas en backend.
 -   Cómo diseñar bandejas sin convertirlas innecesariamente en estados.
 -   Cómo reutilizar antecedentes documentales personales en una fase
     futura manteniendo evidencia de la versión utilizada.
@@ -1586,15 +1822,26 @@ reglas rígidas:
 -   Requisitos documentales exactos por tipo de solicitud.
 -   Significado institucional exacto de dotación, destinación y vínculo.
 -   Catálogo y reglas de calidad contractual.
--   Autoridad que debe aparecer en cada tipo documental.
+-   Autoridad institucional correspondiente a cada acto documental; la
+    generación V3 continúa bloqueada hasta definirla.
 -   Reglas específicas de titular/subrogante para cada acto.
--   Identidad administrativa exacta del respaldo transitorio.
--   Momento exacto en que debe reservarse contractualmente una persona
-    propuesta.
+-   Criterio institucional para verificar si referencias externas
+    iguales, ausentes o diferentes corresponden al mismo antecedente
+    administrativo. El identificador interno no resuelve esta identidad.
+-   Procedimiento para confirmar a la persona finalmente contratada,
+    distinto de la propuesta y su reserva.
+-   Incompatibilidades contractuales adicionales a la superposición de
+    fechas.
+-   Equivalencia contractual verificable de registros V2 históricos;
+    no se inferirá de un vínculo de dotación.
 -   Terminología formal para extensiones, continuidades o nuevos
     períodos.
--   Procedimiento institucional exacto para rectificación, anulación o
-    corrección de una formalización.
+-   Procedimiento institucional exacto para modificar o terminar
+    contratos ya formalizados; la liberación de una reserva no lo hace.
+-   Alcance y condiciones para rectificar una solicitud ya anulada o un
+    documento generado que no llegó a formalización. Afecta la
+    autorización y las transiciones posteriores, sin alterar la regla
+    de conservación de versiones.
 -   Evidencia final requerida para considerar una contratación
     formalizada.
 -   Información proveniente de SIRH que deba conservarse localmente.
@@ -1744,6 +1991,30 @@ RESPALDO TRANSITORIO = EXCLUSIVO Y NO DIVISIBLE
 
 DOCUMENTO GENERADO = PUNTO DE CONGELAMIENTO
 ```
+
+## 21.1 Relación de las decisiones consolidadas con las fases
+
+🔵 **Fase 3 — respaldos y reservas:** analizar y diseñar la identidad
+del respaldo, compromisos y liberaciones, reutilización autorizada,
+reservas de personas, solapamientos inclusivos, operaciones atómicas y
+correcciones habilitadas. La matriz de 9.10 y el análisis de 12.8 son
+sus entradas funcionales; este documento no implementa el flujo.
+
+🟡 **Fase 4 — identidad definitiva:** distinguir la persona propuesta y
+reservada de la persona finalmente contratada. Su procedimiento de
+confirmación sigue pendiente; no se infiere desde la propuesta ni desde
+un vínculo de dotación V2.
+
+⚪ **Fase 5 — versionado documental:** preservar cada documento y
+snapshot, generar nuevas versiones rectificadas cuando cambie su
+contenido y mantener la relación entre versiones. La generación V3
+sigue bloqueada hasta definir la autoridad institucional del acto.
+
+⚪ **Fase 6 — formalización y destino funcional:** diferenciar cobertura
+contractual final, destinación funcional y reservas previas. La
+anulación formal de una reserva no constituye término de un contrato
+formalizado; el procedimiento institucional correspondiente permanece
+pendiente.
 
 ------------------------------------------------------------------------
 
