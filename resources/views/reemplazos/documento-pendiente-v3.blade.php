@@ -1,6 +1,7 @@
 <x-app-layout>
     <div class="py-8 sm:py-10">
         <div class="mx-auto max-w-6xl space-y-5 px-4 sm:px-6 lg:px-8">
+            @include('reemplazos.partials.anulacion')
             @include('reemplazos.partials.ficha-base', [
                 'volverHref' => $retorno['href'],
                 'volverTexto' => $retorno['text'],

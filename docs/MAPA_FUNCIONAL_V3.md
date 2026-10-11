@@ -1034,6 +1034,19 @@ tiempo separada para eventos opcionales/repetibles.
 
 ## 9.10 Anulación y matriz resumida de efectos
 
+Aclaración confirmada de Fase 3C.2A: ANULADA es terminal para solicitudes
+TRANSITORIAS V3. La petición de anulación es una actuación de historial y no
+crea estado. Antes del primer envío puede ejecutar la jefatura o administrativo
+autorizado; después solo Gestión de Personas. El primer envío se determina por
+historial persistente, incluso si vuelve a borrador o corrección. La operación
+previa al documento libera afectación y reserva atómicamente y conserva todos
+los antecedentes. Su integración técnica se limita a BORRADOR,
+ENVIADA_GESTION_PERSONAS, EN_REVISION, DEVUELTA_PARA_CORRECCION y
+LISTA_GENERAR_DOCUMENTO, sin documento ni formalización existentes. No habilita
+anulación formal de reserva posterior al documento ni término de contrato.
+Véase FASE_3C2A_ANULACIONES_LIBERACIONES.md.
+
+
 🟢 **RF-09 — Responsable:** antes del primer envío, la jefatura
 autorizada puede anular directamente su solicitud. Después del envío,
 solo Gestión de Personas puede ejecutar la anulación; la jefatura puede

@@ -7,6 +7,7 @@ use App\Models\Tramite;
 use App\Models\User;
 use App\Services\Accesos\AccesoOperativoService;
 use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
+use App\Services\Reemplazos\AnulacionTransitoria;
 use App\Services\SolicitudesContrato\ContextoSolicitudContratoService;
 
 class TramiteReemplazoPolicy
@@ -52,6 +53,32 @@ class TramiteReemplazoPolicy
         return $user->active
             && $user->can('reemplazos.formalizar')
             && $this->puedeGestionar($user, $tramite);
+    }
+
+    public function annul(User $user, Tramite $tramite): bool
+    {
+        $reglas = app(AnulacionTransitoria::class);
+        if (! $user->active || ! $user->can('reemplazos.anular')
+            || $tramite->tipoTramite?->codigo !== 'REEMPLAZO'
+            || $tramite->solicitudContrato?->modalidad !== ModalidadSolicitudContrato::TRANSITORIA
+            || ! $reglas->antesDelDocumento($tramite)) {
+            return false;
+        }
+        if ($reglas->fueEnviada($tramite)) {
+            return $user->can('reemplazos.anular_enviadas') && $this->puedeGestionar($user, $tramite);
+        }
+
+        return $tramite->estadoTramite?->codigo === 'BORRADOR' && $this->puedeOperar($user, $tramite);
+    }
+
+    public function requestAnnulment(User $user, Tramite $tramite): bool
+    {
+        $reglas = app(AnulacionTransitoria::class);
+
+        return $tramite->tipoTramite?->codigo === 'REEMPLAZO'
+            && $tramite->solicitudContrato?->modalidad === ModalidadSolicitudContrato::TRANSITORIA
+            && $reglas->antesDelDocumento($tramite) && $reglas->fueEnviada($tramite)
+            && $this->puedeOperar($user, $tramite);
     }
 
     private function puedeOperar(User $user, Tramite $tramite): bool

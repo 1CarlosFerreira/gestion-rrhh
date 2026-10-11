@@ -23,6 +23,7 @@ class RolesPermisosSeeder extends Seeder
             'tramites.adjuntos.descargar',
             'tramites.adjuntos.anular',
             'reemplazos.crear',
+            'reemplazos.anular',
             'reemplazos.revisar',
             'reemplazos.generar_documento',
             'reemplazos.formalizar',
@@ -43,6 +44,8 @@ class RolesPermisosSeeder extends Seeder
             'personas.gestionar',
         ];
 
+        Permission::findOrCreate('reemplazos.anular_enviadas', 'web');
+
         foreach ($permissions as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
@@ -57,6 +60,8 @@ class RolesPermisosSeeder extends Seeder
                 'reemplazos.formalizar',
                 'reemplazos.generar_documento',
                 'reemplazos.revisar',
+                'reemplazos.anular',
+                'reemplazos.anular_enviadas',
                 'reemplazos.alcance_global',
                 'responsabilidades.ver',
                 'tramites.adjuntos.anular',
@@ -69,6 +74,7 @@ class RolesPermisosSeeder extends Seeder
                 'estructura_organizacional.ver',
                 'personas.ver',
                 'reemplazos.crear',
+                'reemplazos.anular',
                 'responsabilidades.ver',
                 'tramites.adjuntos.cargar',
                 'tramites.adjuntos.descargar',
@@ -79,6 +85,7 @@ class RolesPermisosSeeder extends Seeder
                 'dotacion.ver',
                 'estructura_organizacional.ver',
                 'reemplazos.crear',
+                'reemplazos.anular',
                 'tramites.adjuntos.cargar',
                 'tramites.adjuntos.descargar',
                 'tramites.ver_unidades',

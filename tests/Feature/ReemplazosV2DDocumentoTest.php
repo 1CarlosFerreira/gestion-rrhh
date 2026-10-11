@@ -20,6 +20,7 @@ use App\Models\Tramite;
 use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use App\Models\UserUnidadAcceso;
+use App\Services\Reemplazos\AnulacionTransitoria;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
@@ -97,6 +98,22 @@ class ReemplazosV2DDocumentoTest extends TestCase
         $inactiveGlobal->givePermissionTo(['reemplazos.generar_documento', 'tramites.ver_todos']);
         $this->actingAs($inactiveGlobal)->post(route('reemplazos.documentos.store', $tramite))->assertForbidden();
         $this->assertSame(0, DocumentoGenerado::query()->count());
+    }
+
+    public function test_v3_annulment_route_preserves_real_historical_v2_document(): void
+    {
+        $tramite = $this->tramiteListo();
+        $this->actingAs($this->user)->post(route('reemplazos.documentos.store', $tramite))->assertRedirect();
+        $documento = DocumentoGenerado::query()->with('adjunto')->sole();
+        $snapshot = $documento->getAttributes();
+        $bytes = Storage::disk('private')->get($documento->adjunto->storage_path);
+        $this->user->givePermissionTo(['reemplazos.anular', 'reemplazos.anular_enviadas']);
+        $this->post(route('reemplazos.annul', $tramite), ['motivo' => 'Anulación no aplicable a V2'])->assertSessionHasErrors('solicitud');
+        $this->assertSame($snapshot, $documento->fresh()->getAttributes());
+        $this->assertSame($bytes, Storage::disk('private')->get($documento->adjunto->storage_path));
+        $this->assertSame('DOCUMENTO_GENERADO', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertFalse(app(AnulacionTransitoria::class)->antesDelDocumento($tramite));
+        $this->assertSame(0, $tramite->historial()->where('action_code', 'ANULAR_SOLICITUD')->count());
     }
 
     public function test_legacy_advanced_request_without_proposal_can_generate_its_historical_pdf(): void

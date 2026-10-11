@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\TramiteController;
 use App\Http\Controllers\Admin\UnidadResponsableController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserUnidadAccesoController;
+use App\Http\Controllers\AnulacionTransitoriaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GestionPersonasReemplazoController;
 use App\Http\Controllers\ProfileController;
@@ -28,6 +29,8 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     Route::get('/reemplazos/crear', [ReemplazoController::class, 'create'])->name('reemplazos.create');
+    Route::post('/reemplazos/{tramite}/anular', [AnulacionTransitoriaController::class, 'annul'])->name('reemplazos.annul');
+    Route::post('/reemplazos/{tramite}/solicitar-anulacion', [AnulacionTransitoriaController::class, 'request'])->name('reemplazos.request-annulment');
     Route::post('/reemplazos', [ReemplazoController::class, 'store'])->name('reemplazos.store');
     Route::get('/reemplazos/funcionarios', [ReemplazoController::class, 'funcionarios'])->name('reemplazos.funcionarios');
     Route::get('/reemplazos/{tramite}', [ReemplazoController::class, 'show'])->name('reemplazos.show');

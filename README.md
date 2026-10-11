@@ -148,7 +148,7 @@ Los roles son administrables y un usuario puede tener más de uno. La autorizaci
 | Administración | `admin.usuarios`, `admin.roles_permisos` |
 | Trámites | `tramites.ver_unidades`, `tramites.ver_todos`, `tramites.crear` |
 | Adjuntos | `tramites.adjuntos.cargar`, `tramites.adjuntos.descargar`, `tramites.adjuntos.anular` |
-| Reemplazos | `reemplazos.crear`, `reemplazos.revisar`, `reemplazos.generar_documento`, `reemplazos.formalizar` |
+| Reemplazos | `reemplazos.crear`, `reemplazos.revisar`, `reemplazos.generar_documento`, `reemplazos.formalizar`, `reemplazos.anular`, `reemplazos.anular_enviadas` |
 | Estructura | `estructura_organizacional.ver`, `estructura_organizacional.gestionar`, `tipos_unidad_organizacional.gestionar` |
 | Responsabilidades | `responsabilidades.ver`, `responsabilidades.gestionar` |
 | Accesos operativos | `accesos_operativos.ver`, `accesos_operativos.gestionar` |
@@ -419,6 +419,20 @@ La formalización incorpora al **reemplazante**, no al funcionario ausente, en l
 El vínculo se crea con origen técnico `DOCUMENTO_FIRMADO` y referencia al trámite. Este nombre de origen expresa que el flujo recibió una evidencia administrativa; el sistema no verifica criptográficamente una firma.
 
 La creación es idempotente: si ya existe un vínculo con `origen_tramite_id` para ese trámite se devuelve el mismo, y las restricciones únicas impiden duplicar tanto la formalización como el alta. Si existe una formalización pero falta su vínculo, se informa una inconsistencia en vez de crear silenciosamente otra realidad.
+
+### Anulaciones TRANSITORIAS V3 (Fase 3C.2A)
+
+Antes del documento se puede anular una solicitud V3 mediante ANULAR_SOLICITUD
+hacia ANULADA terminal. Libera afectación y reserva en una transacción y conserva
+historial, motivo, actor y fecha. Antes del primer envío actúa el operador con
+permiso y alcance; después, Gestión de Personas con reemplazos.anular_enviadas.
+El envío se determina por historial persistente. Las peticiones no cambian estado
+ni liberan compromisos y se muestran en el expediente y la bandeja de revisión.
+Un respaldo liberado puede seleccionarse en otra solicitud compatible y genera
+una afectación nueva. V2 conserva su flujo y no admite esta operación.
+La generación documental V3 y la anulación formal posterior al documento siguen
+pendientes. Catálogo, permisos, instalación y pruebas se describen en
+[FASE_3C2A_ANULACIONES_LIBERACIONES.md](docs/FASE_3C2A_ANULACIONES_LIBERACIONES.md).
 
 ## 11. Pantallas principales
 

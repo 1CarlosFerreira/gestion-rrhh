@@ -47,7 +47,7 @@ class TransicionarTramite
             if ($locked->submitted_at === null && $transition->estadoDestino->codigo === 'ENVIADA_GESTION_PERSONAS') {
                 $locked->submitted_at = now();
             }
-            if ($transition->estadoDestino->codigo === 'FORMALIZADA') {
+            if ($transition->estadoDestino->codigo === 'FORMALIZADA' || ($transition->estadoDestino->codigo === 'ANULADA' && $locked->solicitudContrato()->exists())) {
                 $locked->finalized_at = now();
             }
             $locked->save();

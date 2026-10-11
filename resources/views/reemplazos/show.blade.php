@@ -61,11 +61,15 @@
                 </div>
             </header>
 
+            @include('reemplazos.partials.anulacion')
             <section aria-labelledby="estado-tramite-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 id="estado-tramite-title" class="text-base font-semibold text-gray-950">Estado del trámite</h2>
                     <x-status-badge :estado="$tramite->estadoTramite" />
                 </div>
+                @if($estadoActual === 'ANULADA')
+                    <p class="mt-4 text-sm text-gray-700">Solicitud anulada definitivamente. Sus antecedentes permanecen disponibles para consulta.</p>
+                @else
                 <ol class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Progreso de la solicitud">
                     @foreach($estadosReemplazo as $codigo => $nombre)
                         @php
@@ -81,6 +85,7 @@
                         </li>
                     @endforeach
                 </ol>
+                @endif
             </section>
 
             <section aria-labelledby="antecedentes-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">

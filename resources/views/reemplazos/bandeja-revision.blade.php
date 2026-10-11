@@ -137,7 +137,7 @@
                                             </div>
                                         </dl>
                                     </td>
-                                    <td class="px-4 py-3 align-top"><x-status-badge :estado="$tramite->estadoTramite" /></td>
+                                    <td class="px-4 py-3 align-top"><x-status-badge :estado="$tramite->estadoTramite" /> @if($tramite->peticiones_anulacion_count)<p class="mt-1 text-xs text-red-700">Petición de anulación registrada</p>@endif</td>
                                     <td class="whitespace-nowrap px-4 py-3 align-top">
                                         @if($tramite->submitted_at)
                                             <span class="block font-medium text-gray-800">{{ $tramite->submitted_at->format('d/m/Y') }}</span>

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Actions\Reemplazos\AnularSolicitudTransitoriaAction;
 use App\Models\CalidadContractual;
 use App\Models\PersonaUnidadVinculo;
 use App\Models\Tramite;
@@ -23,12 +24,15 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(AnularSolicitudTransitoriaAction::class);
         $this->app->tag([ReemplazoTransitionGuard::class], 'tramite.transition.guards');
     }
 
     public function boot(): void
     {
         Gate::policy(Tramite::class, TramitePolicy::class);
+        Gate::define('anular-reemplazo', TramiteReemplazoPolicy::class.'@annul');
+        Gate::define('solicitar-anulacion-reemplazo', TramiteReemplazoPolicy::class.'@requestAnnulment');
         Gate::define('crear-reemplazo', TramiteReemplazoPolicy::class.'@create');
         Gate::define('ver-reemplazo', TramiteReemplazoPolicy::class.'@view');
         Gate::define('editar-reemplazo', TramiteReemplazoPolicy::class.'@update');

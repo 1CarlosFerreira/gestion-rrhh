@@ -22,6 +22,7 @@ use App\Support\Tramites\ResolverRetornoTramite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class GestionPersonasReemplazoController extends Controller
@@ -30,9 +31,9 @@ class GestionPersonasReemplazoController extends Controller
     {
         abort_unless($request->user()->can('reemplazos.revisar'), 403);
         $ids = $accesos->unidadesAccesibles($request->user(), today())->pluck('id');
-        $estadosActivos = ['ENVIADA_GESTION_PERSONAS', 'EN_REVISION', 'LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO'];
+        $estadosActivos = ['ENVIADA_GESTION_PERSONAS', 'EN_REVISION', 'LISTA_GENERAR_DOCUMENTO', 'DOCUMENTO_GENERADO', 'DEVUELTA_PARA_CORRECCION'];
         $pestana = $request->query('pestana') === 'finalizados' ? 'finalizados' : 'activos';
-        $estadosBandeja = $pestana === 'finalizados' ? ['FORMALIZADA'] : $estadosActivos;
+        $estadosBandeja = $pestana === 'finalizados' ? ['FORMALIZADA', 'ANULADA'] : $estadosActivos;
         $consultaBase = Tramite::query()
             ->whereHas('tipoTramite', fn ($q) => $q->where('codigo', 'REEMPLAZO'));
         if (! $request->user()->can('reemplazos.alcance_global')) {
@@ -81,6 +82,7 @@ class GestionPersonasReemplazoController extends Controller
             ->when($unidadId > 0, fn ($query) => $query->where('unidad_organizacional_id', $unidadId));
 
         $tramites = $consulta
+            ->withCount(['historial as peticiones_anulacion_count' => fn ($q) => $q->where('action_code', 'SOLICITAR_ANULACION')])
             ->with(['unidadOrganizacional', 'estadoTramite', 'solicitudContrato', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'formalizacionReemplazo'])
             ->when($pestana === 'finalizados', fn ($query) => $query->orderByDesc('finalized_at'), fn ($query) => $query->orderBy('submitted_at'))
             ->paginate(25, ['*'], $pestana === 'finalizados' ? 'finalizados_page' : 'activos_page')
@@ -93,7 +95,10 @@ class GestionPersonasReemplazoController extends Controller
     {
         $this->authorizeShow($tramite);
         $tramite->load(['unidadOrganizacional', 'estadoTramite', 'creador', 'solicitudContrato', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'reemplazo.reemplazanteEstamento', 'reemplazo.reemplazanteProfesion', 'reemplazo.reemplazanteCalidadContractual', 'reemplazo.tipoReemplazo', 'revisionReemplazo.clasificacionArea', 'revisionReemplazo.revisadoPor', 'formalizacionReemplazo.estamento', 'formalizacionReemplazo.profesion', 'formalizacionReemplazo.calidadContractual', 'formalizacionReemplazo.adjunto', 'formalizacionReemplazo.formalizadoPor', 'vinculoDotacion', 'adjuntos.tipoDocumento', 'historial.usuario', 'documentosGenerados.adjunto', 'documentosGenerados.generadoPor']);
-        $tramite->reemplazo->funcionario->load([
+        if ($tramite->estadoTramite->codigo === 'ANULADA') {
+            return view('reemplazos.show', ['tramite' => $tramite, 'retorno' => $resolverRetorno->resolve($request, 'revision_reemplazos')]);
+        }
+        $tramite->reemplazo->funcionario?->load([
             'vinculosDotacion' => fn ($query) => $query
                 ->with(['estamento', 'profesion'])
                 ->where('unidad_organizacional_id', $tramite->solicitudContrato?->unidad_origen_id ?? $tramite->unidad_organizacional_id)
@@ -151,15 +156,18 @@ class GestionPersonasReemplazoController extends Controller
         return redirect()->route('gestion-personas.reemplazos.index')->with('status', 'Solicitud devuelta para corrección.');
     }
 
-    public function approve(SaveRevisionReemplazoRequest $request, Tramite $tramite, AprobarAntecedentesReemplazoAction $aprobar, AprobarAntecedentesTransitoriosAction $aprobarTransitorio): RedirectResponse
+    public function approve(SaveRevisionReemplazoRequest $request, Tramite $tramite, AprobarAntecedentesReemplazoAction $aprobar, AprobarAntecedentesTransitoriosAction $aprobarTransitorio, RespaldosAptosSolicitudTransitoria $respaldosAptos): RedirectResponse
     {
         $this->authorizeReview($tramite);
         if ($tramite->solicitudContrato()->exists()) {
+            if ($tramite->estadoTramite?->codigo !== 'EN_REVISION') {
+                throw ValidationException::withMessages(['solicitud' => 'La solicitud no se encuentra en revisión.']);
+            }
             $datos = $request->validated();
             $version = RespaldoTransitorioVersion::query()
                 ->with('respaldo')
                 ->whereKey($datos['respaldo_version_id'])
-                ->whereHas('respaldo', fn ($query) => $query->where('solicitud_origen_id', $tramite->solicitudContrato()->value('id')))
+                ->whereIn('respaldo_id', $respaldosAptos->obtener($tramite->solicitudContrato, $tramite->reemplazo)->pluck('id'))
                 ->firstOrFail();
             $aprobarTransitorio->execute($tramite, $version->respaldo, $version->id, collect($datos)->only(['grado_eus', 'clasificacion_area_id', 'cumple_normativa', 'observacion_administrativa'])->all(), $request->user());
         } else {

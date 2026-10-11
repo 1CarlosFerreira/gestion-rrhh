@@ -40,3 +40,9 @@ docker compose exec -e RRHH_MYSQL_3C1_TEST_DATABASE=gestion_rrhh_3c1_test_ejempl
 El nombre de la base aislada debe comenzar con `gestion_rrhh_3c1_test_`. La prueba la migra y siembra; no usa una transacción envolvente. Nunca debe apuntar a la base de aplicación.
 
 El formulario V3 permite registrar un respaldo en `BORRADOR` y la revisión muestra sus versiones aptas para aprobación. El alta de respaldo usa bloqueos por persona de Fase 3B y registra historial; no compromete el respaldo. La interfaz no implementa edición ni anulación del respaldo. Tampoco se implementan liberaciones, cambios de candidato posteriores a aprobación, rectificaciones de respaldos comprometidos, generación documental V3, devolución posterior a aprobación ni contratación permanente. Estas capacidades quedan para fases posteriores.
+
+Actualización de Fase 3C.2A: la aprobación también admite respaldos liberados por
+anulación válida de otra solicitud compatible, con revalidación transaccional.
+Las liberaciones y anulaciones previas al documento ya están implementadas;
+véase FASE_3C2A_ANULACIONES_LIBERACIONES.md. Los demás límites de esta fase
+permanecen vigentes.

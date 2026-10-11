@@ -22,7 +22,15 @@ class RespaldosAptosSolicitudTransitoria
         $hasta = $detalle->fecha_funcionario_hasta->toDateString();
         $this->periodos->validar($desde, $hasta);
 
-        return $solicitud->respaldosRegistrados()
+        return RespaldoTransitorio::query()
+            ->where(function ($query) use ($solicitud): void {
+                $query->where('solicitud_origen_id', $solicitud->id)
+                    ->orWhereHas('afectaciones', fn ($afectacion) => $afectacion
+                        ->whereNotNull('liberado_at')
+                        ->whereHas('solicitudContrato.tramite', fn ($tramite) => $tramite
+                            ->whereHas('estadoTramite', fn ($estado) => $estado->where('codigo', 'ANULADA'))
+                            ->whereHas('historial', fn ($historial) => $historial->where('action_code', 'ANULAR_SOLICITUD'))));
+            })
             ->with('versionActual')
             ->whereDoesntHave('afectaciones', fn ($query) => $query->whereNull('liberado_at'))
             ->get()

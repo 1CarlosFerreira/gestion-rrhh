@@ -27,6 +27,7 @@ class RoleConsolidationTest extends TestCase
             'dotacion.ver',
             'estructura_organizacional.ver',
             'reemplazos.crear',
+            'reemplazos.anular',
             'tramites.adjuntos.cargar',
             'tramites.adjuntos.descargar',
             'tramites.ver_unidades',
@@ -36,6 +37,7 @@ class RoleConsolidationTest extends TestCase
             'estructura_organizacional.ver',
             'personas.ver',
             'reemplazos.crear',
+            'reemplazos.anular',
             'responsabilidades.ver',
             'tramites.adjuntos.cargar',
             'tramites.adjuntos.descargar',
@@ -51,6 +53,8 @@ class RoleConsolidationTest extends TestCase
             'reemplazos.formalizar',
             'reemplazos.generar_documento',
             'reemplazos.revisar',
+            'reemplazos.anular',
+            'reemplazos.anular_enviadas',
             'responsabilidades.ver',
             'tramites.adjuntos.anular',
             'tramites.adjuntos.cargar',
@@ -61,7 +65,8 @@ class RoleConsolidationTest extends TestCase
         $this->assertFalse(Role::findByName('Funcionario')->hasPermissionTo('dotacion.ver_todas'));
         $this->assertFalse(Role::findByName('Jefatura')->hasAnyPermission(['reemplazos.revisar', 'reemplazos.generar_documento', 'reemplazos.formalizar', 'tramites.ver_todos']));
         $this->assertFalse(Permission::query()->whereIn('name', ['tramites.ver_propios', 'tramites.ver_unidad'])->exists());
-        $this->assertCount(Permission::query()->count(), Role::findByName('Administrador')->permissions);
+        $this->assertCount(Permission::query()->count() - 1, Role::findByName('Administrador')->permissions);
+        $this->assertFalse(Role::findByName('Administrador')->hasPermissionTo('reemplazos.anular_enviadas'));
     }
 
     public function test_user_can_have_jefatura_and_solicitante_without_creating_domain_records(): void

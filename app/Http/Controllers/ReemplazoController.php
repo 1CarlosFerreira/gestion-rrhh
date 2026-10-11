@@ -72,6 +72,7 @@ class ReemplazoController extends Controller
                 'reemplazo.reemplazante',
                 'reemplazo.tipoReemplazo',
                 'adjuntos.tipoDocumento',
+                'historial.usuario',
             ]),
             'retorno' => $resolverRetorno->resolve($request),
         ]);

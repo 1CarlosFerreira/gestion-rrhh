@@ -2,6 +2,7 @@
 
 namespace App\Services\Reemplazos;
 
+use App\Actions\Reemplazos\AnularSolicitudTransitoriaAction;
 use App\Contracts\Tramites\TramiteTransitionGuard;
 use App\Enums\ModalidadSolicitudContrato;
 use App\Models\DocumentoGenerado;
@@ -30,7 +31,20 @@ class ReemplazoTransitionGuard implements TramiteTransitionGuard
         if ($tramite->tipoTramite()->value('codigo') !== 'REEMPLAZO') {
             return;
         }
+        if ($tramite->solicitudContrato()->exists() && $tramite->estadoTramite?->codigo === 'ANULADA') {
+            throw ValidationException::withMessages(['solicitud' => 'Una solicitud anulada es terminal.']);
+        }
         $this->autorizar($tramite, $transicion, $user);
+        if ($transicion->estadoDestino->codigo === 'ANULADA' && $transicion->codigo_accion !== 'ANULAR_SOLICITUD') {
+            throw ValidationException::withMessages(['solicitud' => 'La anulación requiere su acción transaccional específica.']);
+        }
+        if ($transicion->codigo_accion === 'ANULAR_SOLICITUD') {
+            if ($transicion->estadoDestino->codigo !== 'ANULADA') {
+                throw ValidationException::withMessages(['solicitud' => 'La transición de anulación debe finalizar en ANULADA.']);
+            }
+            Gate::forUser($user)->authorize('anular-reemplazo', $tramite);
+            app(AnularSolicitudTransitoriaAction::class)->validarTransicion($tramite, $user);
+        }
 
         if (in_array($transicion->codigo_accion, ['ENVIAR_A_GESTION_PERSONAS', 'REENVIAR_A_GESTION_PERSONAS'], true)) {
             $this->validarEnvio($tramite);
