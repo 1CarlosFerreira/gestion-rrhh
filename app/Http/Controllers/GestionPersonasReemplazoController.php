@@ -128,6 +128,9 @@ class GestionPersonasReemplazoController extends Controller
             'tramite' => $tramite,
             'respaldosAptos' => $tramite->solicitudContrato !== null ? $respaldosAptos->obtener($tramite->solicitudContrato, $tramite->reemplazo) : collect(),
             'clasificaciones' => ClasificacionArea::query()->where('activo', true)->orderBy('nombre')->get(),
+            'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(),
+            'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(),
+            'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get(),
             'retorno' => $resolverRetorno->resolve($request, 'revision_reemplazos'),
         ]);
     }
@@ -169,7 +172,11 @@ class GestionPersonasReemplazoController extends Controller
                 ->whereKey($datos['respaldo_version_id'])
                 ->whereIn('respaldo_id', $respaldosAptos->obtener($tramite->solicitudContrato, $tramite->reemplazo)->pluck('id'))
                 ->firstOrFail();
-            $aprobarTransitorio->execute($tramite, $version->respaldo, $version->id, collect($datos)->only(['grado_eus', 'clasificacion_area_id', 'cumple_normativa', 'observacion_administrativa'])->all(), $request->user());
+            $aprobarTransitorio->execute($tramite, $version->respaldo, $version->id, collect($datos)->only([
+                'grado_eus', 'clasificacion_area_id', 'cumple_normativa', 'observacion_administrativa',
+                'reemplazante_estamento_id', 'reemplazante_profesion_id', 'reemplazante_calidad_contractual_id',
+                'reemplazante_cargo_funcion', 'motivo_correccion',
+            ])->all(), $request->user());
         } else {
             $aprobar->execute($tramite, $request->validated(), $request->user());
         }

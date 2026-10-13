@@ -38,6 +38,7 @@ class BorradorReemplazoService
             $datos = $this->filtrarDatos($datos);
             $tipo = TipoTramite::query()->where('codigo', 'REEMPLAZO')->where('activo', true)->firstOrFail();
             $estado = EstadoTramite::query()->where('tipo_tramite_id', $tipo->id)->where('codigo', 'BORRADOR')->where('activo', true)->firstOrFail();
+            $this->validarReemplazanteActivo($datos);
             $this->validarDatos($contexto['unidad_origen'], $datos);
             $tramite = Tramite::query()->create(['public_id' => (string) Str::ulid(), 'codigo' => $this->codigo->execute(), 'tipo_tramite_id' => $tipo->id, 'estado_tramite_id' => $estado->id, 'unidad_organizacional_id' => $contexto['unidad_solicitante']->id, 'created_by' => $actor->id]);
             $this->guardarContexto($tramite, $contexto);
@@ -68,6 +69,7 @@ class BorradorReemplazoService
             }
             $contexto = $this->contextoSolicitud->prepararTransitoria($contexto, $actor, now());
             $datos = $this->filtrarDatos($datos);
+            $this->validarReemplazanteActivo($datos);
             $this->validarDatos($contexto['unidad_origen'], $datos, $tramite->reemplazo->id);
             $tramite->update(['unidad_organizacional_id' => $contexto['unidad_solicitante']->id]);
             $this->guardarContexto($tramite, $contexto);
@@ -96,6 +98,13 @@ class BorradorReemplazoService
         $this->reemplazos->validarBorrador($datos);
         if (! empty($datos['funcionario_id']) && ! empty($datos['fecha_funcionario_desde']) && ! empty($datos['fecha_funcionario_hasta']) && $this->reemplazos->existeSuperposicion($datos['funcionario_id'], $datos['fecha_funcionario_desde'], $datos['fecha_funcionario_hasta'], $exceptoId, fn ($q) => $this->workflow->filtrarActivos($q))) {
             throw ValidationException::withMessages(['fecha_funcionario_desde' => 'El funcionario ya posee otro reemplazo con un período superpuesto.']);
+        }
+    }
+
+    private function validarReemplazanteActivo(array $datos): void
+    {
+        if (! empty($datos['reemplazante_id']) && ! Persona::query()->whereKey($datos['reemplazante_id'])->where('active', true)->exists()) {
+            throw ValidationException::withMessages(['reemplazante_id' => 'Seleccione una persona activa registrada.']);
         }
     }
 

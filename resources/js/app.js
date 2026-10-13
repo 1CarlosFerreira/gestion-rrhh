@@ -1,8 +1,12 @@
 import './bootstrap';
 
 import Alpine from 'alpinejs';
+import { cambiarModoReemplazante, cambiarPersonaSeleccionada, seleccionarPersonaReemplazante } from './reemplazante-modo';
 
 window.Alpine = Alpine;
+Alpine.magic('cambiarModoReemplazante', () => cambiarModoReemplazante);
+Alpine.magic('seleccionarPersonaReemplazante', () => seleccionarPersonaReemplazante);
+Alpine.magic('cambiarPersonaSeleccionada', () => cambiarPersonaSeleccionada);
 
 Alpine.data('replacementReview', (initial) => ({
     saving: false,

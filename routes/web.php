@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/reemplazos/{tramite}/solicitar-anulacion', [AnulacionTransitoriaController::class, 'request'])->name('reemplazos.request-annulment');
     Route::post('/reemplazos', [ReemplazoController::class, 'store'])->name('reemplazos.store');
     Route::get('/reemplazos/funcionarios', [ReemplazoController::class, 'funcionarios'])->name('reemplazos.funcionarios');
+    Route::get('/reemplazos/personas', [ReemplazoController::class, 'personas'])->middleware('throttle:60,1')->name('reemplazos.personas');
     Route::get('/reemplazos/{tramite}', [ReemplazoController::class, 'show'])->name('reemplazos.show');
     Route::get('/reemplazos/{tramite}/editar', [ReemplazoController::class, 'edit'])->name('reemplazos.edit');
     Route::put('/reemplazos/{tramite}', [ReemplazoController::class, 'update'])->name('reemplazos.update');

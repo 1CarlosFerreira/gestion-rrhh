@@ -18,6 +18,7 @@
                     <div class="mt-4">@include('reemplazos.partials.revision-lectura')</div>
                 </section>
             @endif
+            @include('reemplazos.partials.correcciones-antecedentes')
             @include('reemplazos.partials.adjuntos')
         </div>
     </div>

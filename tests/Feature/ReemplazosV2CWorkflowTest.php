@@ -347,6 +347,20 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'REENVIAR_A_GESTION_PERSONAS']);
     }
 
+    public function test_v2_review_does_not_accept_v3_candidate_correction_fields(): void
+    {
+        $tramite = $this->startReview();
+        $original = $tramite->reemplazo->reemplazante_cargo_funcion;
+
+        $this->actingAs($this->revisor)->put(route('gestion-personas.reemplazos.save', $tramite), [
+            'reemplazante_cargo_funcion' => 'Cambio improcedente',
+            'motivo_correccion' => 'Caso ficticio',
+        ])->assertSessionHasErrors(['reemplazante_cargo_funcion', 'motivo_correccion']);
+
+        $this->assertSame($original, $tramite->fresh()->reemplazo->reemplazante_cargo_funcion);
+        $this->assertSame(0, $tramite->historial()->where('action_code', 'ANTECEDENTES_REEMPLAZANTE_CORREGIDOS')->count());
+    }
+
     public function test_approval_saves_current_administrative_data_and_transitions_directly(): void
     {
         $tramite = $this->startReview();

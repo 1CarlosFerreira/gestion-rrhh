@@ -150,16 +150,16 @@ class ReemplazosV2BBorradorTest extends TestCase
         $this->assertGreaterThanOrEqual(2, substr_count($response->getContent(), 'cargo_funcion'));
     }
 
-    public function test_new_replacement_action_is_compact_in_header_and_keeps_identity_fields(): void
+    public function test_v3_creation_uses_two_replacement_choices_and_keeps_identity_fields(): void
     {
         $response = $this->actingAs($this->user)->get(route('reemplazos.create'));
 
         $response->assertOk()
-            ->assertSeeInOrder(['Reemplazante', 'Nuevo reemplazante', 'Persona existente'])
+            ->assertSeeInOrder(['Datos del Reemplazante', 'Persona existente', 'Nuevo reemplazante', 'Registrar nuevo reemplazante'])
             ->assertDontSee('+ Registrar nuevo reemplazante')
             ->assertSee('name="nuevo_reemplazante_rut"', false)
             ->assertSee('name="nuevo_reemplazante_nombres"', false)
-            ->assertSee('Sin antecedentes laborales registrados.');
+            ->assertSee('No hay antecedentes laborales disponibles para copiar.');
     }
 
     public function test_draft_accepts_incomplete_proposal_but_send_requires_labor_fields_without_creating_dotacion(): void

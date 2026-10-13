@@ -36,10 +36,18 @@ class SaveBorradorReemplazoRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $tramite = $this->route('tramite');
+            $v3 = ! ($tramite instanceof Tramite) || $tramite->solicitudContrato()->exists();
             if ($this->filled('reemplazante_id') && $this->filled('nuevo_reemplazante_rut')) {
                 $validator->errors()->add('reemplazante_id', 'Seleccione una persona existente o registre una nueva, no ambas.');
             }
-            if ($this->filled('nuevo_reemplazante_rut') && ! $this->filled('nuevo_reemplazante_nombres') && ! Persona::query()->where('rut', $this->input('nuevo_reemplazante_rut'))->exists()) {
+            if ($v3 && $this->filled('reemplazante_id') && ! Persona::query()->whereKey($this->integer('reemplazante_id'))->where('active', true)->exists()) {
+                $validator->errors()->add('reemplazante_id', 'Seleccione una persona activa registrada.');
+            }
+            if ($v3 && $this->filled('nuevo_reemplazante_rut') && Persona::query()->where('rut', $this->input('nuevo_reemplazante_rut'))->exists()) {
+                $validator->errors()->add('nuevo_reemplazante_rut', 'Este RUT ya está registrado. Seleccione la persona existente.');
+            }
+            if ($this->filled('nuevo_reemplazante_rut') && ! $this->filled('nuevo_reemplazante_nombres') && ($v3 || ! Persona::query()->where('rut', $this->input('nuevo_reemplazante_rut'))->exists())) {
                 $validator->errors()->add('nuevo_reemplazante_nombres', 'Los nombres son obligatorios para una persona nueva.');
             }
             if ($this->filled('reemplazante_profesion_id') && $this->filled('reemplazante_estamento_id')) {

@@ -20,6 +20,8 @@
 /storage/*.key
 /storage/pail
 /vendor
+database/recuperacion/*.sql
+database/recuperacion/*.json
 docker-compose.override.yml
 Homestead.json
 Homestead.yaml

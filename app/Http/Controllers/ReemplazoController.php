@@ -17,12 +17,14 @@ use App\Models\UnidadOrganizacional;
 use App\Services\Reemplazos\AlcanceSolicitudReemplazoService;
 use App\Services\Reemplazos\BorradorReemplazoService;
 use App\Services\SolicitudesContrato\ContextoSolicitudContratoService;
+use App\Support\Rut\Rut;
 use App\Support\Tramites\ResolverRetornoTramite;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ReemplazoController extends Controller
@@ -43,14 +45,19 @@ class ReemplazoController extends Controller
             return $service->crear($this->contextoV3($request), $datos, $request->user());
         });
 
-        return redirect()->route('reemplazos.edit', $tramite)->with('status', 'Borrador guardado. Ya puede adjuntar documentos.');
+        $respuesta = redirect()->route('reemplazos.edit', $tramite)->with('status', 'Borrador guardado. Ya puede adjuntar documentos.');
+        if ($request->input('modo_reemplazante') === 'nuevo' && ! $request->filled('nuevo_reemplazante_rut')) {
+            $respuesta->with('modo_reemplazante', 'nuevo');
+        }
+
+        return $respuesta;
     }
 
     public function edit(Request $request, Tramite $tramite, ContextoSolicitudContratoService $contexto): View
     {
         $this->autorizarTramite($tramite, 'editar-reemplazo');
 
-        return $this->form($tramite->load(['solicitudContrato', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento']), $request, $contexto);
+        return $this->form($tramite->load(['solicitudContrato', 'reemplazo.funcionario', 'reemplazo.reemplazante', 'adjuntos.tipoDocumento', 'adjuntos.documentoGenerado']), $request, $contexto);
     }
 
     public function show(Request $request, Tramite $tramite, ResolverRetornoTramite $resolverRetorno): View
@@ -87,7 +94,12 @@ class ReemplazoController extends Controller
             $service->actualizar($tramite, $this->contexto($request), $datos, $request->user());
         });
 
-        return back()->with('status', 'Borrador actualizado.');
+        $respuesta = back()->with('status', 'Borrador actualizado.');
+        if ($request->input('modo_reemplazante') === 'nuevo' && ! $request->filled('nuevo_reemplazante_rut')) {
+            $respuesta->with('modo_reemplazante', 'nuevo');
+        }
+
+        return $respuesta;
     }
 
     public function send(SaveBorradorReemplazoRequest $request, Tramite $tramite, BorradorReemplazoService $service, TransicionarTramite $transition): RedirectResponse
@@ -138,6 +150,69 @@ class ReemplazoController extends Controller
         return response()->json($personas);
     }
 
+    public function personas(Request $request): JsonResponse
+    {
+        Gate::authorize('crear-reemplazo');
+        $rutIngresado = $request->query('rut');
+        $busquedaIngresada = $request->query('buscar');
+        $rutExacto = null;
+        if ($rutIngresado !== null) {
+            if (! is_string($rutIngresado) || ! Rut::validate($rutIngresado)) {
+                return response()->json([]);
+            }
+            $rutExacto = Rut::normalize($rutIngresado);
+            $consulta = Persona::query()->where('rut', $rutExacto);
+        } else {
+            if (! is_string($busquedaIngresada)) {
+                return response()->json([]);
+            }
+            $busqueda = trim($busquedaIngresada);
+            if (mb_strlen($busqueda) < 3 || mb_strlen($busqueda) > 80 || strpbrk($busqueda, '%_') !== false) {
+                return response()->json([]);
+            }
+            $rut = preg_match('/^[\d.\s]+$/u', $busqueda)
+                ? preg_replace('/[.\s]+/u', '', $busqueda)
+                : Rut::normalize($busqueda);
+            $rutExacto = Rut::validate($busqueda) ? Rut::normalize($busqueda) : null;
+            $consulta = Persona::query()->where(function ($query) use ($busqueda, $rut): void {
+                $query->where('rut', 'like', $rut.'%')
+                    ->orWhere('nombres', 'like', $busqueda.'%')
+                    ->orWhere('apellido_paterno', 'like', $busqueda.'%')
+                    ->orWhere('apellido_materno', 'like', $busqueda.'%');
+            });
+        }
+
+        $personas = $consulta->select(['id', 'rut', 'nombres', 'apellido_paterno', 'apellido_materno'])
+            ->where('active', true)
+            ->with(['vinculosDotacion' => fn ($query) => $query
+                ->select(['id', 'persona_id', 'unidad_organizacional_id', 'vigente_desde', 'vigente_hasta'])
+                ->with('unidad:id,nombre')
+                ->vigentesEn(today())
+                ->orderByDesc('vigente_desde')])
+            ->orderBy('apellido_paterno')->orderBy('nombres')
+            ->limit(10)->get();
+
+        if ($personas->isEmpty() && $rutExacto !== null && Persona::query()->where('rut', $rutExacto)->where('active', false)->exists()) {
+            return response()->json([['id' => null, 'nombre' => 'Persona registrada inactiva', 'rut' => $rutExacto, 'unidad_vigente' => null, 'inactiva' => true, 'antecedentes' => []]]);
+        }
+
+        return response()->json($personas->map(fn (Persona $persona) => $this->personaParaBusqueda($persona)));
+    }
+
+    private function personaParaBusqueda(Persona $persona): array
+    {
+        $unidadesVigentes = $persona->vinculosDotacion
+            ->map(fn ($vinculo) => $vinculo->unidad?->nombre)
+            ->filter()->unique()->values();
+
+        return [
+            'id' => (string) $persona->id,
+            'nombre' => $persona->nombre_completo,
+            'rut' => $persona->rut,
+            'unidad_vigente' => $unidadesVigentes->implode(' · ') ?: null,
+        ];
+    }
+
     private function autorizarTramite(Tramite $tramite, string $ability): void
     {
         abort_unless($tramite->tipoTramite()->where('codigo', 'REEMPLAZO')->exists() && $tramite->reemplazo()->exists(), 404);
@@ -160,6 +235,10 @@ class ReemplazoController extends Controller
             return $existente;
         }
         $persona = Persona::query()->firstOrCreate(['rut' => $request->string('nuevo_reemplazante_rut')->toString()], ['nombres' => $request->string('nuevo_reemplazante_nombres')->toString(), 'apellido_paterno' => $request->input('nuevo_reemplazante_apellido_paterno'), 'apellido_materno' => $request->input('nuevo_reemplazante_apellido_materno'), 'active' => true]);
+        $tramite = $request->route('tramite');
+        if (! $persona->wasRecentlyCreated && (! ($tramite instanceof Tramite) || $tramite->solicitudContrato()->exists())) {
+            throw ValidationException::withMessages(['nuevo_reemplazante_rut' => 'Este RUT ya está registrado. Seleccione la persona existente.']);
+        }
 
         return $persona->id;
     }
@@ -182,7 +261,28 @@ class ReemplazoController extends Controller
             ->orderBy('apellido_paterno')
             ->get() : collect();
 
-        $personas = Persona::query()->with(['vinculosDotacion' => fn ($query) => $query->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->orderByDesc('vigente_desde')])->where('active', true)->orderBy('apellido_paterno')->limit(200)->get();
+        $personas = $legacy
+            ? Persona::query()->with(['vinculosDotacion' => fn ($query) => $query->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->orderByDesc('vigente_desde')])->where('active', true)->orderBy('apellido_paterno')->limit(200)->get()
+            : collect();
+        $reemplazanteId = (int) ($tramite?->reemplazo?->reemplazante_id ?? 0);
+        if ($reemplazanteId > 0 && ! $personas->contains('id', $reemplazanteId)) {
+            $seleccionada = Persona::query()
+                ->with(['vinculosDotacion' => fn ($query) => $query->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->orderByDesc('vigente_desde')])
+                ->find($reemplazanteId);
+            if ($seleccionada !== null) {
+                $personas->prepend($seleccionada);
+            }
+        }
+        $rutBuscado = Rut::normalize((string) old('buscar_reemplazante', old('buscar_reemplazante_rut', '')));
+        $reemplazanteAnteriorId = (int) old('reemplazante_id', 0);
+        if ($reemplazanteAnteriorId > 0 && Rut::validate($rutBuscado) && ! $personas->contains('id', $reemplazanteAnteriorId)) {
+            $seleccionada = Persona::query()
+                ->with(['vinculosDotacion' => fn ($query) => $query->with(['unidad', 'estamento', 'profesion', 'calidadContractual'])->orderByDesc('vigente_desde')])
+                ->whereKey($reemplazanteAnteriorId)->where('rut', $rutBuscado)->where('active', true)->first();
+            if ($seleccionada !== null) {
+                $personas->prepend($seleccionada);
+            }
+        }
 
         return view('reemplazos.form', ['tramite' => $tramite, 'solicitudContrato' => $tramite?->solicitudContrato, 'respaldos' => $tramite?->solicitudContrato?->respaldosRegistrados()->with('versionActual')->get() ?? collect(), 'legacy' => $legacy, 'detalle' => $tramite?->reemplazo, 'unidades' => $unidades, 'funcionarios' => $funcionarios, 'personas' => $personas, 'estamentos' => Estamento::query()->where('activo', true)->orderBy('nombre')->get(), 'profesiones' => Profesion::query()->where('activo', true)->orderBy('nombre')->get(), 'calidades' => CalidadContractual::query()->where('activo', true)->orderBy('orden')->orderBy('nombre')->get(), 'tipos' => TipoReemplazo::query()->where('activo', true)->orderBy('orden')->get(), 'tiposDocumento' => TipoDocumento::query()->where('active', true)->orderBy('nombre')->get()]);
     }

@@ -294,6 +294,8 @@ El funcionario se elige entre Personas activas con dotación vigente en la unida
 
 El borrador puede editarse en `BORRADOR` y `DEVUELTA_PARA_CORRECCION`. Cambiar una unidad vuelve a validar su alcance; cambiar la unidad origen vuelve a validar la dotación del funcionario.
 
+El formulario V3 agrupa antecedentes de la solicitud, datos del reemplazante y documentos adjuntos. La unidad origen se elige como unidad de dotación del funcionario y se mantiene explícita; la unidad destino funcional se indica con los datos del reemplazante. No se igualan automáticamente con la unidad solicitante. La persona registrada se elige mediante un autocompletado por RUT, nombres o apellidos que muestra la unidad vigente, sin restringirla a la dotación solicitante. El alta de una persona nueva rechaza un RUT duplicado y no crea cuenta ni dotación. Los adjuntos reutilizan almacenamiento privado, descarga autorizada, versionado y anulación lógica.
+
 ### Periodos y cobertura
 
 La solicitud distingue cuatro fechas:
@@ -381,6 +383,8 @@ La bandeja presenta trámites activos y finalizados, con búsqueda por código o
 - aprobar los antecedentes.
 
 La aprobación exige grado, clasificación y una selección explícita de cumplimiento normativo. Se conserva quién revisó y cuándo.
+
+En solicitudes transitorias V3 con candidato, Gestión de Personas puede corregir estamento, profesión, calidad contractual y cargo o función durante `EN_REVISION`, sin devolver la solicitud. Cada cambio exige motivo y genera un evento inmutable con valores anteriores y nuevos, actor y fecha; el historial sigue visible después de la aprobación. La corrección no modifica la Persona ni la Dotación y está bloqueada fuera de revisión. El flujo V2 conserva su comportamiento anterior.
 
 ### Documento generado
 
@@ -657,6 +661,8 @@ La base usa MySQL 8.4 en el servicio `db`, con `utf8mb4` y `utf8mb4_unicode_ci`.
 El nombre, usuario y contraseña provienen de `.env`. Los valores predeterminados son locales y no son credenciales de producción.
 
 Las migraciones están en `database/migrations` y los seeders idempotentes en `database/seeders`. `DatabaseSeeder` carga permisos/roles, catálogos, estructura institucional, flujo de Reemplazos, tipos documentales, plantilla PDF y administrador de desarrollo.
+
+El conjunto ficticio para probar dotación y solicitudes transitorias V3 se carga por separado con `DotacionDemoV3Seeder`. Su contenido, condiciones de seguridad y comando de ejecución en cada computador están en [`docs/DOTACION_DEMO_V3.md`](docs/DOTACION_DEMO_V3.md).
 
 Para reconstruir completamente una base **solo de desarrollo**:
 

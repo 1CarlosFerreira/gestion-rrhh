@@ -20,8 +20,8 @@
                 ])
 
                 <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                    <h2 class="text-base font-semibold text-gray-950">Antecedentes propuestos del reemplazante</h2>
-                    <p class="mt-1 text-sm text-gray-600">Información ingresada por el Solicitante. Para corregirla, devuelva la solicitud.</p>
+                    <h2 class="text-base font-semibold text-gray-950">{{ $tramite->solicitudContrato ? 'Antecedentes actuales del reemplazante' : 'Antecedentes propuestos del reemplazante' }}</h2>
+                    <p class="mt-1 text-sm text-gray-600">{{ $tramite->solicitudContrato ? 'Los cambios de Gestión de Personas quedan registrados con sus valores originales y motivo.' : 'Información ingresada por el Solicitante. Para corregirla, devuelva la solicitud.' }}</p>
                     <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                         <div><dt class="text-xs text-gray-500">Estamento</dt><dd class="mt-1 font-medium text-gray-900">{{ $tramite->reemplazo->reemplazanteEstamento?->nombre ?? 'No informado' }}</dd></div>
                         <div><dt class="text-xs text-gray-500">Profesión</dt><dd class="mt-1 font-medium text-gray-900">{{ $tramite->reemplazo->reemplazanteProfesion?->nombre ?? 'No corresponde / no informada' }}</dd></div>
@@ -29,6 +29,8 @@
                         <div><dt class="text-xs text-gray-500">Cargo / función</dt><dd class="mt-1 font-medium text-gray-900">{{ $tramite->reemplazo->reemplazante_cargo_funcion ?? 'No informado' }}</dd></div>
                     </dl>
                 </section>
+
+                @include('reemplazos.partials.correcciones-antecedentes')
 
                 <section class="rounded-xl border border-brand-primary/30 bg-white p-5 shadow-md ring-1 ring-brand-primary/20 sm:p-6">
                     <div>
@@ -69,6 +71,46 @@
                             <textarea class="mt-1 w-full rounded border-gray-300" name="observacion_administrativa">{{ old('observacion_administrativa', $tramite->revisionReemplazo?->observacion_administrativa) }}</textarea>
                             <x-input-error :messages="$errors->get('observacion_administrativa')" class="mt-1" />
                         </label>
+
+                        @if($tramite->solicitudContrato && $tramite->reemplazo->reemplazante_id !== null)
+                            <fieldset class="grid gap-4 rounded-lg border border-gray-200 p-4 sm:grid-cols-2 lg:col-span-2">
+                                <legend class="px-1 text-sm font-semibold text-gray-800">Corrección de antecedentes del reemplazante</legend>
+                                <p class="text-xs text-gray-600 sm:col-span-2">Puede corregir estos valores durante la revisión sin devolver la solicitud. Indique el motivo si cambia alguno.</p>
+                                <label class="text-sm">Estamento
+                                    <select name="reemplazante_estamento_id" class="mt-1 w-full rounded border-gray-300">
+                                        @foreach($estamentos as $estamento)
+                                            <option value="{{ $estamento->id }}" @selected((string) old('reemplazante_estamento_id', $tramite->reemplazo->reemplazante_estamento_id) === (string) $estamento->id)>{{ $estamento->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <x-input-error :messages="$errors->get('reemplazante_estamento_id')" class="mt-1" />
+                                </label>
+                                <label class="text-sm">Profesión
+                                    <select name="reemplazante_profesion_id" class="mt-1 w-full rounded border-gray-300">
+                                        <option value="">No informada</option>
+                                        @foreach($profesiones as $profesion)
+                                            <option value="{{ $profesion->id }}" @selected((string) old('reemplazante_profesion_id', $tramite->reemplazo->reemplazante_profesion_id) === (string) $profesion->id)>{{ $profesion->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <x-input-error :messages="$errors->get('reemplazante_profesion_id')" class="mt-1" />
+                                </label>
+                                <label class="text-sm">Calidad contractual
+                                    <select name="reemplazante_calidad_contractual_id" class="mt-1 w-full rounded border-gray-300">
+                                        @foreach($calidades as $calidad)
+                                            <option value="{{ $calidad->id }}" @selected((string) old('reemplazante_calidad_contractual_id', $tramite->reemplazo->reemplazante_calidad_contractual_id) === (string) $calidad->id)>{{ $calidad->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <x-input-error :messages="$errors->get('reemplazante_calidad_contractual_id')" class="mt-1" />
+                                </label>
+                                <label class="text-sm">Cargo / función
+                                    <input name="reemplazante_cargo_funcion" maxlength="200" value="{{ old('reemplazante_cargo_funcion', $tramite->reemplazo->reemplazante_cargo_funcion) }}" class="mt-1 w-full rounded border-gray-300">
+                                    <x-input-error :messages="$errors->get('reemplazante_cargo_funcion')" class="mt-1" />
+                                </label>
+                                <label class="text-sm sm:col-span-2">Motivo de corrección
+                                    <textarea name="motivo_correccion" rows="2" maxlength="5000" class="mt-1 w-full rounded border-gray-300">{{ old('motivo_correccion') }}</textarea>
+                                    <x-input-error :messages="$errors->get('motivo_correccion')" class="mt-1" />
+                                </label>
+                            </fieldset>
+                        @endif
 
                         @if($tramite->solicitudContrato)
                             <fieldset class="space-y-2 lg:col-span-2">

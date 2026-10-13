@@ -125,6 +125,8 @@
                 </div>
             </section>
 
+            @include('reemplazos.partials.correcciones-antecedentes')
+
             <section aria-labelledby="periodos-title" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
                 <h2 id="periodos-title" class="text-base font-semibold text-gray-950">Períodos y cobertura</h2>
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
