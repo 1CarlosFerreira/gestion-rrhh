@@ -24,6 +24,7 @@ Aplicación interna del Hospital de Illapel para administrar procesos y document
 18. [Solución de problemas frecuentes](#18-solución-de-problemas-frecuentes)
 19. [Estructura relevante del repositorio](#19-estructura-relevante-del-repositorio)
 20. [Convenciones para continuar desarrollando](#20-convenciones-para-continuar-desarrollando)
+21. [Metodología NEXO y seguimiento](#21-metodología-nexo-y-seguimiento)
 
 ## 1. Descripción general
 
@@ -802,3 +803,20 @@ Los archivos `.docx` de `docs/` son fuentes o plantillas institucionales. El com
 - Mantener controladores pequeños, validación en Form Requests, autorización en Policies/Gates y negocio en Actions/Services.
 - Ejecutar pruebas relevantes, suite completa cuando corresponda, Pint y compilación frontend antes de cerrar una entrega.
 - No inventar catálogos, requisitos documentales, reglas SIRH, firma electrónica ni integraciones externas sin una fuente institucional confirmada.
+
+## 21. Metodología NEXO y seguimiento
+
+El proyecto adapta la base documentada **NEXO v0.3** a RRHH; no define NEXO v0.4.
+Este README sigue siendo el documento maestro. [AGENTS.md](AGENTS.md) centraliza
+las reglas técnicas y metodológicas y los perfiles de [Arquitecto](agentes/arquitecto.md),
+[Desarrollador](agentes/desarrollador.md) y [Tester](agentes/tester.md) distribuyen
+responsabilidades sin ampliar permisos.
+
+El [procedimiento de seguimiento](docs/seguimiento/README.md) y su
+[plantilla](docs/seguimiento/plantilla.md) permiten mantener una ficha canónica por
+trabajo `NEXO-RRHH-AAAA-NNN`, solo con autorización para crearla o actualizarla.
+Al retomar, contrastar ficha, autorización vigente y Git real. Registrar hechos,
+evidencias, limitaciones y transferencias; el Tester recomienda y el responsable
+humano acepta. Los permisos de análisis, implementación, pruebas, migraciones,
+commit y push son independientes. Una fase documental se verifica por contenido,
+enlaces y diff, sin acreditar funcionamiento de la aplicación ni habilitar otra fase.

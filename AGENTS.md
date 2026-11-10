@@ -110,6 +110,16 @@ nativo o WSL2, separación de revisión documental y pruebas de aplicación, y
 transferencias en la conversación mientras no exista seguimiento local autorizado.
 No crear ni enlazar fichas o procedimientos de seguimiento inexistentes.
 
+El [procedimiento de seguimiento](docs/seguimiento/README.md) y la
+[plantilla](docs/seguimiento/plantilla.md) organizan la continuidad mediante una
+única ficha canónica por trabajo `NEXO-RRHH-AAAA-NNN`. Su existencia no autoriza
+crear fichas: cada creación o actualización requiere permiso para ese archivo.
+Sin ese permiso, mantener las transferencias en conversación. Contrastar siempre
+la memoria documental con las autorizaciones vigentes y el estado real de Git.
+Los permisos de migraciones se distinguen de análisis, implementación, pruebas,
+commit y push; ninguno se concede por implicación. Todas las reglas de E1 anteriores
+y siguientes permanecen vigentes.
+
 ### Reglas comunes
 - Responder y documentar en español, conservando nombres técnicos.
 - Comprender el requerimiento, arquitectura y convenciones antes de actuar.
