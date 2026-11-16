@@ -14,8 +14,8 @@ Antes de actuar, contrastar esta ficha con el mensaje humano vigente y Git real.
 - Objetivo: conservar contexto verificable del trabajo y permitir su reconstrucción posterior mediante documentos, autorizaciones humanas y estado real del repositorio.
 - Complejidad: mediana por coordinación entre fases, perfiles y permisos; esta ejecución E3-A es documental, acotada y reversible. Riesgo principal: confundir memoria histórica con permiso vigente.
 - Plan canónico: NEXO-RRHH-2026-002-P1 v1.0, identificado por el responsable humano en la conversación. No se dispone de un documento independiente con el plan completo; esta ficha no lo sustituye ni inventa su contenido.
-- Fase y estado vigente: E3-A — aceptada con observaciones por el responsable humano el 2026-11-10, considerando la revisión independiente del Tester.
-- Condición independiente del trabajo: activa. E3-A aceptada con observaciones; esta aceptación no habilita acciones adicionales.
+- Fase y estado vigente: E3-A aceptada con observaciones e incluida en el commit local `4838dbd4d84b0a93e0bab4f216e5346f9053b7b6`; E3-B ejecutada y su resultado técnico aceptado por el responsable humano el 2026-11-16.
+- Condición independiente del trabajo: activa. E4 permanece pendiente; la aceptación de E3-B no habilita acciones adicionales.
 - Roles: responsable humano autoriza y acepta; Arquitecto propone planificación; Desarrollador implementa; Tester verifica independientemente. No se crean agentes ni delegaciones y no se asignan identidades personales.
 - Requisitos confirmados: solicitud humana titulada «Etapa autorizada: E3-A — Registro de seguimiento», secciones 1 a 10, en esta conversación.
 - Alcance: crear exclusivamente esta ficha y comprobar estructura, identificador, commits, etapas, permisos, Markdown y Git. La carpeta trabajos/ es el contenedor necesario de la ruta autorizada, sin archivos auxiliares.
@@ -26,9 +26,11 @@ Antes de actuar, contrastar esta ficha con el mensaje humano vigente y Git real.
 |---|---|---|
 | E1 — Base metodológica | Implementada, verificada y aceptada, según antecedente humano | Commit local 5e718b48cd1e2692ab6a4faa24835e13f65fdacd comprobado; no se dispone en esta entrega del informe completo de verificación E1 ni del mensaje original de aceptación |
 | E2 — Seguimiento y continuidad | Implementada, verificada y aceptada | Informe Tester favorable y aceptación humana expresa en esta conversación; commit local f9661754920ab5e88ccf5e05cd64d0482826c872 comprobado |
-| E3-A — Registro de seguimiento | Aceptada con observaciones el 2026-11-10 | Revisión independiente del Tester favorable con observaciones y aceptación humana; ficha sin commit propio |
-| E3-B — Piloto de recuperación | Pendiente de autorización | No ejecutado; no existen resultados de recuperación acreditados |
+| E3-A — Registro de seguimiento | Aceptada con observaciones el 2026-11-10; incluida en commit local | Revisión independiente del Tester y aceptación humana; commit `4838dbd4d84b0a93e0bab4f216e5346f9053b7b6`. La ficha estuvo sin commit en su entrega original |
+| E3-B — Piloto de recuperación | Ejecutada; resultado técnico aceptado el 2026-11-16 | Declaración expresa del responsable humano en la solicitud de cierre documental; criterios E3B-P01 a E3B-P04 aceptados. Sin pruebas funcionales de Laravel |
 | E4 — Verificación final | Pendiente | Sin ejecución ni autorización operativa documentada aquí |
+
+La denominación de E4 sigue siendo «Verificación final». La evolución hacia agentes ejecutables definidos en TOML es una propuesta posterior, sin identificador de etapa ni implementación autorizada; no redefine E4.
 
 ## Autorizaciones humanas
 
@@ -64,6 +66,14 @@ Las fechas exactas de los mensajes históricos no están respaldadas por una mar
 - Sandbox: lectura excepcional autorizada por comando exacto; escritura y verificaciones fuera del aislamiento requieren autorización específica del comando correspondiente. Sin herencia de permisos excepcionales.
 - Los registros anteriores conservan su valor histórico y sus limitaciones; no constituyen permisos actuales.
 
+### Cierre documental E3-B — 2026-11-16
+
+- Referencia local: REF-002-E3B-CIERRE. Fuente: mensaje humano «NEXO — Cierre documental E3-B» de 2026-11-16.
+- Decisión humana: acepta el resultado técnico del piloto E3-B conforme a E3B-P01, E3B-P02, E3B-P03 y E3B-P04, y autoriza actualizar exclusivamente esta ficha para cerrar documentalmente el piloto.
+- Alcance de esta autorización: registrar el commit local de E3-A, la ejecución y aceptación de E3-B, los dos subagentes utilizados y los criterios; verificar diff, archivo modificado, coherencia histórica y ausencia de datos sensibles. No se atribuyen a este mensaje autorizaciones anteriores no disponibles.
+- Exclusiones: código, otros documentos, pruebas de aplicación, migraciones, bases de datos, dependencias, commit y push. La autorización termina con esta entrega documental; E4 requiere instrucción propia.
+- El mensaje de cierre confirma la aceptación humana de los cuatro criterios. Sus definiciones se incorporan desde el informe del piloto, sin añadir evidencia técnica ni atribuir verificaciones independientes no documentadas.
+
 ## Git real y conservación
 
 - Rama observada: feature/v2-base-limpia.
@@ -77,6 +87,7 @@ Las fechas exactas de los mensajes históricos no están respaldadas por una mar
 - Discrepancias iniciales: ninguna en rama, commits o alcance observado. Cualquier cambio posterior requiere reevaluar las conclusiones afectadas.
 - Conservación local: docs/seguimiento/trabajos/NEXO-RRHH-2026-002.md, archivo nuevo expuesto a pérdida local mientras no exista conservación adicional autorizada.
 - Conservación en commit: E1/E2 comprobados localmente; ficha E3-A sin commit. No existe hash de commit para esta ficha y no se autoriza crearlo.
+- Estado vigente al iniciar el cierre E3-B: rama `feature/v2-base-limpia`, árbol limpio y HEAD local `4838dbd4d84b0a93e0bab4f216e5346f9053b7b6` (`docs(nexo): registrar seguimiento y aceptación E3-A`). Ese commit incluye esta ficha. Las líneas anteriores describen el estado histórico de la entrega E3-A, previo al commit; ya no son tareas pendientes.
 - Publicación remota: no comprobada. Un origin configurado no demuestra publicación. No se realizó push en las operaciones observadas de esta conversación ni en E3-A; no se afirma nada sobre operaciones externas no observadas.
 - No se ejecutaron pull ni fetch. No se consultaron servicios externos ni se verificaron respaldos remotos.
 
@@ -112,14 +123,30 @@ Los resultados E3A-V anteriores son antecedentes de elaboración, no sustituyen 
 
 Aclaración R-OBS-02: la evidencia histórica de E3A-V01 afirmó incorrectamente «ocho secciones principales». Se conserva esa afirmación como antecedente de elaboración, no como comprobación vigente. El diagnóstico documental posterior confirma siete encabezados principales, coincidentes en nombre y orden con la plantilla canónica.
 
+### Resultado aceptado del piloto E3-B
+
+El informe del piloto reportó los resultados de E3B-P01 a E3B-P04; el responsable humano aceptó el resultado técnico el 2026-11-16. Los hilos identificados fueron `/root/arquitecto_e3b` y `/root/tester_e3b`. No consta en esta ficha una verificación independiente adicional de la ejecución del piloto.
+
+| ID | Condición observable según informe del piloto | Método y entorno registrados | Resultado | Evidencia o límite |
+|---|---|---|---|---|
+| E3B-P01 | Creación de dos hilos de subagentes distintos | Informe del piloto y aceptación humana del cierre | Reportado como cumplido; aceptado por el humano | Identificadores registrados arriba; sin verificación independiente adicional documentada aquí |
+| E3B-P02 | Transferencia íntegra de la propuesta del Arquitecto al Tester | Informe del piloto y aceptación humana del cierre | Reportado como cumplido; aceptado por el humano | No se incorpora el contenido de la transferencia ni una comprobación independiente adicional |
+| E3B-P03 | Revisión independiente y consolidación de resultados | Informe del piloto y aceptación humana del cierre | Reportado como cumplido; aceptado por el humano | No se incorpora el detalle de la revisión ni una comprobación independiente adicional |
+| E3B-P04 | Repositorio sin modificaciones | Informe del piloto y aceptación humana del cierre | Reportado como cumplido; aceptado por el humano | Describe el estado reportado durante el piloto; esta ficha ya tiene cambios documentales sin commit |
+
+El piloto E3-B no ejecutó pruebas funcionales de Laravel. Su aceptación técnica no acredita funcionamiento de la aplicación.
+
 ## Acciones, decisiones y evidencias
+
+Las filas anteriores al 2026-11-16 conservan el estado conocido en su momento. La decisión de aceptar E3-A se resolvió el 2026-11-10; la autorización y ejecución de E3-B y la aceptación de su resultado técnico se resolvieron después. Sus menciones como «Pendiente» son antecedentes históricos, no pendientes vigentes.
 
 | Fecha disponible | Rol y fase | Tipo: hecho comprobado / declaración / decisión pendiente | Acción ejecutada o decisión y fuente | Plan y permiso | Evidencia y resultado |
 |---|---|---|---|---|---|
 | Sin fecha individual respaldada | Tester E2 | Declaración histórica disponible | Informe independiente recomienda aceptar E2; cuatro criterios cumplidos | P1 v1.0, REF-002-E2-TEST | Informe en conversación; no es prueba de aplicación |
 | Sin fecha individual respaldada | Responsable humano E2 | Hecho comprobado en conversación | Acepta formalmente E2 y autoriza un commit local | P1 v1.0, REF-002-E2-COMMIT | Mensaje humano y commit E2 local comprobado |
 | Fecha de sesión 2026-11-09, sin hora exacta | Desarrollador E3-A | Hecho comprobado | Lee fuentes, contrasta Git y elabora la ficha | P1 v1.0, REF-002-E3A | Git inicial limpio; E1/E2 locales; contenido documental con límites explícitos |
-| Pendiente | Responsable humano | Decisión pendiente | Revisar E3-A y resolver autorización de E3-B | Nueva decisión necesaria | Sin aceptación E3-A ni permiso E3-B registrados |
+| Pendiente en la entrega original E3-A; resuelto posteriormente | Responsable humano | Decisión pendiente histórica | Revisar E3-A y resolver autorización de E3-B | Nueva decisión necesaria entonces | E3-A fue aceptada el 2026-11-10; E3-B se ejecutó y su resultado técnico fue aceptado el 2026-11-16. Esta fila conserva el estado anterior |
+| 2026-11-16 | Responsable humano, cierre E3-B | Declaración y decisión humana | Informa ejecución satisfactoria del piloto y acepta su resultado técnico conforme a E3B-P01 a E3B-P04 | REF-002-E3B-CIERRE; autorización limitada a esta actualización documental | Mensaje humano de cierre; sin pruebas funcionales de Laravel |
 
 - Implementación y documentación afectada: exclusivamente esta ficha canónica basada en la plantilla vigente; no hay registros paralelos.
 - Archivos creados: docs/seguimiento/trabajos/NEXO-RRHH-2026-002.md. Ningún archivo existente modificado por esta ejecución.
@@ -131,7 +158,7 @@ Aclaración R-OBS-02: la evidencia histórica de E3A-V01 afirmó incorrectamente
 - Hallazgos: sin defecto documental bloqueante identificado durante elaboración; limitaciones de trazabilidad de mensajes y plan completo registradas, sin convertirlas en evidencia comprobada.
 - Correcciones autorizadas anteriores: no se inventa detalle no disponible. Ninguna corrección adicional de otros archivos está autorizada.
 - Riesgos: pérdida del archivo sin commit, falta de acceso futuro a conversación, ficha desactualizada, inferencia indebida de permisos históricos y confusión entre commit y publicación. Mitigaciones: contraste Git/mensaje humano, límites expresos, referencias neutras y decisión humana antes de continuar.
-- Decisiones humanas pendientes: autorización específica E3-B y posterior alcance/verificación E4. Commit local y publicación de esta ficha requieren permisos independientes; E3-A ya fue aceptada con observaciones.
+- Decisiones humanas pendientes en la entrega original E3-A (antecedente histórico): autorización específica E3-B y posterior alcance/verificación E4. La primera fue resuelta; E4 sigue pendiente. Commit local y publicación de la actualización de esta ficha requieren permisos independientes; E3-A ya fue aceptada con observaciones.
 
 
 ### Hito y observaciones conservadas — 2026-11-10
@@ -144,28 +171,29 @@ Aclaración R-OBS-02: la evidencia histórica de E3A-V01 afirmó incorrectamente
 - La recuperación efectiva de contexto corresponde a E3-B, pendiente de autorización; no se ejecutó.
 - La ficha todavía no cuenta con un commit propio.
 - No existe comprobación de publicación remota.
-- Los pasajes previos relativos a aceptación pendiente, verificaciones de elaboración y Git inicialmente limpio describen la entrega original; el estado vigente es el registrado el 2026-11-10.
+- Los pasajes previos relativos a aceptación pendiente, verificaciones de elaboración y Git inicialmente limpio describen la entrega original; el estado posterior de E3-B es el registrado el 2026-11-16.
 - Estado inicial de esta actualización: ficha preexistente sin seguimiento, rama feature/v2-base-limpia y HEAD f966175; ningún otro cambio mostrado por git status.
 - La actualización conserva la estructura canónica y no acredita pruebas funcionales. La evidencia final y el estado Git posterior se entregan en conversación.
 
 ## Continuidad y suspensión
 
-- Suspensión o bloqueo actual: no se registra suspensión formal. E3-A aceptada con observaciones; trabajo activo y E3-B sin autorización.
-- Trabajo incompleto: piloto E3-B y E4. No se han obtenido resultados de recuperación ni de verificación final; no hay efectos de aplicación pendientes.
+- Suspensión o bloqueo actual: no se registra suspensión formal. E3-A y el resultado técnico de E3-B están aceptados; E4 permanece pendiente.
+- Trabajo incompleto: E4. El resultado del piloto E3-B fue aceptado; no hay verificación final E4 ni efectos de aplicación pendientes documentados.
 - Para retomar: leer README maestro, AGENTS.md, perfil aplicable, procedimiento, esta ficha, plan y mensajes disponibles y última transferencia. La lectura de fuentes en E3-A no equivale a ejecutar el piloto E3-B.
 - Contrastar rama, HEAD, índice, cambios y archivos nuevos con Git real. Si el material o autorización cambió, reevaluar evidencia y detener acciones dependientes hasta aclaración humana.
 - Si no se dispone del mensaje autorizante o del plan necesario, pedir aclaración; esta ficha no basta. Las autorizaciones excepcionales del sandbox no se heredan.
-- Próxima acción: decisión humana sobre conservación mediante commit local, que requiere autorización independiente. E3-B requiere autorización expresa de alcance, acciones y verificaciones; la aceptación de E3-A no la concede.
+- Próxima acción: revisión y aprobación humana de este cierre documental. E3-A ya está conservada en el commit local `4838dbd4d84b0a93e0bab4f216e5346f9053b7b6`; cualquier nuevo commit, push o avance a E4 requiere autorización independiente.
 
 ## Transferencia, aceptación y cierre
 
-- Entrega vigente: NEXO-RRHH-2026-002, E3-A, Desarrollador; aceptada con observaciones, trabajo activo.
-- Plan y autorización: P1 v1.0, REF-002-E3A, con límites del mensaje humano vigente.
-- Base y rama: f9661754920ab5e88ccf5e05cd64d0482826c872, feature/v2-base-limpia; Git inicial limpio, una ficha propia sin commit; resultado final en conversación.
-- Resultados: comprobaciones documentales y limitaciones en la matriz anterior; revisión final posterior a escritura comunicada por el Desarrollador. No equivale a verificación independiente del Tester.
+- Entrega vigente: NEXO-RRHH-2026-002, cierre documental E3-B; resultado técnico del piloto aceptado, actualización documental pendiente de aprobación humana.
+- Plan y autorización: P1 v1.0 como antecedente registrado; REF-002-E3B-CIERRE para esta edición y verificación documental, sin ampliar permisos anteriores.
+- Base y rama: `4838dbd4d84b0a93e0bab4f216e5346f9053b7b6`, `feature/v2-base-limpia`; árbol limpio al inicio. La base histórica de elaboración E3-A fue `f9661754920ab5e88ccf5e05cd64d0482826c872`.
+- Resultados: E3-A conserva sus comprobaciones documentales históricas; E3-B tiene aceptación humana de E3B-P01 a E3B-P04, con la limitación de evidencia detallada indicada arriba. Este cierre se verifica documentalmente y no equivale a pruebas funcionales de Laravel.
 - Recomendación Tester E3-A: favorable con observaciones, según informe independiente disponible en esta conversación; revisión exclusivamente documental.
-- Pendientes y riesgos recibidos: conservación local sin commit propio, trazabilidad histórica y del plan, autorización E3-B y alcance/verificación E4.
-- Siguiente responsable: responsable humano; decidir autorización independiente para commit local y, separadamente, etapas posteriores.
+- Pendientes y riesgos recibidos: trazabilidad histórica y del plan, evidencia técnica detallada de E3-B no incluida en esta ficha, y alcance/verificación E4.
+- Siguiente responsable: responsable humano; revisar y aprobar este cierre documental y decidir por separado cualquier commit, push o etapa posterior.
 - Aceptación humana: E3-A aceptada con observaciones por el responsable humano el 2026-11-10, con fundamento en la revisión independiente del Tester favorable con observaciones. E1 y E2 se mantienen aceptadas y conservadas mediante commits locales según antecedentes registrados. No se cierra E3 ni el trabajo.
-- Conservación: esta ficha permanece local sin seguimiento, sin commit ni publicación acreditada. No crear commit para identificar la entrega.
-- Límite: no iniciar E3-B, E4 ni otras operaciones por implicación; no actualizar esta memoria en sesiones futuras sin permiso vigente para el archivo.
+- Aceptación humana E3-B: resultado técnico del piloto aceptado el 2026-11-16 conforme a E3B-P01 a E3B-P04; no se ejecutaron pruebas funcionales de Laravel.
+- Conservación: la versión E3-A de esta ficha está en el commit local `4838dbd4d84b0a93e0bab4f216e5346f9053b7b6`. Esta actualización E3-B queda sin commit ni publicación acreditada; no crear commit para identificar la entrega.
+- Límite: no iniciar E4 ni otras operaciones por implicación; no actualizar esta memoria en sesiones futuras sin permiso vigente para el archivo.
