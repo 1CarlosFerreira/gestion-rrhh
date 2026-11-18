@@ -30,7 +30,7 @@ class DashboardController extends Controller
             $contexto->filtrarVisibles($tramitesAbiertos, $user, today(), $unidadesAutorizadas);
             $requierenAtencion = fn ($query) => $query
                 ->whereHas('estadoTramite', fn ($estado) => $estado->whereIn('codigo', ['BORRADOR', 'DEVUELTA_PARA_CORRECCION']))
-                ->when(! $user->can('reemplazos.crear'), fn ($query) => $query->whereRaw('1 = 0'));
+                ->when(! $user->hasRole('Solicitante') || ! $user->can('reemplazos.crear'), fn ($query) => $query->whereRaw('1 = 0'));
             $resumenMisTramites['abiertos'] = (clone $tramitesAbiertos)->count();
             $resumenMisTramites['requieren_atencion'] = (clone $tramitesAbiertos)->tap($requierenAtencion)->count();
             $resumenMisTramites['en_tramitacion'] = $resumenMisTramites['abiertos'] - $resumenMisTramites['requieren_atencion'];

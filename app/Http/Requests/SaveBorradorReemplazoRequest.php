@@ -8,6 +8,7 @@ use App\Models\Tramite;
 use App\Rules\ValidRut;
 use App\Support\Rut\Rut;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -15,7 +16,11 @@ class SaveBorradorReemplazoRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('reemplazos.crear') === true;
+        $tramite = $this->route('tramite');
+
+        return $tramite instanceof Tramite
+            ? Gate::allows('editar-reemplazo', $tramite)
+            : Gate::allows('crear-reemplazo');
     }
 
     public function rules(): array

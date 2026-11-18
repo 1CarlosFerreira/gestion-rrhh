@@ -40,6 +40,7 @@ class DashboardMisTramitesTest extends TestCase
         Permission::findOrCreate('tramites.ver_unidades');
         Permission::findOrCreate('reemplazos.crear');
         $this->user = User::factory()->create(['active' => true]);
+        $this->user->assignRole('Solicitante');
         $this->user->givePermissionTo(['tramites.ver_unidades', 'reemplazos.crear']);
         $this->unidad = UnidadOrganizacional::query()->where('codigo', 'SDGADM-INF')->firstOrFail();
         UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);

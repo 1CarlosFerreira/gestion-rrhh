@@ -42,7 +42,7 @@ class SolicitarAnulacionTransitoriaTest extends TestCase
         parent::setUp();
         $this->seed();
         $this->actor = User::factory()->create(['active' => true]);
-        $this->actor->givePermissionTo('reemplazos.crear');
+        $this->actor->givePermissionTo(['reemplazos.crear', 'reemplazos.anular']);
         $this->unidad = UnidadOrganizacional::query()->where('activo', true)->firstOrFail();
         UserUnidadAcceso::query()->create(['user_id' => $this->actor->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today()->subDay(), 'created_by' => $this->actor->id]);
         $this->funcionario = $this->persona('89000001-1');
@@ -87,7 +87,7 @@ class SolicitarAnulacionTransitoriaTest extends TestCase
     {
         [$tramite] = $this->caso(false);
         $this->envio($tramite);
-        $this->actor->revokePermissionTo('reemplazos.crear');
+        $this->actor->revokePermissionTo('reemplazos.anular');
         $this->expectException(AuthorizationException::class);
         app(SolicitarAnulacionTransitoriaAction::class)->execute($tramite, $this->actor, 'Motivo');
     }
@@ -97,7 +97,7 @@ class SolicitarAnulacionTransitoriaTest extends TestCase
         [$tramite] = $this->caso(false);
         $this->envio($tramite);
         $otro = User::factory()->create(['active' => true]);
-        $otro->givePermissionTo('reemplazos.crear');
+        $otro->givePermissionTo('reemplazos.anular');
         $this->expectException(AuthorizationException::class);
         app(SolicitarAnulacionTransitoriaAction::class)->execute($tramite, $otro, 'Motivo');
     }

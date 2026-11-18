@@ -84,7 +84,6 @@ class RolesPermisosSeeder extends Seeder
             'Jefatura' => [
                 'dotacion.ver',
                 'estructura_organizacional.ver',
-                'reemplazos.crear',
                 'reemplazos.anular',
                 'tramites.adjuntos.cargar',
                 'tramites.adjuntos.descargar',

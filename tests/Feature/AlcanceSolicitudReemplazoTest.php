@@ -40,6 +40,7 @@ class AlcanceSolicitudReemplazoTest extends TestCase
         Permission::findOrCreate('reemplazos.crear');
         $persona = $this->persona('71000001-1', 'Solicitante');
         $this->user = User::factory()->create(['active' => true, 'persona_id' => $persona->id]);
+        $this->user->assignRole('Solicitante');
         $this->user->givePermissionTo('reemplazos.crear');
         [$this->unidad, $this->otraUnidad] = UnidadOrganizacional::query()->where('activo', true)->orderBy('id')->limit(2)->get()->all();
         $this->alcance = app(AlcanceSolicitudReemplazoService::class);
@@ -124,7 +125,7 @@ class AlcanceSolicitudReemplazoTest extends TestCase
         $tramite = $this->historicalDraft();
 
         $this->assertTrue(Gate::forUser($this->user)->allows('view', $tramite));
-        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->otraUnidad->id])->assertSessionHasErrors('unidad_organizacional_id');
+        $this->actingAs($this->user)->post(route('reemplazos.store'), ['unidad_organizacional_id' => $this->otraUnidad->id])->assertForbidden();
         $this->actingAs($this->user)->put(route('reemplazos.update', $tramite), ['unidad_organizacional_id' => $this->otraUnidad->id])->assertForbidden();
         $this->actingAs($this->user)->getJson(route('reemplazos.funcionarios', ['unidad_organizacional_id' => $this->otraUnidad->id]))->assertForbidden();
     }

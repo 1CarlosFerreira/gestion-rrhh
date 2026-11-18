@@ -78,6 +78,23 @@ class AnularSolicitudTransitoriaTest extends TestCase
         $this->assertSame('Motivo ficticio', $tramite->historial()->where('action_code', 'ANULAR_SOLICITUD')->sole()->observation);
     }
 
+    public function test_jefatura_without_creation_permission_can_annul_draft_and_request_annulment(): void
+    {
+        $this->actor->assignRole('Jefatura');
+        $this->actor->revokePermissionTo('reemplazos.crear');
+        $this->assertFalse($this->actor->can('reemplazos.crear'));
+
+        [$borrador] = $this->caso(false);
+        $this->estado($borrador, 'BORRADOR');
+        $this->actingAs($this->actor)->post(route('reemplazos.annul', $borrador), ['motivo' => 'Anulación de prueba'])->assertRedirect();
+        $this->assertSame('ANULADA', $borrador->fresh()->estadoTramite->codigo);
+
+        [$enviada] = $this->caso(false, $this->persona('89000003-3'));
+        $this->envio($enviada);
+        $this->actingAs($this->actor)->post(route('reemplazos.request-annulment', $enviada), ['motivo' => 'Petición de prueba'])->assertRedirect();
+        $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $enviada->id, 'user_id' => $this->actor->id, 'action_code' => 'SOLICITAR_ANULACION']);
+    }
+
     public function test_operator_cannot_cancel_after_submission_even_when_returned_to_draft(): void
     {
         [$tramite] = $this->caso(false);

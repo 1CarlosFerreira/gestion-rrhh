@@ -49,6 +49,7 @@ class ReemplazoFormularioV3Test extends TestCase
         $this->origen = UnidadOrganizacional::query()->where('codigo', 'SDGADM-INF')->firstOrFail();
         $this->destino = UnidadOrganizacional::query()->where('codigo', 'SDGDP-DGP-GP')->firstOrFail();
         $this->operador = User::factory()->create(['active' => true]);
+        $this->operador->assignRole('Solicitante');
         $this->operador->givePermissionTo('reemplazos.crear');
         $this->revisor = User::factory()->create(['active' => true]);
         $this->revisor->givePermissionTo(['reemplazos.revisar', 'reemplazos.alcance_global']);

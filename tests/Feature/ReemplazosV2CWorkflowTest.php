@@ -48,6 +48,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
         Permission::findOrCreate('tramites.ver_todos');
         Permission::findOrCreate('reemplazos.alcance_global');
         $this->solicitante = User::factory()->create(['active' => true]);
+        $this->solicitante->assignRole('Solicitante');
         $this->solicitante->givePermissionTo('reemplazos.crear');
         $this->revisor = User::factory()->create(['active' => true]);
         $this->revisor->givePermissionTo('reemplazos.revisar');
@@ -76,6 +77,7 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $tramite = $this->draft();
         $creatorId = $tramite->created_by;
         $collaborator = User::factory()->create(['active' => true]);
+        $collaborator->assignRole('Solicitante');
         $collaborator->givePermissionTo(['reemplazos.crear', 'tramites.ver_unidades']);
         UserUnidadAcceso::query()->create([
             'user_id' => $collaborator->id,
@@ -96,6 +98,39 @@ class ReemplazosV2CWorkflowTest extends TestCase
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $collaborator->id, 'action_code' => 'BORRADOR_ACTUALIZADO']);
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $collaborator->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
         $this->actingAs($this->solicitante)->get(route('reemplazos.show', $tramite))->assertOk();
+    }
+
+    public function test_direct_permission_without_solicitante_role_cannot_edit_or_send_historical_v2(): void
+    {
+        $tramite = $this->draft();
+        $actor = User::factory()->create(['active' => true]);
+        $actor->givePermissionTo('reemplazos.crear');
+        UserUnidadAcceso::query()->create([
+            'user_id' => $actor->id,
+            'unidad_organizacional_id' => $this->unidad->id,
+            'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD,
+            'vigente_desde' => today(),
+            'created_by' => $this->solicitante->id,
+        ]);
+
+        $this->actingAs($actor)->get(route('reemplazos.show', $tramite))->assertOk();
+        $this->actingAs($actor)->get(route('reemplazos.edit', $tramite))->assertForbidden();
+        $this->actingAs($actor)->put(route('reemplazos.update', $tramite), $this->draftData($tramite))->assertForbidden();
+        $this->actingAs($actor)->put(route('reemplazos.send', $tramite), $this->draftData($tramite))->assertForbidden();
+
+        $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseMissing('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $actor->id]);
+    }
+
+    public function test_solicitante_losing_access_cannot_send_historical_v2(): void
+    {
+        $tramite = $this->draft();
+        $this->solicitante->accesosOperativos()->update(['vigente_hasta' => today()->subDay()]);
+
+        $this->actingAs($this->solicitante)->put(route('reemplazos.send', $tramite), $this->draftData($tramite))->assertForbidden();
+
+        $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
+        $this->assertDatabaseMissing('tramite_historial', ['tramite_id' => $tramite->id, 'action_code' => 'ENVIAR_A_GESTION_PERSONAS']);
     }
 
     public function test_sending_persists_current_justification_and_other_form_changes(): void

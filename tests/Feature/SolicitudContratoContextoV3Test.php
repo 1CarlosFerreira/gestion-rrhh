@@ -50,6 +50,7 @@ class SolicitudContratoContextoV3Test extends TestCase
         Permission::findOrCreate('reemplazos.crear');
         Permission::findOrCreate('tramites.ver_todos');
         $this->operador = User::factory()->create(['active' => true]);
+        $this->operador->assignRole('Solicitante');
         $this->operador->givePermissionTo('reemplazos.crear');
         [$this->solicitante, $this->origen, $this->destino] = UnidadOrganizacional::query()->where('activo', true)->orderBy('id')->limit(3)->get()->all();
         foreach ([$this->solicitante, $this->origen, $this->destino] as $unidad) {
@@ -77,6 +78,28 @@ class SolicitudContratoContextoV3Test extends TestCase
         $this->assertSame($this->autoridad->id, $solicitud->autoridad_persona_id);
         $this->assertNull($this->autoridad->user);
         $this->assertDatabaseHas('tramite_historial', ['tramite_id' => $tramite->id, 'user_id' => $this->operador->id, 'action_code' => 'TRAMITE_CREADO']);
+    }
+
+    public function test_direct_permission_without_solicitante_role_cannot_create_v3(): void
+    {
+        $this->operador->removeRole('Solicitante');
+
+        $this->actingAs($this->operador)->get(route('reemplazos.create'))->assertForbidden();
+        $this->actingAs($this->operador)->get(route('reemplazos.personas'))->assertForbidden();
+        $this->actingAs($this->operador)->post(route('reemplazos.store'), $this->contexto())->assertForbidden();
+        $this->assertDatabaseCount('tramites', 0);
+    }
+
+    public function test_dual_role_can_create_and_losing_scope_prevents_later_v3_writes(): void
+    {
+        $this->operador->assignRole('Jefatura');
+        $this->actingAs($this->operador)->post(route('reemplazos.store'), $this->contexto())->assertRedirect();
+        $tramite = Tramite::query()->firstOrFail();
+        $this->operador->accesosOperativos()->where('unidad_organizacional_id', $this->solicitante->id)->update(['vigente_hasta' => today()->subDay()]);
+
+        $this->actingAs($this->operador)->put(route('reemplazos.update', $tramite), $this->contexto())->assertForbidden();
+        $this->actingAs($this->operador)->put(route('reemplazos.send', $tramite), $this->contexto())->assertForbidden();
+        $this->assertSame('BORRADOR', $tramite->fresh()->estadoTramite->codigo);
     }
 
     public function test_same_person_as_titular_and_subrogante_is_unambiguous_without_priority(): void

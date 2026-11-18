@@ -26,7 +26,6 @@ class RoleConsolidationTest extends TestCase
         $this->assertEqualsCanonicalizing([
             'dotacion.ver',
             'estructura_organizacional.ver',
-            'reemplazos.crear',
             'reemplazos.anular',
             'tramites.adjuntos.cargar',
             'tramites.adjuntos.descargar',

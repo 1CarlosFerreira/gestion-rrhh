@@ -45,6 +45,7 @@ class ReemplazosV2BBorradorTest extends TestCase
             Permission::findOrCreate($permiso);
         }
         $this->user = User::factory()->create(['active' => true]);
+        $this->user->assignRole('Solicitante');
         $this->user->givePermissionTo(['reemplazos.crear', 'tramites.adjuntos.cargar', 'tramites.adjuntos.descargar']);
         $this->unidad = UnidadOrganizacional::query()->where('codigo', 'SDGADM-INF')->firstOrFail();
         UserUnidadAcceso::query()->create(['user_id' => $this->user->id, 'unidad_organizacional_id' => $this->unidad->id, 'alcance' => AlcanceAccesoOperativo::SOLO_UNIDAD, 'vigente_desde' => today(), 'created_by' => $this->user->id]);

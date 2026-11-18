@@ -20,7 +20,7 @@ class TramiteReemplazoPolicy
 
     public function create(User $user): bool
     {
-        return $user->active && $user->can('reemplazos.crear') && $this->contexto->unidadesAutorizadas($user, today())->isNotEmpty();
+        return $user->active && $user->hasRole('Solicitante') && $user->can('reemplazos.crear') && $this->contexto->unidadesAutorizadas($user, today())->isNotEmpty();
     }
 
     public function view(User $user, Tramite $tramite): bool
@@ -30,7 +30,9 @@ class TramiteReemplazoPolicy
 
     public function update(User $user, Tramite $tramite): bool
     {
-        return in_array($tramite->estadoTramite?->codigo, ['BORRADOR', 'DEVUELTA_PARA_CORRECCION'], true) && $this->puedeOperar($user, $tramite);
+        return $user->hasRole('Solicitante')
+            && in_array($tramite->estadoTramite?->codigo, ['BORRADOR', 'DEVUELTA_PARA_CORRECCION'], true)
+            && $this->puedeOperar($user, $tramite);
     }
 
     public function review(User $user, Tramite $tramite): bool
@@ -68,17 +70,29 @@ class TramiteReemplazoPolicy
             return $user->can('reemplazos.anular_enviadas') && $this->puedeGestionar($user, $tramite);
         }
 
-        return $tramite->estadoTramite?->codigo === 'BORRADOR' && $this->puedeOperar($user, $tramite);
+        return $tramite->estadoTramite?->codigo === 'BORRADOR' && $this->tieneAlcance($user, $tramite);
     }
 
     public function requestAnnulment(User $user, Tramite $tramite): bool
     {
         $reglas = app(AnulacionTransitoria::class);
 
-        return $tramite->tipoTramite?->codigo === 'REEMPLAZO'
+        return $user->active && $user->can('reemplazos.anular')
+            && $tramite->tipoTramite?->codigo === 'REEMPLAZO'
             && $tramite->solicitudContrato?->modalidad === ModalidadSolicitudContrato::TRANSITORIA
             && $reglas->antesDelDocumento($tramite) && $reglas->fueEnviada($tramite)
-            && $this->puedeOperar($user, $tramite);
+            && $this->tieneAlcance($user, $tramite);
+    }
+
+    private function tieneAlcance(User $user, Tramite $tramite): bool
+    {
+        if ($tramite->solicitudContrato !== null) {
+            return $tramite->solicitudContrato->modalidad === ModalidadSolicitudContrato::TRANSITORIA
+                && $this->contexto->tieneAlcance($user, $tramite->solicitudContrato, today());
+        }
+
+        return $tramite->unidadOrganizacional !== null
+            && $this->alcance->puedeOperarEn($user, $tramite->unidadOrganizacional, today());
     }
 
     private function puedeOperar(User $user, Tramite $tramite): bool

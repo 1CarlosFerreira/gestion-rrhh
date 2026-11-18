@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Tramite;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class RegistrarRespaldoTransitorioRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->active === true && $this->user()->can('reemplazos.crear');
+        $tramite = $this->route('tramite');
+
+        return $tramite instanceof Tramite && Gate::allows('editar-reemplazo', $tramite);
     }
 
     public function rules(): array

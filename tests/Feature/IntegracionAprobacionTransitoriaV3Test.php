@@ -41,6 +41,7 @@ class IntegracionAprobacionTransitoriaV3Test extends TestCase
         parent::setUp();
         $this->seed();
         $this->operador = User::factory()->create(['active' => true]);
+        $this->operador->assignRole('Solicitante');
         $this->operador->givePermissionTo('reemplazos.crear');
         $this->revisor = User::factory()->create(['active' => true]);
         $this->revisor->givePermissionTo('reemplazos.revisar');
