@@ -5,9 +5,9 @@ ENV TZ=${APP_TIMEZONE}
 
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g; s|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
-    && apt-get install -y --no-install-recommends git libfreetype6-dev libicu-dev libjpeg62-turbo-dev libpng-dev libzip-dev unzip \
+    && apt-get install -y --no-install-recommends git libfreetype6-dev libicu-dev libjpeg62-turbo-dev libpng-dev libsqlite3-dev libzip-dev unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" gd intl opcache pdo_mysql zip \
+    && docker-php-ext-install -j"$(nproc)" gd intl opcache pdo_mysql pdo_sqlite zip \
     && git config --system --add safe.directory /var/www/html \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
